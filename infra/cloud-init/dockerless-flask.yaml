@@ -1,0 +1,47 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - git
+  - nginx
+  - python3
+  - python3-venv
+  - python3-pip
+  - nodejs
+  - npm
+
+users:
+  - name: deploy
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    ssh_authorized_keys:
+      - ${deploy_ssh_public_key}
+
+write_files:
+  - path: /etc/systemd/system/consulting-site.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Consulting Site Gunicorn Service
+      After=network.target
+
+      [Service]
+      User=deploy
+      Group=www-data
+      WorkingDirectory=/opt/consulting-site/current
+      EnvironmentFile=/opt/consulting-site/shared/env/app.env
+      ExecStart=/opt/consulting-site/current/.venv/bin/gunicorn -w 3 -b 127.0.0.1:8000 wsgi:app
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - mkdir -p /opt/consulting-site/shared/env
+  - mkdir -p /opt/consulting-site/shared/logs
+  - mkdir -p /opt/consulting-site/shared/uploads
+  - chown -R deploy:deploy /opt/consulting-site
+  - systemctl daemon-reload
