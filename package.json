@@ -1,0 +1,13 @@
+{
+  "name": "consulting-site-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "tailwindcss": "^4.0.0",
+    "vite": "^7.0.0"
+  }
+}
