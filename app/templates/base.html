@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Consulting Site{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/assets/app.css') }}">
+</head>
+<body>
+  {% include 'partials/nav.html' %}
+  <main class="mx-auto max-w-6xl px-6 py-10">
+    {% block content %}{% endblock %}
+  </main>
+  <script type="module" src="{{ url_for('static', filename='dist/js/app.js') }}"></script>
+</body>
+</html>
