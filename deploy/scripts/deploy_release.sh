@@ -14,6 +14,9 @@ TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 NEW_RELEASE="$RELEASES_DIR/$TIMESTAMP"
 VENV_DIR="$NEW_RELEASE/.venv"
 
+OLD_CURRENT=""
+ACTIVATED=0
+
 log() {
   printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
 }
@@ -28,17 +31,31 @@ require_cmd() {
 }
 
 version_ge() {
-  # returns 0 if $1 >= $2
   [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 
 cleanup_on_error() {
   local exit_code=$?
+
   log "Deploy failed with exit code ${exit_code}"
-  log "Leaving current release unchanged"
+
+  if [ "$ACTIVATED" = "1" ]; then
+    if [ -n "$OLD_CURRENT" ] && [ -d "$OLD_CURRENT" ]; then
+      log "Rolling current symlink back to previous release: $OLD_CURRENT"
+      ln -sfn "$OLD_CURRENT" "$CURRENT_LINK"
+
+      log "Attempting to restart application on previous release"
+      sudo systemctl restart consulting-site || true
+    else
+      log "No valid previous release available for rollback"
+      rm -f "$CURRENT_LINK" || true
+    fi
+  else
+    log "Activation never occurred; current symlink left unchanged"
+  fi
 
   if [ -d "$NEW_RELEASE" ]; then
-    log "Removing incomplete release: $NEW_RELEASE"
+    log "Removing failed release: $NEW_RELEASE"
     rm -rf "$NEW_RELEASE"
   fi
 
@@ -63,6 +80,14 @@ mkdir -p \
   "$SHARED_DIR/tmp"
 
 [ -d "$SOURCE_DIR" ] || fail "Source directory missing: $SOURCE_DIR"
+
+if [ -L "$CURRENT_LINK" ]; then
+  OLD_CURRENT="$(readlink -f "$CURRENT_LINK" || true)"
+  if [ -n "$OLD_CURRENT" ] && [ ! -d "$OLD_CURRENT" ]; then
+    log "Existing current target is broken: $OLD_CURRENT"
+    OLD_CURRENT=""
+  fi
+fi
 
 log "Creating new release directory: $NEW_RELEASE"
 mkdir -p "$NEW_RELEASE"
@@ -116,7 +141,6 @@ if [ -f "package.json" ]; then
   log "Detected Node version: $NODE_VERSION_RAW"
   log "Detected npm version: $(npm -v)"
 
-  # Vite currently requires Node 20.19+ or 22.12+
   if [[ "$NODE_VERSION" == 20.* ]]; then
     version_ge "$NODE_VERSION" "20.19.0" || \
       fail "Node.js 20.19.0+ required for this frontend build; found $NODE_VERSION_RAW"
@@ -170,16 +194,14 @@ print("manage.py import OK")
 PY
 fi
 
-if [ -L "$CURRENT_LINK" ]; then
-  CURRENT_TARGET="$(readlink -f "$CURRENT_LINK")"
-  if [ -n "$CURRENT_TARGET" ] && [ -d "$CURRENT_TARGET" ]; then
-    log "Updating previous symlink -> $CURRENT_TARGET"
-    ln -sfn "$CURRENT_TARGET" "$PREVIOUS_LINK"
-  fi
+if [ -n "$OLD_CURRENT" ] && [ -d "$OLD_CURRENT" ]; then
+  log "Updating previous symlink -> $OLD_CURRENT"
+  ln -sfn "$OLD_CURRENT" "$PREVIOUS_LINK"
 fi
 
 log "Activating new release"
 ln -sfn "$NEW_RELEASE" "$CURRENT_LINK"
+ACTIVATED=1
 
 log "Restarting application service"
 sudo systemctl restart consulting-site
@@ -196,7 +218,7 @@ cd "$RELEASES_DIR"
 ls -1dt */ 2>/dev/null | tail -n +"$((KEEP_RELEASES + 1))" | xargs -r rm -rf
 
 log "Deploy successful"
-log "Current release:  $(readlink -f "$CURRENT_LINK")"
+log "Current release: $(readlink -f "$CURRENT_LINK")"
 if [ -L "$PREVIOUS_LINK" ]; then
   log "Previous release: $(readlink -f "$PREVIOUS_LINK")"
 fi
