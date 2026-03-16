@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    digitalocean = {
+      source = "digitalocean/digitalocean"
+    }
+  }
+}
+
 resource "digitalocean_droplet" "this" {
   name       = var.name
   region     = var.region

@@ -1,1 +1,3 @@
-output "firewall_id" { value = digitalocean_firewall.this.id }
+output "firewall_id" {
+  value = digitalocean_firewall.this.id
+}

@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    digitalocean = {
+      source = "digitalocean/digitalocean"
+    }
+  }
+}
+
 resource "digitalocean_firewall" "this" {
   name        = var.name
   droplet_ids = var.droplet_ids

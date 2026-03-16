@@ -1,2 +1,7 @@
-variable "region" { type = string }
-variable "droplet_id" { type = string }
+variable "region" {
+  type = string
+}
+
+variable "droplet_id" {
+  type = string
+}
