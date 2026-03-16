@@ -27,14 +27,21 @@ require_cmd() {
   command -v "$1" >/dev/null 2>&1 || fail "Required command not found: $1"
 }
 
+version_ge() {
+  # returns 0 if $1 >= $2
+  [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]
+}
+
 cleanup_on_error() {
   local exit_code=$?
   log "Deploy failed with exit code ${exit_code}"
   log "Leaving current release unchanged"
+
   if [ -d "$NEW_RELEASE" ]; then
     log "Removing incomplete release: $NEW_RELEASE"
     rm -rf "$NEW_RELEASE"
   fi
+
   exit "$exit_code"
 }
 
@@ -45,6 +52,7 @@ require_cmd python3
 require_cmd systemctl
 require_cmd nginx
 require_cmd readlink
+require_cmd sort
 
 mkdir -p \
   "$RELEASES_DIR" \
@@ -98,12 +106,37 @@ else
   log "No pyproject.toml or requirements.txt found; skipping Python dependency install"
 fi
 
-if [ -f "package-lock.json" ]; then
+if [ -f "package.json" ]; then
+  require_cmd node
   require_cmd npm
+
+  NODE_VERSION_RAW="$(node -v)"
+  NODE_VERSION="${NODE_VERSION_RAW#v}"
+
+  log "Detected Node version: $NODE_VERSION_RAW"
+  log "Detected npm version: $(npm -v)"
+
+  # Vite currently requires Node 20.19+ or 22.12+
+  if [[ "$NODE_VERSION" == 20.* ]]; then
+    version_ge "$NODE_VERSION" "20.19.0" || \
+      fail "Node.js 20.19.0+ required for this frontend build; found $NODE_VERSION_RAW"
+  elif [[ "$NODE_VERSION" == 21.* ]]; then
+    fail "Node.js 21 is not accepted for this frontend build; use 20.19+ or 22.12+"
+  elif [[ "$NODE_VERSION" == 22.* ]]; then
+    version_ge "$NODE_VERSION" "22.12.0" || \
+      fail "Node.js 22.12.0+ required for this frontend build; found $NODE_VERSION_RAW"
+  else
+    NODE_MAJOR="${NODE_VERSION%%.*}"
+    if [ "$NODE_MAJOR" -lt 20 ]; then
+      fail "Node.js 20.19.0+ or 22.12.0+ required for this frontend build; found $NODE_VERSION_RAW"
+    fi
+  fi
+fi
+
+if [ -f "package-lock.json" ]; then
   log "Installing Node dependencies with npm ci"
   npm ci
 elif [ -f "package.json" ]; then
-  require_cmd npm
   log "Installing Node dependencies with npm install"
   npm install
 fi
@@ -129,7 +162,7 @@ log "Running pre-activation validation"
 if [ -f "manage.py" ]; then
   python - <<'PY'
 import importlib.util
-import sys
+
 spec = importlib.util.spec_from_file_location("manage", "manage.py")
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
