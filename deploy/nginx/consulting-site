@@ -25,7 +25,7 @@ server {
     }
 
     location / {
-        proxy_pass http://consulting_site_app;
+        proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
 
         proxy_set_header Host $host;

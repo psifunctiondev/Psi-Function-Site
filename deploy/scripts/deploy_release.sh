@@ -183,15 +183,19 @@ fi
 
 log "Running pre-activation validation"
 
-if [ -f "manage.py" ]; then
+if [ -f "wsgi.py" ]; then
   python - <<'PY'
 import importlib.util
 
-spec = importlib.util.spec_from_file_location("manage", "manage.py")
+spec = importlib.util.spec_from_file_location("wsgi", "wsgi.py")
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
-print("manage.py import OK")
+
+assert getattr(module, "app", None) is not None
+print("wsgi:app import OK")
 PY
+else
+  log "No wsgi.py found; skipping Gunicorn target validation"
 fi
 
 if [ -n "$OLD_CURRENT" ] && [ -d "$OLD_CURRENT" ]; then
