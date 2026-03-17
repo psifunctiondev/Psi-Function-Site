@@ -7,11 +7,13 @@ User=deploy
 Group=www-data
 WorkingDirectory=/opt/consulting-site/current
 EnvironmentFile=-/opt/consulting-site/shared/env/app.env
+RuntimeDirectory=consulting-site
+RuntimeDirectoryMode=0755
 UMask=0027
 
 ExecStart=/opt/consulting-site/current/.venv/bin/gunicorn \
   --workers 3 \
-  --bind 127.0.0.1:8000 \
+  --bind unix:/run/consulting-site/gunicorn.sock \
   --access-logfile - \
   --error-logfile - \
   wsgi:app
