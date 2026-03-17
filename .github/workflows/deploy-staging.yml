@@ -40,6 +40,11 @@ jobs:
           ssh "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" \
             'bash /opt/consulting-site/source/deploy/scripts/install_systemd_service.sh'
 
+      - name: Install nginx site
+        run: |
+          ssh "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" \
+            'bash /opt/consulting-site/source/deploy/scripts/install_nginx_site.sh'
+
       - name: Run deploy
         run: |
           ssh "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" \
