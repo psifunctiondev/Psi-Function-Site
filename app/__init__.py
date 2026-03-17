@@ -1,6 +1,7 @@
 from flask import Flask
 from .config import get_config
 from .extensions import db, migrate, login_manager
+from app.blueprints.health.routes import bp as health_bp
 
 def create_app(config_name: str | None = None) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
@@ -21,5 +22,6 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(portal_bp, url_prefix='/portal')
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(health_bp)
 
     return app

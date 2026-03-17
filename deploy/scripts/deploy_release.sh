@@ -217,6 +217,9 @@ sudo nginx -t
 log "Reloading nginx"
 sudo systemctl reload nginx
 
+log "Checking health endpoint"
+curl --fail --silent --show-error http://127.0.0.1/health >/dev/null
+
 log "Pruning old releases, keeping newest $KEEP_RELEASES"
 cd "$RELEASES_DIR"
 ls -1dt */ 2>/dev/null | tail -n +"$((KEEP_RELEASES + 1))" | xargs -r rm -rf
