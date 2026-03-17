@@ -6,7 +6,7 @@ After=network.target
 User=deploy
 Group=www-data
 WorkingDirectory=/opt/consulting-site/current
-EnvironmentFile=/opt/consulting-site/shared/env/app.env
+EnvironmentFile=-/opt/consulting-site/shared/env/app.env
 UMask=0027
 
 ExecStart=/opt/consulting-site/current/.venv/bin/gunicorn \
