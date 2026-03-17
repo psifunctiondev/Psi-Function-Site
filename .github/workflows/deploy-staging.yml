@@ -35,6 +35,11 @@ jobs:
             ./ \
             "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}:/opt/consulting-site/source/"
 
+      - name: Install systemd service
+        run: |
+          ssh "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" \
+            'bash /opt/consulting-site/source/deploy/scripts/install_systemd_service.sh'
+
       - name: Run deploy
         run: |
           ssh "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" \
