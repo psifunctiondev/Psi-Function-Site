@@ -217,18 +217,38 @@ sudo nginx -t
 log "Reloading nginx"
 sudo systemctl reload nginx
 
-log "Checking health endpoint"
-HEALTH_URL="http://127.0.0.1/health"
-HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-30}"
+log "Checking Gunicorn health endpoint"
+SOCKET_PATH="/run/consulting-site/gunicorn.sock"
+APP_HEALTH_TIMEOUT="${APP_HEALTH_TIMEOUT:-30}"
 
-for i in $(seq 1 "$HEALTH_TIMEOUT"); do
-  if curl --fail --silent --show-error "$HEALTH_URL" >/dev/null; then
-    log "Health check passed"
+for i in $(seq 1 "$APP_HEALTH_TIMEOUT"); do
+  if [ -S "$SOCKET_PATH" ] && \
+     curl --silent --show-error --fail \
+       --unix-socket "$SOCKET_PATH" \
+       http://localhost/health >/dev/null; then
+    log "Gunicorn health check passed"
     break
   fi
 
-  if [ "$i" -eq "$HEALTH_TIMEOUT" ]; then
-    fail "Health check failed after ${HEALTH_TIMEOUT}s: $HEALTH_URL"
+  if [ "$i" -eq "$APP_HEALTH_TIMEOUT" ]; then
+    fail "Gunicorn health check failed after ${APP_HEALTH_TIMEOUT}s"
+  fi
+
+  sleep 1
+done
+
+log "Checking Nginx health endpoint"
+NGINX_HEALTH_URL="http://127.0.0.1/health"
+NGINX_HEALTH_TIMEOUT="${NGINX_HEALTH_TIMEOUT:-30}"
+
+for i in $(seq 1 "$NGINX_HEALTH_TIMEOUT"); do
+  if curl --silent --show-error --fail "$NGINX_HEALTH_URL" >/dev/null; then
+    log "Nginx health check passed"
+    break
+  fi
+
+  if [ "$i" -eq "$NGINX_HEALTH_TIMEOUT" ]; then
+    fail "Nginx health check failed after ${NGINX_HEALTH_TIMEOUT}s: $NGINX_HEALTH_URL"
   fi
 
   sleep 1
