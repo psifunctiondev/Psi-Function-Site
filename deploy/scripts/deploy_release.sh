@@ -218,7 +218,21 @@ log "Reloading nginx"
 sudo systemctl reload nginx
 
 log "Checking health endpoint"
-curl --fail --silent --show-error http://127.0.0.1/health >/dev/null
+HEALTH_URL="http://127.0.0.1/health"
+HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-30}"
+
+for i in $(seq 1 "$HEALTH_TIMEOUT"); do
+  if curl --fail --silent --show-error "$HEALTH_URL" >/dev/null; then
+    log "Health check passed"
+    break
+  fi
+
+  if [ "$i" -eq "$HEALTH_TIMEOUT" ]; then
+    fail "Health check failed after ${HEALTH_TIMEOUT}s: $HEALTH_URL"
+  fi
+
+  sleep 1
+done
 
 log "Pruning old releases, keeping newest $KEEP_RELEASES"
 cd "$RELEASES_DIR"
