@@ -38,4 +38,42 @@ jobs:
       - name: Run deploy
         run: |
           ssh "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" \
-            'bash /opt/consulting-site/source/deploy/scripts/deploy_release.sh'
+            'bash /opt/consulting-site/source/deploy/scripts/deploy_release.sh || {
+              rc=$?;
+              echo "DEPLOY FAILED: collecting immediate diagnostics";
+              sudo systemctl status consulting-site.service -l --no-pager || true;
+              sudo systemctl show consulting-site.service \
+                -p Result -p ExecMainCode -p ExecMainStatus \
+                -p User -p Group -p WorkingDirectory -p EnvironmentFile -p ExecStart || true;
+              exit $rc;
+            }'
+
+      - name: Collect remote diagnostics on failure
+        if: failure()
+        run: |
+          ssh "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" '
+            echo "===== systemctl status ====="
+            sudo systemctl status consulting-site.service -l --no-pager || true
+            echo
+            echo "===== systemctl show ====="
+            sudo systemctl show consulting-site.service \
+              -p Result \
+              -p ExecMainCode \
+              -p ExecMainStatus \
+              -p User \
+              -p Group \
+              -p WorkingDirectory \
+              -p EnvironmentFile \
+              -p ExecStart \
+              -p FragmentPath || true
+            echo
+            echo "===== unit file ====="
+            sudo sed -n "1,200p" /etc/systemd/system/consulting-site.service || true
+            echo
+            echo "===== env file ====="
+            ls -l /opt/consulting-site/shared/env/app.env || true
+            echo
+            echo "===== current symlink ====="
+            ls -l /opt/consulting-site/current || true
+            readlink -f /opt/consulting-site/current || true
+          '
