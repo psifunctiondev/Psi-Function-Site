@@ -30,7 +30,15 @@ RELEASE_SCRIPT="${SOURCE_DIR}/deploy/scripts/deploy_release.sh"
 SERVICE_TEMPLATE="/etc/systemd/system/consulting-site@.service"
 SERVICE_NAME="consulting-site@${ENVIRONMENT}"
 
-NGINX_SITE_NAME="consulting-site-${ENVIRONMENT}"
+case "$ENVIRONMENT" in
+  staging)
+    NGINX_SITE_NAME="staging.conf"
+    ;;
+  production)
+    NGINX_SITE_NAME="production.conf"
+    ;;
+esac
+
 NGINX_SITE_AVAILABLE="/etc/nginx/sites-available/${NGINX_SITE_NAME}"
 NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/${NGINX_SITE_NAME}"
 
@@ -75,12 +83,12 @@ check_systemd_unit() {
 
   check_path_exists "$SERVICE_TEMPLATE" "Systemd template unit"
 
-  if ! sudo systemctl list-unit-files --type=service | grep -Fq "${SERVICE_NAME}.service"; then
-    fail "Systemd instance not installed/enabled: ${SERVICE_NAME}"
-  fi
-
   if ! sudo systemctl cat "$SERVICE_NAME" >/dev/null 2>&1; then
     fail "Systemd cannot read unit: ${SERVICE_NAME}"
+  fi
+
+  if ! sudo systemctl is-enabled "$SERVICE_NAME" >/dev/null 2>&1; then
+    fail "Systemd instance is not enabled: ${SERVICE_NAME}"
   fi
 
   log "Verified systemd unit: ${SERVICE_NAME}"
