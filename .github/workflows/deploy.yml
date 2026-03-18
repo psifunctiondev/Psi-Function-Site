@@ -1,0 +1,274 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      sha:
+        description: "Exact commit SHA to deploy"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: consulting-site-deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy_staging:
+    name: Deploy staging
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Determine target SHA
+        id: target
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            TARGET_SHA="${GITHUB_SHA}"
+          else
+            TARGET_SHA="${{ inputs.sha }}"
+          fi
+
+          if ! printf '%s' "${TARGET_SHA}" | grep -Eq '^[0-9a-fA-F]{7,40}$'; then
+            echo "Invalid commit SHA: ${TARGET_SHA}" >&2
+            exit 1
+          fi
+
+          echo "sha=${TARGET_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "Target SHA: ${TARGET_SHA}"
+
+      - name: Check out exact SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.target.outputs.sha }}
+          fetch-depth: 1
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Configure known_hosts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Sync repository to staging source
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+
+          rsync -az --delete \
+            --exclude ".git" \
+            --exclude ".github" \
+            --exclude ".venv" \
+            --exclude "node_modules" \
+            -e "ssh -p ${DEPLOY_PORT}" \
+            ./ "${DEPLOY_USER}@${DEPLOY_HOST}:/opt/consulting-site/staging/source/"
+
+      - name: Run remote staging deploy
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "bash /opt/consulting-site/staging/source/deploy/scripts/deploy_env.sh staging ${TARGET_SHA}"
+
+      - name: Verify public staging health
+        if: vars.PUBLIC_HEALTH_URL != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          curl --fail --silent --show-error --location \
+            --retry 5 \
+            --retry-delay 3 \
+            "${{ vars.PUBLIC_HEALTH_URL }}"
+
+      - name: Show remote diagnostics on failure
+        if: failure()
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set +e
+
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" '
+            echo "===== systemd status ====="
+            sudo systemctl status consulting-site@staging --no-pager || true
+            echo
+            echo "===== nginx test ====="
+            sudo nginx -t || true
+            echo
+            echo "===== current release ====="
+            readlink -f /opt/consulting-site/staging/current || true
+            echo
+            echo "===== current revision ====="
+            cat /opt/consulting-site/staging/current/REVISION || true
+            echo
+            echo "===== recent journal ====="
+            sudo journalctl -u consulting-site@staging -n 100 --no-pager || true
+          '
+
+  deploy_production:
+    name: Deploy production
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Validate SHA input
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TARGET_SHA="${{ inputs.sha }}"
+
+          if ! printf '%s' "${TARGET_SHA}" | grep -Eq '^[0-9a-fA-F]{7,40}$'; then
+            echo "Invalid commit SHA: ${TARGET_SHA}" >&2
+            exit 1
+          fi
+
+      - name: Check out exact SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 1
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Configure known_hosts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Confirm requested SHA is live in staging
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          TARGET_SHA: ${{ inputs.sha }}
+        run: |
+          set -euo pipefail
+
+          LIVE_STAGING_SHA="$(
+            ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+              "cat /opt/consulting-site/staging/current/REVISION"
+          )"
+
+          echo "Live staging SHA: ${LIVE_STAGING_SHA}"
+          echo "Requested production SHA: ${TARGET_SHA}"
+
+          if [ "${LIVE_STAGING_SHA}" != "${TARGET_SHA}" ]; then
+            echo "Production deploy refused: requested SHA is not the SHA currently live in staging." >&2
+            exit 1
+          fi
+
+      - name: Sync repository to production source
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+
+          rsync -az --delete \
+            --exclude ".git" \
+            --exclude ".github" \
+            --exclude ".venv" \
+            --exclude "node_modules" \
+            -e "ssh -p ${DEPLOY_PORT}" \
+            ./ "${DEPLOY_USER}@${DEPLOY_HOST}:/opt/consulting-site/production/source/"
+
+      - name: Run remote production deploy
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          TARGET_SHA: ${{ inputs.sha }}
+        run: |
+          set -euo pipefail
+
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "bash /opt/consulting-site/production/source/deploy/scripts/deploy_env.sh production ${TARGET_SHA}"
+
+      - name: Verify public production health
+        if: vars.PUBLIC_HEALTH_URL != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          curl --fail --silent --show-error --location \
+            --retry 5 \
+            --retry-delay 3 \
+            "${{ vars.PUBLIC_HEALTH_URL }}"
+
+      - name: Show remote diagnostics on failure
+        if: failure()
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set +e
+
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" '
+            echo "===== systemd status ====="
+            sudo systemctl status consulting-site@production --no-pager || true
+            echo
+            echo "===== nginx test ====="
+            sudo nginx -t || true
+            echo
+            echo "===== current release ====="
+            readlink -f /opt/consulting-site/production/current || true
+            echo
+            echo "===== current revision ====="
+            cat /opt/consulting-site/production/current/REVISION || true
+            echo
+            echo "===== recent journal ====="
+            sudo journalctl -u consulting-site@production -n 100 --no-pager || true
+          '

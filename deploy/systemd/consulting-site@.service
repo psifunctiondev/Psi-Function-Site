@@ -1,0 +1,33 @@
+[Unit]
+Description=Consulting Site Gunicorn Service (%i)
+After=network.target
+
+[Service]
+User=deploy
+Group=www-data
+WorkingDirectory=/opt/consulting-site/%i/current
+
+EnvironmentFile=-/opt/consulting-site/%i/shared/env/app.env
+Environment=PYTHONUNBUFFERED=1
+
+UMask=0007
+
+ExecStart=/opt/consulting-site/%i/current/.venv/bin/gunicorn \
+  --workers 3 \
+  --bind unix:/opt/consulting-site/%i/shared/run/gunicorn.sock \
+  --access-logfile - \
+  --error-logfile - \
+  wsgi:app
+
+ExecReload=/bin/kill -HUP $MAINPID
+
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillMode=mixed
+
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+

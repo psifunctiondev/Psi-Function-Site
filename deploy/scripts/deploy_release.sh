@@ -2,7 +2,26 @@
 set -Eeuo pipefail
 umask 027
 
-APP_DIR="/opt/consulting-site"
+usage() {
+  echo "Usage: $0 <staging|production> <git-sha>" >&2
+  exit 1
+}
+
+ENVIRONMENT="${1:-}"
+GIT_SHA="${2:-}"
+
+[ -n "$ENVIRONMENT" ] || usage
+[ -n "$GIT_SHA" ] || usage
+
+case "$ENVIRONMENT" in
+  staging|production) ;;
+  *)
+    echo "Invalid environment: $ENVIRONMENT" >&2
+    usage
+    ;;
+esac
+
+APP_DIR="/opt/consulting-site/${ENVIRONMENT}"
 RELEASES_DIR="$APP_DIR/releases"
 SOURCE_DIR="$APP_DIR/source"
 SHARED_DIR="$APP_DIR/shared"
@@ -17,8 +36,12 @@ VENV_DIR="$NEW_RELEASE/.venv"
 OLD_CURRENT=""
 ACTIVATED=0
 
+SERVICE_NAME="consulting-site@${ENVIRONMENT}"
+SOCKET_PATH="$SHARED_DIR/run/gunicorn.sock"
+APP_HEALTH_TIMEOUT="${APP_HEALTH_TIMEOUT:-30}"
+
 log() {
-  printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
+  printf '[%s] [%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$ENVIRONMENT" "$*"
 }
 
 fail() {
@@ -45,7 +68,7 @@ cleanup_on_error() {
       ln -sfn "$OLD_CURRENT" "$CURRENT_LINK"
 
       log "Attempting to restart application on previous release"
-      sudo systemctl restart consulting-site || true
+      sudo systemctl restart "$SERVICE_NAME" || true
     else
       log "No valid previous release available for rollback"
       rm -f "$CURRENT_LINK" || true
@@ -67,9 +90,9 @@ trap cleanup_on_error ERR
 require_cmd rsync
 require_cmd python3
 require_cmd systemctl
-require_cmd nginx
 require_cmd readlink
 require_cmd sort
+require_cmd curl
 
 mkdir -p \
   "$RELEASES_DIR" \
@@ -77,6 +100,7 @@ mkdir -p \
   "$SHARED_DIR/env" \
   "$SHARED_DIR/logs" \
   "$SHARED_DIR/uploads" \
+  "$SHARED_DIR/run" \
   "$SHARED_DIR/tmp"
 
 [ -d "$SOURCE_DIR" ] || fail "Source directory missing: $SOURCE_DIR"
@@ -104,6 +128,10 @@ rsync -a --delete \
   "$SOURCE_DIR"/ "$NEW_RELEASE"/
 
 cd "$NEW_RELEASE"
+
+printf '%s\n' "$GIT_SHA" > REVISION
+date -u +"%Y-%m-%dT%H:%M:%SZ" > RELEASED_AT
+printf '%s\n' "$ENVIRONMENT" > DEPLOY_ENVIRONMENT
 
 if [ -f "$SHARED_DIR/env/app.env" ]; then
   log "Loading environment: $SHARED_DIR/env/app.env"
@@ -155,17 +183,15 @@ if [ -f "package.json" ]; then
       fail "Node.js 20.19.0+ or 22.12.0+ required for this frontend build; found $NODE_VERSION_RAW"
     fi
   fi
-fi
 
-if [ -f "package-lock.json" ]; then
-  log "Installing Node dependencies with npm ci"
-  npm ci
-elif [ -f "package.json" ]; then
-  log "Installing Node dependencies with npm install"
-  npm install
-fi
+  if [ -f "package-lock.json" ]; then
+    log "Installing Node dependencies with npm ci"
+    npm ci
+  else
+    log "Installing Node dependencies with npm install"
+    npm install
+  fi
 
-if [ -f "package.json" ]; then
   log "Building frontend assets"
   npm run build
 fi
@@ -208,19 +234,10 @@ ln -sfn "$NEW_RELEASE" "$CURRENT_LINK"
 ACTIVATED=1
 
 log "Restarting application service"
-sudo systemctl restart consulting-site
-sudo systemctl is-active --quiet consulting-site || fail "consulting-site service failed to start"
+sudo systemctl restart "$SERVICE_NAME"
+sudo systemctl is-active --quiet "$SERVICE_NAME" || fail "$SERVICE_NAME failed to start"
 
-log "Validating nginx configuration"
-sudo nginx -t
-
-log "Reloading nginx"
-sudo systemctl reload nginx
-
-log "Checking Gunicorn health endpoint"
-SOCKET_PATH="/run/consulting-site/gunicorn.sock"
-APP_HEALTH_TIMEOUT="${APP_HEALTH_TIMEOUT:-30}"
-
+log "Checking Gunicorn health endpoint over unix socket"
 for i in $(seq 1 "$APP_HEALTH_TIMEOUT"); do
   if [ -S "$SOCKET_PATH" ] && \
      curl --silent --show-error --fail \
@@ -237,29 +254,13 @@ for i in $(seq 1 "$APP_HEALTH_TIMEOUT"); do
   sleep 1
 done
 
-log "Checking Nginx health endpoint"
-NGINX_HEALTH_URL="http://127.0.0.1/health"
-NGINX_HEALTH_TIMEOUT="${NGINX_HEALTH_TIMEOUT:-30}"
-
-for i in $(seq 1 "$NGINX_HEALTH_TIMEOUT"); do
-  if curl --silent --show-error --fail "$NGINX_HEALTH_URL" >/dev/null; then
-    log "Nginx health check passed"
-    break
-  fi
-
-  if [ "$i" -eq "$NGINX_HEALTH_TIMEOUT" ]; then
-    fail "Nginx health check failed after ${NGINX_HEALTH_TIMEOUT}s: $NGINX_HEALTH_URL"
-  fi
-
-  sleep 1
-done
-
 log "Pruning old releases, keeping newest $KEEP_RELEASES"
 cd "$RELEASES_DIR"
 ls -1dt */ 2>/dev/null | tail -n +"$((KEEP_RELEASES + 1))" | xargs -r rm -rf
 
 log "Deploy successful"
 log "Current release: $(readlink -f "$CURRENT_LINK")"
+log "Current revision: $(cat "$CURRENT_LINK/REVISION")"
 if [ -L "$PREVIOUS_LINK" ]; then
   log "Previous release: $(readlink -f "$PREVIOUS_LINK")"
 fi
