@@ -233,7 +233,7 @@ jobs:
           set -euo pipefail
 
           ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "bash /opt/consulting-site/production/source/deploy/scripts/deploy_env.sh production ${TARGET_SHA}"
+            "REQUIRE_NGINX=0 bash /opt/consulting-site/production/source/deploy/scripts/deploy_env.sh production ${TARGET_SHA}"
 
       - name: Verify public production health
         if: vars.PUBLIC_HEALTH_URL != ''

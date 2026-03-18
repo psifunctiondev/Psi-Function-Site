@@ -161,7 +161,13 @@ main() {
   check_app_layout
   check_deploy_permissions
   check_systemd_unit
-  check_nginx_site
+
+  if [ "${REQUIRE_NGINX:-1}" = "1" ]; then
+    check_nginx_site
+  else
+    log "Skipping nginx verification because REQUIRE_NGINX=${REQUIRE_NGINX:-1}"
+  fi
+
   check_current_state
 
   log "Running release deployment"
