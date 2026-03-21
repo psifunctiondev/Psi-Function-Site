@@ -1,7 +1,7 @@
 from flask import Flask
 from .config import get_config
 from .extensions import db, migrate, login_manager
-from app.blueprints.health.routes import bp as health_bp
+from .blueprints.health.routes import bp as health_bp
 
 def create_app(config_name: str | None = None) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
