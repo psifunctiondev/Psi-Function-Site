@@ -1,7 +1,7 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: #F4F6F8;
+  background: radial-gradient(circle at center, #6C7D94 0%, #F4F6F8 70%);
   min-height: 100%;
 }
 
