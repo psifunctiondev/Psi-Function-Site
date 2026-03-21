@@ -1,0 +1,10 @@
+.env
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Sensitive vars
+terraform.tfvars

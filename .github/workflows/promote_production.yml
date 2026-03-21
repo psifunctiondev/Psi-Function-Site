@@ -1,0 +1,60 @@
+name: Promote to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA currently live in staging"
+        required: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  promote-production:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Check out exact SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Trust deploy host
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Verify staging revision matches requested SHA
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            'test "$(cat /opt/consulting-site/staging/current/REVISION)" = "${{ inputs.sha }}"'
+
+      - name: Rsync repository to remote source
+        run: |
+          rsync -az --delete \
+            --exclude '.git' \
+            ./ \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/consulting-site/source-production/
+
+      - name: Deploy production release
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "cd /opt/consulting-site/source-production && bash deploy/scripts/deploy_release.sh production ${{ inputs.sha }}"
+
+      - name: Verify production revision
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "bash /opt/consulting-site/source-production/deploy/scripts/verify_revision.sh production ${{ inputs.sha }}"
+
+      - name: Smoke test production
+        run: |
+          bash deploy/scripts/smoke_test.sh https://psifunction.com

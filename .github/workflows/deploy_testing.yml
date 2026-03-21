@@ -1,0 +1,52 @@
+name: Deploy Testing
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-testing
+  cancel-in-progress: true
+
+jobs:
+  deploy-testing:
+    runs-on: ubuntu-latest
+    environment: testing
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Trust deploy host
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Rsync repository to remote source
+        run: |
+          rsync -az --delete \
+            --exclude '.git' \
+            ./ \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/consulting-site/source-testing/
+
+      - name: Deploy testing release
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "cd /opt/consulting-site/source-testing && bash deploy/scripts/deploy_release.sh testing ${GITHUB_SHA}"
+
+      - name: Verify testing revision
+        run: |
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "bash /opt/consulting-site/source-testing/deploy/scripts/verify_revision.sh testing ${GITHUB_SHA}"
+
+      - name: Smoke test testing
+        run: |
+          bash deploy/scripts/smoke_test.sh https://testing.psifunction.com
