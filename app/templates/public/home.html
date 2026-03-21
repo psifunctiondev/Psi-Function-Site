@@ -1,9 +1,28 @@
-{% extends 'base.html' %}
-{% block title %}Home{% endblock %}
-{% block content %}
-<section class="space-y-6">
-  <h1 class="text-4xl font-bold">Independent Consulting</h1>
-  <p class="max-w-2xl text-slate-700">A Flask + Tailwind starter with room for chat, graph views, and client portal features.</p>
-  <div id="chat-widget" data-endpoint="/api/chat" class="rounded-2xl border border-slate-200 p-6"></div>
-</section>
-{% endblock %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    >
+    <title>Psi Function</title>
+    <meta
+      name="description"
+      content="Psi Function"
+    >
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/site.css') }}"
+    >
+  </head>
+  <body>
+    <main class="landing">
+      <img
+        class="hero"
+        src="{{ url_for('static', filename='images/hero.png') }}"
+        alt="Psi Function hero image"
+      >
+    </main>
+  </body>
+</html>
