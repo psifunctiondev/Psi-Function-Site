@@ -1,28 +1,23 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1"
-    >
-    <title>Psi Function</title>
-    <meta
-      name="description"
-      content="Psi Function"
-    >
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/site.css') }}"
-    >
-  </head>
-  <body>
-    <main class="landing">
-      <img
-        class="hero"
-        src="{{ url_for('static', filename='images/hero.png') }}"
-        alt="Psi Function hero image"
-      >
-    </main>
-  </body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<section class="container">
+  <div class="hero">
+
+    <p class="hero-text hero-text--top">
+      PSI FUNCTION LLC
+    </p>
+
+    <div class="hero-image-wrapper">
+      <img src="{{ url_for('static', filename='img/hero.jpg') }}" alt="Hero">
+    </div>
+
+    <p class="hero-text hero-text--bottom">
+      Strategic technology consulting for independent businesses.
+    </p>
+
+  </div>
+</section>
+{% endblock %}
