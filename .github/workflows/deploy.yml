@@ -30,8 +30,7 @@ concurrency:
 jobs:
   deploy_staging:
     name: Deploy staging
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
-    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'staging'    runs-on: ubuntu-latest
     environment: staging
 
     steps:
