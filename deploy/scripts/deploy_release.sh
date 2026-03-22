@@ -3,7 +3,7 @@ set -Eeuo pipefail
 umask 027
 
 usage() {
-  echo "Usage: $0 <staging|production> <git-sha>" >&2
+  echo "Usage: $0 <testing|staging|production> <git-sha>" >&2
   exit 1
 }
 
@@ -14,7 +14,7 @@ GIT_SHA="${2:-}"
 [ -n "$GIT_SHA" ] || usage
 
 case "$ENVIRONMENT" in
-  staging|production) ;;
+  testing|staging|production) ;;
   *)
     echo "Invalid environment: $ENVIRONMENT" >&2
     usage
