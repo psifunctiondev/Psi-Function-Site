@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+sudo tee /etc/fail2ban/jail.local > /dev/null <<'EOF'
+[DEFAULT]
+ignoreip = 127.0.0.1/8 ::1
+findtime = 10m
+bantime = 1h
+maxretry = 5
+backend = auto
+
+[nginx-http-auth]
+enabled = true
+logpath = /var/log/nginx/*error.log
+
+[nginx-badbots]
+enabled = true
+logpath = /var/log/nginx/*access.log
+
+[sshd]
+enabled = true
+findtime = 30m
+maxretry = 8
+bantime = 1h
+
+[nginx-404-scan]
+enabled = true
+findtime = 2m
+maxretry = 10
+bantime = 1h
+EOF
+
+sudo tee /etc/fail2ban/filter.d/nginx-404-scan.conf > /dev/null <<'EOF'
+[Definition]
+failregex = ^<HOST> -.*"(GET|POST).*" 404
+ignoreregex =
+EOF
+
+sudo fail2ban-client -d
+sudo fail2ban-regex /var/log/nginx/*access.log /etc/fail2ban/filter.d/nginx-404-scan.conf
+sudo systemctl restart fail2ban
+sudo fail2ban-client status
+sudo fail2ban-client status nginx-404-scan
