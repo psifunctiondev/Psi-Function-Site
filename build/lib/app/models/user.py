@@ -1,5 +1,7 @@
 from flask_login import UserMixin
+
 from app.extensions import db, login_manager
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

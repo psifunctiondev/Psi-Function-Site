@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
+
 from app.services.ai.client import AIClient
 
 api_bp = Blueprint('api', __name__)

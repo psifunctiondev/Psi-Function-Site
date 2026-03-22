@@ -1,7 +1,9 @@
 from flask import Flask
-from .config import get_config
-from .extensions import db, migrate, login_manager
+
 from .blueprints.health.routes import bp as health_bp
+from .config import get_config
+from .extensions import db, login_manager, migrate
+
 
 def create_app(config_name: str | None = None) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
@@ -11,11 +13,11 @@ def create_app(config_name: str | None = None) -> Flask:
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
-    from .blueprints.public.routes import public_bp
+    from .blueprints.admin.routes import admin_bp
+    from .blueprints.api.routes import api_bp
     from .blueprints.auth.routes import auth_bp
     from .blueprints.portal.routes import portal_bp
-    from .blueprints.api.routes import api_bp
-    from .blueprints.admin.routes import admin_bp
+    from .blueprints.public.routes import public_bp
 
     app.register_blueprint(public_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
