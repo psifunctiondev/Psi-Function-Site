@@ -11,8 +11,8 @@ def test_homepage_includes_assets(client):
     html = resp.data.decode()
 
     assert "/static/dist/assets/app.css" in html
-    assert "app.js" in html
-    
+    assert "fonts.googleapis.com" in html
+
 def test_homepage_renders(client):
     resp = client.get("/")
     assert resp.status_code == 200
