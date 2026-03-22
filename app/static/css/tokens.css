@@ -1,8 +1,0 @@
-/* 1. Base palette */
-@import url("palette_color_tokens.css");
-
-/* 2. Gradients */
-@import url("gradient_tokens.css");
-
-/* 3. Mode styles (dark mode defaults) */
-@import url("dark_mode_system.css");

@@ -1,0 +1,5 @@
+:root {
+  --gradient-depth: linear-gradient(135deg, #1A2433 0%, #2E2F36 100%);
+  --gradient-signal: linear-gradient(90deg, #F0643A 0%, #FFB48F 100%);
+  --gradient-atmospheric: linear-gradient(180deg, #1A2433 0%, #6C7D94 100%);
+}
