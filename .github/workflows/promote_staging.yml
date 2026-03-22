@@ -43,17 +43,17 @@ jobs:
           rsync -az --delete \
             --exclude '.git' \
             ./ \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/consulting-site/source-staging/
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/consulting-site/staging/source
 
       - name: Deploy staging release
         run: |
           ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "cd /opt/consulting-site/source-staging && bash deploy/scripts/deploy_release.sh staging ${{ inputs.sha }}"
+            "cd /opt/consulting-site/staging/source && bash deploy/scripts/deploy_release.sh staging ${{ inputs.sha }}"
 
       - name: Verify staging revision
         run: |
           ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "bash /opt/consulting-site/source-staging/deploy/scripts/verify_revision.sh staging ${{ inputs.sha }}"
+            "bash /opt/consulting-site/staging/source/deploy/scripts/verify_revision.sh staging ${{ inputs.sha }}"
 
       - name: Smoke test staging
         run: |
