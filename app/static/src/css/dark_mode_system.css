@@ -1,0 +1,17 @@
+body {
+  background: var(--navy-900);
+  color: var(--white-50);
+}
+
+.card {
+  background: var(--graphite-800);
+}
+
+.secondary-text {
+  color: var(--steel-500);
+}
+
+.cta {
+  background: var(--coral-500);
+  color: var(--white-50);
+}

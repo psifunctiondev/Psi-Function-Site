@@ -8,10 +8,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='dist/assets/app.css') }}">
 </head>
 <body>
-  {% include 'partials/nav.html' %}
-  <main class="mx-auto max-w-6xl px-6 py-10">
+  <main>
     {% block content %}{% endblock %}
   </main>
-  <script type="module" src="{{ url_for('static', filename='dist/js/app.js') }}"></script>
 </body>
 </html>
