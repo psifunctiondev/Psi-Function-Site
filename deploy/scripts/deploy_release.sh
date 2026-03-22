@@ -196,6 +196,12 @@ if [ -f "package.json" ]; then
   npm run build
 fi
 
+if [ -d "$NEW_RELEASE/app/static/dist" ]; then
+  log "Normalizing frontend asset permissions"
+  find "$NEW_RELEASE/app/static/dist" -type d -exec chmod 755 {} \;
+  find "$NEW_RELEASE/app/static/dist" -type f -exec chmod 644 {} \;
+fi
+
 log "Linking shared writable paths"
 rm -rf "$NEW_RELEASE/uploads" "$NEW_RELEASE/logs" "$NEW_RELEASE/tmp"
 ln -sfn "$SHARED_DIR/uploads" "$NEW_RELEASE/uploads"
