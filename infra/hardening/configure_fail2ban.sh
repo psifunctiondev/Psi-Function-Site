@@ -13,10 +13,6 @@ backend = auto
 enabled = true
 logpath = /var/log/nginx/*error.log
 
-[nginx-badbots]
-enabled = true
-logpath = /var/log/nginx/*access.log
-
 [sshd]
 enabled = true
 findtime = 30m
@@ -25,8 +21,8 @@ bantime = 1h
 
 [nginx-404-scan]
 enabled = true
-findtime = 2m
-maxretry = 10
+maxretry = 5
+findtime = 1m
 bantime = 1h
 EOF
 
@@ -37,7 +33,9 @@ ignoreregex =
 EOF
 
 sudo fail2ban-client -d
-sudo fail2ban-regex /var/log/nginx/*access.log /etc/fail2ban/filter.d/nginx-404-scan.conf
+
+LOG_FILE="$(ls /var/log/nginx/*access.log | head -n 1)"
+sudo fail2ban-regex "$LOG_FILE" /etc/fail2ban/filter.d/nginx-404-scan.conf
+
 sudo systemctl restart fail2ban
 sudo fail2ban-client status
-sudo fail2ban-client status nginx-404-scan
