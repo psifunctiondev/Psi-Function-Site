@@ -38,11 +38,11 @@ EOF
 echo "Validating parsed Fail2Ban configuration..."
 sudo fail2ban-client -d > /dev/null
 
-echo "Finding an nginx access log for regex testing..."
-LOG_FILE="$(find /var/log/nginx -maxdepth 1 -type f -name '*access.log' | head -n 1)"
+echo "Finding a non-empty nginx access log for regex testing..."
+LOG_FILE="$(find /var/log/nginx -maxdepth 1 -type f -name '*access.log' -size +0c | head -n 1)"
 
 if [[ -z "${LOG_FILE}" ]]; then
-  echo "ERROR: no nginx access log found under /var/log/nginx"
+  echo "ERROR: no non-empty nginx access log found under /var/log/nginx"
   exit 1
 fi
 
@@ -60,8 +60,20 @@ sudo systemctl is-active --quiet fail2ban || {
   exit 1
 }
 
-echo "Checking Fail2Ban control socket..."
-sudo fail2ban-client ping
+echo "Waiting for Fail2Ban control socket..."
+for i in {1..10}; do
+  if sudo fail2ban-client ping >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+sudo fail2ban-client ping || {
+  echo "ERROR: fail2ban service is active but control socket is not ready"
+  sudo systemctl status fail2ban --no-pager -l
+  sudo journalctl -u fail2ban -n 100 --no-pager
+  exit 1
+}
 
 echo "Fail2Ban overall status:"
 sudo fail2ban-client status
