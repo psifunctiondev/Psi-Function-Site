@@ -43,6 +43,7 @@ body {
 
 .hero-text--bottom {
   color: var(--steel-500);
+  text-align: center;
 }
 
 /* Image */
