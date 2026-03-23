@@ -28,7 +28,7 @@ EOF
 
 sudo tee /etc/fail2ban/filter.d/nginx-404-scan.conf > /dev/null <<'EOF'
 [Definition]
-failregex = ^<HOST> -.*"(GET|POST).*" 404
+failregex = ^<HOST> -.*"(GET|POST).*" (400|404|444)
 ignoreregex =
 EOF
 
