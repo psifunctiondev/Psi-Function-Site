@@ -10,7 +10,14 @@ def test_homepage_includes_assets(client):
     resp = client.get("/")
     html = resp.data.decode()
 
-    assert "/static/dist/assets/app.css" in html
+    # CSS assets
+    assert 'href="/static/css/complete_design_tokens.css"' in html
+    assert 'href="/static/css/site.css"' in html
+
+    # JS asset
+    assert 'src="/static/js/app.js"' in html
+
+    # Fonts (external dependency)
     assert "fonts.googleapis.com" in html
 
 def test_homepage_renders(client):
