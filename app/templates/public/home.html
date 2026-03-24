@@ -3,33 +3,145 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-<section class="container">
-  <div class="hero">
+<section class="home-hero container">
+  <div class="home-hero__grid">
+    <div class="home-hero__content">
+      <p class="eyebrow">PSI FUNCTION LLC</p>
 
-    <p class="logo">
-      PSI FUNCTION LLC
-    </p>
+      <h1 class="home-hero__title">
+        Strategic technology consulting for independent businesses
+      </h1>
 
-    <div class="hero-image-wrapper">
-      <img src="{{ url_for('static', filename='images/hero.png') }}" alt="Hero">
+      <p class="home-hero__lede">
+        Modern technology is no longer reserved for large enterprises. Psi Function
+        helps small to mid-size organizations identify practical opportunities in AI,
+        cloud platforms, and open-source software, then turn those opportunities into
+        real operational advantage.
+      </p>
+
+      <div class="home-hero__actions">
+        <a href="/about" class="button button--primary">Learn more</a>
+        <a href="/contact" class="button button--secondary">Start a conversation</a>
+      </div>
     </div>
 
-    <p class="hero-text--bottom">
-      Strategic technology consulting for independent businesses
-    </p>
+    <div class="home-hero__media surface surface--hero">
+      <div class="hero-image-wrapper">
+        <img
+          src="{{ url_for('static', filename='images/hero.png') }}"
+          alt="Abstract technology illustration"
+          class="home-hero__image"
+        >
+      </div>
+    </div>
+  </div>
+</section>
 
-    <p class="hero-text">
-      All businesses aim to attract new customers, to deliver competitive capabilities, and to operate efficiently. For decades, large corporations have achieved these goals through investments in technology — investments that were out of reach for small to mid-size companies.
-    </p>
+<section class="container section-stack">
+  <div class="surface surface--section">
+    <div class="section-intro">
+      <p class="section-kicker">Why now</p>
+      <h2 class="section-title">The economics of modern technology have changed</h2>
+    </div>
 
-    <p class="hero-text">
-      The world has changed. Artificial intelligence, cloud computing, and open-source software have dramatically reduced the cost and complexity of building modern technology solutions. Today, even small teams can deploy tools and systems that were once the domain of large enterprises.
-    </p>
+    <div class="prose-stack">
+      <p>
+        All businesses aim to attract new customers, deliver competitive capabilities,
+        and operate efficiently. For decades, large corporations advanced these goals
+        through major technology investments that were often out of reach for smaller organizations.
+      </p>
 
-    <p class="hero-text">
-      However, many small to mid-size companies lack the internal expertise to identify where these technologies can create meaningful impact — or how to implement them. Psi Function partners with such organizations to translate modern technology into practical, material business improvements.
-    </p>
+      <p>
+        That landscape has shifted. Artificial intelligence, cloud computing, and
+        open-source software have dramatically reduced the cost and complexity of building
+        sophisticated tools, workflows, and digital services.
+      </p>
 
+      <p>
+        Small to mid-size companies can now access technology strategies that once
+        required enterprise-scale budgets. The challenge is no longer whether the tools
+        exist — it is determining which investments will create material business value,
+        and how to implement them cleanly.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="container section-stack">
+  <div class="section-intro">
+    <p class="section-kicker">What Psi Function does</p>
+    <h2 class="section-title">Focused guidance from concept to implementation</h2>
+    <p class="section-text">
+      Psi Function works with organizations that need clear technical direction without
+      the overhead of building a large in-house innovation team.
+    </p>
+  </div>
+
+  <div class="card-grid">
+    <article class="card">
+      <h3 class="card__title">Technology strategy</h3>
+      <p class="card__text">
+        Identify the most useful opportunities across AI, automation, analytics, and
+        cloud systems with an emphasis on practical business outcomes.
+      </p>
+    </article>
+
+    <article class="card">
+      <h3 class="card__title">Solution design</h3>
+      <p class="card__text">
+        Translate goals into structured plans, system designs, and implementation paths
+        that are realistic for your scale, budget, and internal capacity.
+      </p>
+    </article>
+
+    <article class="card">
+      <h3 class="card__title">Execution support</h3>
+      <p class="card__text">
+        Help move projects forward through vendor selection, technical oversight,
+        architecture review, and disciplined delivery planning.
+      </p>
+    </article>
+  </div>
+</section>
+
+<section class="container section-stack">
+  <div class="surface surface--accent">
+    <div class="section-intro">
+      <p class="section-kicker">Who this is for</p>
+      <h2 class="section-title">Organizations ready to modernize with intention</h2>
+    </div>
+
+    <div class="prose-stack">
+      <p>
+        Many organizations know that better systems, smarter automation, and stronger
+        use of data could improve the business. What they often lack is the internal
+        time or technical fluency to decide what to do first.
+      </p>
+
+      <p>
+        Psi Function partners with businesses that want disciplined, thoughtful help:
+        not abstract innovation language, but concrete steps toward tools and systems
+        that improve how the business operates.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="container section-stack">
+  <div class="cta-band">
+    <div class="cta-band__content">
+      <p class="section-kicker">Next step</p>
+      <h2 class="section-title">Explore the themes. Then shape the site.</h2>
+      <p class="section-text">
+        This version of the homepage is intentionally structured to test typography,
+        surfaces, buttons, cards, and hierarchy across the Night, Twilight, and Day themes.
+      </p>
+    </div>
+
+    <div class="cta-band__actions">
+      <a href="/about" class="button button--primary">View approach</a>
+      <a href="/contact" class="button button--secondary">Get in touch</a>
+    </div>
   </div>
 </section>
 {% endblock %}

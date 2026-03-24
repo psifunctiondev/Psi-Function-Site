@@ -1,0 +1,376 @@
+/*
+  Complete design token file
+  Built from the user's uploaded base palette and gradient tokens.
+  Structure:
+  1) Raw palette tokens
+  2) Raw gradient tokens
+  3) Semantic theme tokens (night, twilight, day)
+  4) Typography tokens
+  5) Spacing / sizing tokens
+  6) Radius / border / shadow tokens
+  7) Layout / responsive tokens
+  8) Motion / layering tokens
+
+  Usage:
+    <html data-theme="night">
+    <html data-theme="twilight">
+    <html data-theme="day">
+
+  Notes:
+    - This file defines only real visual themes.
+    - If your site supports automatic theme selection based on user preference
+      and/or local time, handle that in application logic or JavaScript by
+      choosing one of the three theme names above.
+*/
+
+:root {
+  /* =========================================================
+     1) RAW PALETTE TOKENS
+     ========================================================= */
+  --navy-900: #1A2433;
+  --graphite-800: #2E2F36;
+  --steel-500: #6C7D94;
+  --coral-500: #F0643A;
+  --glow-300: #FFB48F;
+  --white-50: #F4F6F8;
+
+  /* Optional derived neutrals for practical UI work */
+  --navy-950: #121a26;
+  --graphite-900: #24252b;
+  --steel-300: #9aa7b9;
+  --steel-200: #b7c1cf;
+  --white-100: #ffffff;
+  --black-900: #0b0f14;
+
+  /* Warm supporting tones for twilight / day surfaces */
+  --warm-100: #fff8f4;
+  --warm-150: #fff1e8;
+  --warm-200: #ffe7da;
+  --warm-300: #ffd7c2;
+
+  /* =========================================================
+     2) RAW GRADIENT TOKENS
+     ========================================================= */
+  --gradient-depth: linear-gradient(135deg, #1A2433 0%, #2E2F36 100%);
+  --gradient-signal: linear-gradient(90deg, #F0643A 0%, #FFB48F 100%);
+  --gradient-atmospheric: linear-gradient(180deg, #1A2433 0%, #6C7D94 100%);
+
+  /* Purpose-named aliases */
+  --gradient-hero: var(--gradient-depth);
+  --gradient-accent: var(--gradient-signal);
+  --gradient-page: var(--gradient-atmospheric);
+
+  /* =========================================================
+     3) SEMANTIC COLOR TOKENS - NIGHT THEME
+     Base theme values live on :root.
+     ========================================================= */
+  color-scheme: dark;
+
+  /* Background / surface */
+  --color-bg: var(--navy-900);
+  --color-bg-subtle: var(--graphite-900);
+  --color-surface: var(--graphite-800);
+  --color-surface-elevated: #38404b;
+  --color-surface-muted: rgba(244, 246, 248, 0.04);
+  --color-overlay: rgba(11, 15, 20, 0.72);
+
+  /* Text */
+  --color-text: var(--white-50);
+  --color-text-muted: var(--steel-200);
+  --color-text-subtle: var(--steel-300);
+  --color-heading: var(--white-100);
+  --color-link: var(--glow-300);
+  --color-link-hover: var(--white-100);
+
+  /* Brand / accent */
+  --color-primary: var(--coral-500);
+  --color-primary-hover: #db5934;
+  --color-primary-active: #c94f2e;
+  --color-accent: var(--glow-300);
+  --color-accent-hover: #ffbf9d;
+  --color-accent-active: #f2aa87;
+
+  /* Borders / dividers */
+  --color-border: rgba(183, 193, 207, 0.22);
+  --color-border-strong: rgba(183, 193, 207, 0.38);
+  --color-divider: rgba(183, 193, 207, 0.14);
+
+  /* States */
+  --color-success: #56b881;
+  --color-warning: #f2b75d;
+  --color-danger: #d96868;
+  --color-info: #73a6ff;
+
+  /* On-color text */
+  --color-on-primary: var(--white-100);
+  --color-on-accent: var(--navy-900);
+  --color-on-dark: var(--white-100);
+  --color-on-light: var(--navy-900);
+
+  /* Focus / selection */
+  --color-focus-ring: rgba(255, 180, 143, 0.45);
+  --color-selection-bg: rgba(240, 100, 58, 0.35);
+  --color-selection-text: var(--white-100);
+
+  /* Semantic gradients */
+  --color-hero-bg: var(--gradient-hero);
+  --color-cta-bg: var(--gradient-accent);
+  --color-page-accent-bg: var(--gradient-page);
+
+  /* =========================================================
+     4) TYPOGRAPHY TOKENS
+     ========================================================= */
+  --font-family-display: "Michroma", "Segoe UI", Arial, sans-serif;
+  --font-family-sans: "IBM Plex Sans", "Inter", "Segoe UI", Arial, sans-serif;
+  --font-family-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.1;
+  --line-height-snug: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.04em;
+  --letter-spacing-display: 0.06em;
+
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.875rem;    /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-md: 1.125rem;    /* 18px */
+  --text-lg: 1.25rem;     /* 20px */
+  --text-xl: 1.5rem;      /* 24px */
+  --text-2xl: 1.875rem;   /* 30px */
+  --text-3xl: 2.25rem;    /* 36px */
+  --text-4xl: 3rem;       /* 48px */
+  --text-5xl: 3.75rem;    /* 60px */
+
+  /* Fluid display sizes */
+  --text-display-sm: clamp(2rem, 4vw, 3rem);
+  --text-display-md: clamp(2.5rem, 5vw, 4rem);
+  --text-display-lg: clamp(3rem, 7vw, 5.25rem);
+
+  /* =========================================================
+     5) SPACING / SIZING TOKENS
+     ========================================================= */
+  --space-0: 0;
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
+  --space-32: 8rem;     /* 128px */
+
+  --size-icon-sm: 1rem;
+  --size-icon-md: 1.25rem;
+  --size-icon-lg: 1.5rem;
+
+  --control-height-sm: 2rem;
+  --control-height-md: 2.75rem;
+  --control-height-lg: 3.25rem;
+
+  /* =========================================================
+     6) RADIUS / BORDER / SHADOW TOKENS
+     ========================================================= */
+  --border-width-thin: 1px;
+  --border-width-thick: 2px;
+
+  --radius-none: 0;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-pill: 9999px;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.16);
+  --shadow-md: 0 10px 24px rgba(0, 0, 0, 0.18);
+  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.22);
+  --shadow-glow: 0 0 0 1px rgba(255, 180, 143, 0.08), 0 10px 30px rgba(240, 100, 58, 0.18);
+
+  /* =========================================================
+     7) LAYOUT / RESPONSIVE TOKENS
+     ========================================================= */
+  --container-xs: 20rem;   /* 320px */
+  --container-sm: 36rem;   /* 576px */
+  --container-md: 48rem;   /* 768px */
+  --container-lg: 64rem;   /* 1024px */
+  --container-xl: 75rem;   /* 1200px */
+  --container-2xl: 80rem;  /* 1280px */
+  --container-max: var(--container-xl);
+
+  --page-padding-inline-mobile: 1rem;
+  --page-padding-inline-tablet: 1.5rem;
+  --page-padding-inline-desktop: 2rem;
+
+  --section-space-sm: var(--space-12);
+  --section-space-md: var(--space-16);
+  --section-space-lg: var(--space-24);
+
+  --header-height: 4.5rem;
+  --footer-padding-block: var(--space-12);
+
+  /* Breakpoint reference values for documentation / tooling */
+  --breakpoint-sm: 40rem;  /* 640px */
+  --breakpoint-md: 48rem;  /* 768px */
+  --breakpoint-lg: 64rem;  /* 1024px */
+  --breakpoint-xl: 80rem;  /* 1280px */
+
+  /* =========================================================
+     8) MOTION / LAYERING TOKENS
+     ========================================================= */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 400;
+  --z-modal: 500;
+  --z-toast: 600;
+}
+
+/* ===========================================================
+   9) THEME: TWILIGHT
+   Warm background, dark text, and distinct light surfaces.
+   =========================================================== */
+:root[data-theme="twilight"] {
+  color-scheme: light;
+
+  --color-bg: var(--glow-300);
+  --color-bg-subtle: var(--warm-200);
+  --color-surface: var(--warm-150);
+  --color-surface-elevated: var(--white-100);
+  --color-surface-muted: rgba(46, 47, 54, 0.04);
+  --color-overlay: rgba(26, 36, 51, 0.22);
+
+  --color-text: var(--graphite-800);
+  --color-text-muted: var(--steel-500);
+  --color-text-subtle: #5a6778;
+  --color-heading: var(--navy-900);
+  --color-link: var(--graphite-800);
+  --color-link-hover: var(--coral-500);
+
+  --color-primary: var(--graphite-800);
+  --color-primary-hover: var(--graphite-900);
+  --color-primary-active: var(--black-900);
+  --color-accent: var(--coral-500);
+  --color-accent-hover: #ff7a56;
+  --color-accent-active: #da5c36;
+
+  --color-border: rgba(46, 47, 54, 0.16);
+  --color-border-strong: rgba(46, 47, 54, 0.28);
+  --color-divider: rgba(46, 47, 54, 0.1);
+
+  --color-success: #2d8c5a;
+  --color-warning: #b27919;
+  --color-danger: #b64747;
+  --color-info: #356fd6;
+
+  --color-on-primary: var(--white-100);
+  --color-on-accent: var(--white-100);
+  --color-on-dark: var(--white-100);
+  --color-on-light: var(--navy-900);
+
+  --color-focus-ring: rgba(46, 47, 54, 0.22);
+  --color-selection-bg: rgba(46, 47, 54, 0.18);
+  --color-selection-text: var(--navy-900);
+
+  --color-hero-bg: linear-gradient(135deg, #fff1e8 0%, #ffcfb6 45%, #2E2F36 100%);
+  --color-cta-bg: linear-gradient(90deg, #2E2F36 0%, #F0643A 100%);
+  --color-page-accent-bg: linear-gradient(180deg, #fff8f4 0%, #ffe7da 100%);
+
+  --shadow-xs: 0 1px 2px rgba(26, 36, 51, 0.06);
+  --shadow-sm: 0 4px 12px rgba(26, 36, 51, 0.08);
+  --shadow-md: 0 10px 24px rgba(26, 36, 51, 0.1);
+  --shadow-lg: 0 20px 40px rgba(26, 36, 51, 0.14);
+  --shadow-glow: 0 0 0 1px rgba(46, 47, 54, 0.06), 0 10px 24px rgba(240, 100, 58, 0.12);
+}
+
+/* ===========================================================
+   10) THEME: DAY
+   Bright neutral presentation mode.
+   =========================================================== */
+:root[data-theme="day"] {
+  color-scheme: light;
+
+  --color-bg: var(--white-100);
+  --color-bg-subtle: var(--white-50);
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-surface-muted: rgba(26, 36, 51, 0.03);
+  --color-overlay: rgba(26, 36, 51, 0.18);
+
+  --color-text: var(--navy-900);
+  --color-text-muted: #425066;
+  --color-text-subtle: #5a6a80;
+  --color-heading: var(--navy-950);
+  --color-link: #c94f2e;
+  --color-link-hover: var(--navy-900);
+
+  --color-primary: var(--coral-500);
+  --color-primary-hover: #db5934;
+  --color-primary-active: #c94f2e;
+  --color-accent: var(--navy-900);
+  --color-accent-hover: #243044;
+  --color-accent-active: #121a26;
+
+  --color-border: rgba(26, 36, 51, 0.14);
+  --color-border-strong: rgba(26, 36, 51, 0.24);
+  --color-divider: rgba(26, 36, 51, 0.08);
+
+  --color-success: #2d8c5a;
+  --color-warning: #b27919;
+  --color-danger: #b64747;
+  --color-info: #356fd6;
+
+  --color-on-primary: var(--white-100);
+  --color-on-accent: var(--white-100);
+  --color-on-dark: var(--white-100);
+  --color-on-light: var(--navy-900);
+
+  --color-focus-ring: rgba(240, 100, 58, 0.3);
+  --color-selection-bg: rgba(240, 100, 58, 0.18);
+  --color-selection-text: var(--navy-900);
+
+  --color-hero-bg: linear-gradient(135deg, #F4F6F8 0%, #FFFFFF 60%, #FFB48F 100%);
+  --color-cta-bg: linear-gradient(90deg, #1A2433 0%, #2E2F36 100%);
+  --color-page-accent-bg: linear-gradient(180deg, #FFFFFF 0%, #F4F6F8 100%);
+
+  --shadow-xs: 0 1px 2px rgba(26, 36, 51, 0.06);
+  --shadow-sm: 0 4px 12px rgba(26, 36, 51, 0.08);
+  --shadow-md: 0 10px 24px rgba(26, 36, 51, 0.1);
+  --shadow-lg: 0 20px 40px rgba(26, 36, 51, 0.12);
+  --shadow-glow: 0 0 0 1px rgba(240, 100, 58, 0.08), 0 10px 30px rgba(240, 100, 58, 0.12);
+}
+
+/* ===========================================================
+   11) GLOBAL CONVENIENCE TOKENS / DEFAULT ELEMENT BEHAVIOR
+   Optional, but useful when adopted site-wide.
+   =========================================================== */
+:root {
+  --selection-bg: var(--color-selection-bg);
+  --selection-text: var(--color-selection-text);
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}

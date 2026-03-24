@@ -1,4 +1,3 @@
-import '../css/app.css'
 import { mountChatWidget } from './chat-widget.js'
 import { mountGraphView } from './graph-view.js'
 

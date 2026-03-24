@@ -1,15 +1,60 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <link href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:wght@300;400;500&family=Cutive+Mono&display=swap" rel="stylesheet">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Consulting Site{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='dist/assets/app.css') }}">
+  <title>{% block title %}Psi Function{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:wght@300;400;500&family=Cutive+Mono&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/complete_design_tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+
+  <script>
+    (function () {
+      const STORAGE_KEY = 'site-theme';
+      const VALID_THEMES = new Set(['auto', 'night', 'twilight', 'day']);
+
+      function getAutoTheme() {
+        const hour = new Date().getHours();
+
+        if (hour >= 6 && hour < 17) {
+          return 'day';
+        }
+
+        if (hour >= 17 && hour < 20) {
+          return 'twilight';
+        }
+
+        return 'night';
+      }
+
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const selected = VALID_THEMES.has(saved) ? saved : 'auto';
+        const applied = selected === 'auto' ? getAutoTheme() : selected;
+        document.documentElement.setAttribute('data-theme', applied);
+      } catch (err) {
+        document.documentElement.setAttribute('data-theme', getAutoTheme());
+      }
+    })();
+  </script>
+
+  {% block head %}{% endblock %}
 </head>
 <body>
+  {% include "includes/site_header.html" %}
+
   <main>
     {% block content %}{% endblock %}
   </main>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>
