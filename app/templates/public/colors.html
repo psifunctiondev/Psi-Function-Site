@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}About — Psi Function{% endblock %}
+{% block content %}
+
+<section class="container section-stack">
+  <p class="eyebrow">About</p>
+  <h1 class="section-title">Color &amp; Surface Audit</h1>
+  <p class="section-text">A 5 &times; 4 swatch grid for dialing in the palette across surfaces, text, and accent roles.</p>
+</section>
+
+<section class="container section-stack">
+  <div class="about-grid">
+
+    <!-- Row 1 — Backgrounds -->
+    <div class="about-grid__cell" style="background: var(--color-bg); color: var(--color-text);">
+      <span class="about-grid__label">bg</span>
+      <span class="about-grid__token">--color-bg</span>
+    </div>
+    <div class="about-grid__cell" style="background: var(--color-bg-subtle); color: var(--color-text);">
+      <span class="about-grid__label">bg-subtle</span>
+      <span class="about-grid__token">--color-bg-subtle</span>
+    </div>
+    <div class="about-grid__cell" style="background: var(--color-surface); color: var(--color-text);">
+      <span class="about-grid__label">surface</span>
+      <span class="about-grid__token">--color-surface</span>
+    </div>
+    <div class="about-grid__cell" style="background: var(--color-surface-elevated); color: var(--color-text);">
+      <span class="about-grid__label">surface-elevated</span>
+      <span class="about-grid__token">--color-surface-elevated</span>
+    </div>
+    <div class="about-grid__cell" style="background: var(--color-overlay); color: var(--color-text);">
+      <span class="about-grid__label">overlay</span>
+      <span class="about-grid__token">--color-overlay</span>
+    </div>
+
+    <!-- Row 2 — Text & Links -->
+    <div class="about-grid__cell about-grid__cell--text-sample" style="background: var(--color-surface);">
+      <span class="about-grid__label" style="color: var(--color-text);">text</span>
+      <span class="about-grid__swatch" style="background: var(--color-text);"></span>
+    </div>
+    <div class="about-grid__cell about-grid__cell--text-sample" style="background: var(--color-surface);">
+      <span class="about-grid__label" style="color: var(--color-text-muted);">text-muted</span>
+      <span class="about-grid__swatch" style="background: var(--color-text-muted);"></span>
+    </div>
+    <div class="about-grid__cell about-grid__cell--text-sample" style="background: var(--color-surface);">
+      <span class="about-grid__label" style="color: var(--color-heading);">heading</span>
+      <span class="about-grid__swatch" style="background: var(--color-heading);"></span>
+    </div>
+    <div class="about-grid__cell about-grid__cell--text-sample" style="background: var(--color-surface);">
+      <span class="about-grid__label" style="color: var(--color-link);">link</span>
+      <span class="about-grid__swatch" style="background: var(--color-link);"></span>
+    </div>
+    <div class="about-grid__cell about-grid__cell--text-sample" style="background: var(--color-surface);">
+      <span class="about-grid__label" style="color: var(--color-link-hover);">link-hover</span>
+      <span class="about-grid__swatch" style="background: var(--color-link-hover);"></span>
+    </div>
+
+    <!-- Row 3 — Brand / Accent -->
+    <div class="about-grid__cell" style="background: var(--color-primary); color: var(--color-on-primary);">
+      <span class="about-grid__label">primary</span>
+      <span class="about-grid__token">--color-primary</span>
+    </div>
+    <div class="about-grid__cell" style="background: var(--color-primary-hover); color: var(--color-on-primary);">
+      <span class="about-grid__label">primary-hover</span>
+      <span class="about-grid__token">--color-primary-hover</span>
+    </div>
+    <div class="about-grid__cell" style="background: var(--color-accent); color: var(--color-on-accent);">
+      <span class="about-grid__label">accent</span>
+      <span class="about-grid__token">--color-accent</span>
+    </div>
+    <div class="about-grid__cell" style="background: var(--color-accent-hover); color: var(--color-on-accent);">
+      <span class="about-grid__label">accent-hover</span>
+      <span class="about-grid__token">--color-accent-hover</span>
+    </div>
+    <div class="about-grid__cell" style="background: var(--gradient-signal); color: var(--color-on-primary);">
+      <span class="about-grid__label">gradient-signal</span>
+      <span class="about-grid__token">coral → glow</span>
+    </div>
+
+    <!-- Row 4 — Borders & States -->
+    <div class="about-grid__cell about-grid__cell--border-sample" style="background: var(--color-bg);">
+      <span class="about-grid__label" style="color: var(--color-text-muted);">border</span>
+      <span class="about-grid__border-swatch" style="border-color: var(--color-border);"></span>
+    </div>
+    <div class="about-grid__cell about-grid__cell--border-sample" style="background: var(--color-bg);">
+      <span class="about-grid__label" style="color: var(--color-text-muted);">border-strong</span>
+      <span class="about-grid__border-swatch" style="border-color: var(--color-border-strong);"></span>
+    </div>
+    <div class="about-grid__cell" style="background: var(--color-success); color: #fff;">
+      <span class="about-grid__label">success</span>
+    </div>
+    <div class="about-grid__cell" style="background: var(--color-warning); color: #fff;">
+      <span class="about-grid__label">warning</span>
+    </div>
+    <div class="about-grid__cell" style="background: var(--color-danger); color: #fff;">
+      <span class="about-grid__label">danger</span>
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}

@@ -1,6 +1,51 @@
 {% extends 'base.html' %}
-{% block title %}About{% endblock %}
+
+{% block title %}About — Psi Function{% endblock %}
+
 {% block content %}
-<h1 class="text-3xl font-bold">About</h1>
-<p class="mt-4 text-slate-700">Replace this with real consulting copy.</p>
+
+<section class="container section-stack">
+  <div class="about-grid">
+
+    <!-- Row 1: 3-col text + 2-col image -->
+    <div class="card about-grid__span-3">
+      <h2 class="card__title">Inspiration</h2>
+
+      <p class="card__text">The ancient Greek letter &Psi;, or psi, has been used for centuries to represent complex ideas. In modern physics psi is a wave function:  the mathematical description of a quantum system's state.
+      </p>
+
+      <p class="card__text">A quantum mechanical psi function describes everything there is to know about an entity. It encodes all of the past and all of the future; it is the entirety of reality and the entirety of possibility. At Psi Function we help your company realize its future from within the uncertainty of the present. Dynamic and complex — part imagination and part hard work — sometimes here and sometimes there: Psi Function transforms the possibilities of your business into its full potential.
+      </p>
+    </div>
+
+    <div class="card about-grid__span-2 about-grid__media-card">
+      <img
+        src="{{ url_for('static', filename='images/Schrodinger.png') }}"
+        alt="Schrodinger equation"
+        class="about-grid__img"
+      >
+    </div>
+
+    <!-- Row 2: 2-col image + 3-col text -->
+    <div class="card about-grid__span-1 about-grid__media-card">
+      <img
+        src="{{ url_for('static', filename='images/mqmoore.png') }}"
+        alt="Quinn Moore headshot"
+        class="about-grid__img"
+      >
+    </div>
+
+    <div class="card about-grid__span-4">
+      <h2 class="card__title">Leadership</h2>
+      <p class="card__text">Quinn Moore is the founder and principal of Psi Function. He brings over 30 years' experience as a business transformation and technology consultant for Fortune 500 companies. Previously an Associate Partner at Accenture and a Client Service Director at Slalom, he has served clients across cybersecurity, telecommunications, professional services, and higher education — helping them create new market offerings, deliver better customer experiences, and optimize internal operations</p>
+      <p class="card__text">While most of his professional career has been spent serving large corporations, his personal life has always centered on small businesses. He grew up in western Pennsylvania as the son of a steel fabrication company owner. His extended family and close friends include owners of architecture, design, financial services, and marketing companies.</p>
+      <p class="card__text">This combination — decades of delivering technology-driven business improvements with a lifetime of seeing small business owners' struggles firsthand — motivated Quinn to create Psi Function.</p>
+      <p class="card__text">Quinn earned combined Bachelor of Science in Mechanical Engineering and Bachelor of Arts in Philosophy degrees from Brown University. He lives in Boston.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+
 {% endblock %}

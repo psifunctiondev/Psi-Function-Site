@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}About{% endblock %}
+{% block content %}
+<h1 class="text-3xl font-bold">About</h1>
+<p class="mt-4 text-slate-700">Replace this with real consulting copy.</p>
+{% endblock %}

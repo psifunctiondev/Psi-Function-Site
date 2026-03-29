@@ -7,7 +7,7 @@ body {
   font-family: var(--font-sans);
   background: var(--color-bg);
   color: var(--color-text);
-  line-height: 1.6;
+  line-height: var(--line-height-normal);
 }
 
 main {
@@ -162,6 +162,43 @@ main {
   border-radius: var(--radius-md);
 }
 
+
+/* =========================
+  Typography system
+========================= */
+
+:root {
+  --font-title: 'Michroma', sans-serif;
+  --font-body: 'IBM Plex Mono', monospace;
+  --font-numeric: 'Cutive Mono', monospace;
+}
+
+/* Defaults */
+body {
+  font-family: var(--font-body);
+  color: var(--color-text);
+}
+
+/* Titles */
+h1, h2, h3, .title {
+  font-family: var(--font-title);
+  letter-spacing: 0.05em;
+  color: var(--color-heading);
+}
+
+/* Logo (future-proof) */
+.logo {
+  font-family: var(--font-title);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Numeric contexts */
+.numeric {
+  font-family: var(--font-numeric);
+}
+
+
 /* =========================
    Typography helpers
 ========================= */
@@ -244,11 +281,14 @@ main {
 
 .card__title {
   color: var(--color-heading);
+  font-size: var(--text-xl);
   margin-bottom: var(--space-2);
 }
 
 .card__text {
   color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--line-height-snug);
 }
 
 /* =========================
@@ -313,6 +353,48 @@ main {
   display: flex;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+/* =========================
+   About — 5-Column Grid
+========================= */
+
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
+}
+
+.about-grid__span-1 {
+  grid-column: span 1;
+}
+
+.about-grid__span-2 {
+  grid-column: span 2;
+}
+
+.about-grid__span-3 {
+  grid-column: span 3;
+}
+
+.about-grid__span-4 {
+  grid-column: span 4;
+}
+
+.about-grid__span-5 {
+  grid-column: span 5;
+}
+
+.about-grid__media-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.about-grid__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 /* =========================
