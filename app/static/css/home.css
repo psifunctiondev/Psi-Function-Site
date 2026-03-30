@@ -1,0 +1,332 @@
+/* =============================================================
+   css/home.css
+   Hero section for the home page.
+
+   Layout anatomy (desktop):
+   ┌─────────────────────────────────────────────────────────┐
+   │  home__hero-eyebrow  (full width, above the split)      │
+   ├────────────────────────────┬────────────────────────────┤
+   │                            │                            │
+   │   home__hero-media         │   home__hero-content       │
+   │   (3 cols / canvas)        │   (2 cols / text)          │
+   │                     ◐      │                            │
+   │   canvas starts at  ║  ←── medallion straddles seam    │
+   │   circle equator    ◑      │   title top = circle top   │
+   │                            │                            │
+   └────────────────────────────┴────────────────────────────┘
+
+   Key invariant: --medallion-size is the single source of truth
+   for all geometry that depends on the circle's dimensions.
+
+   Depends on: tokens/ (palette, typography, space-size, layout,
+               motion, shape-shadow), theme-*.css
+   ============================================================= */
+
+
+/* ----------------------------------------------------------
+   Geometry token
+   ---------------------------------------------------------- */
+
+.home__hero {
+  --medallion-size: clamp(14rem, 22vw, 22rem);
+}
+
+
+/* ----------------------------------------------------------
+   Section shell
+   ---------------------------------------------------------- */
+
+.home__hero {
+  width: 100%;
+  min-height: calc(100vh - var(--header-height));
+  background: var(--color-bg);
+  overflow: visible;
+}
+
+
+/* ----------------------------------------------------------
+   EYEBROW — full-width banner above the two-column split
+   ---------------------------------------------------------- */
+
+.home__hero-eyebrow {
+  margin: 0;
+  width: 100%;
+  padding-block: var(--space-1);
+  padding-inline: var(--page-padding-inline-desktop);
+
+  /* Absorb the header fade-zone */
+  padding-top: calc(var(--space-1) + var(--header-height) * 0.25);
+
+  font-family: var(--font-family-display);
+  font-size: var(--text-4xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-logo);
+  line-height: var(--line-height-tight);
+  text-transform: uppercase;
+  text-align: center;
+
+  color: var(--color-primary);
+}
+
+
+/* ----------------------------------------------------------
+   INNER — 3fr/2fr grid, position:relative anchors medallion
+   ---------------------------------------------------------- */
+
+.home__hero-inner {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  position: relative;
+  min-height: calc(
+    100vh
+    - var(--header-height)
+    - var(--space-5) * 2
+    - var(--header-height) * 0.25
+  );
+}
+
+
+/* ----------------------------------------------------------
+   MEDALLION — straddles the column seam
+   top: matches content panel padding-block-start so the
+        circle top aligns with the title top.
+   left: 60% = the 3fr/(3fr+2fr) column boundary.
+   ---------------------------------------------------------- */
+
+.home__hero-medallion {
+  position: absolute;
+  left: 20%;
+  top: var(--section-space-md);
+  transform: translateX(-50%);
+  z-index: var(--z-base);
+
+  width: var(--medallion-size);
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-pill);
+
+  background: var(--color-bg);
+
+  /*
+  box-shadow:
+    0 0 0 2px var(--color-border),
+    var(--shadow-lg);
+  */
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: background var(--duration-base) var(--ease-standard);
+}
+
+.home__hero-psi {
+  width: 76%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  mix-blend-mode: screen;
+}
+
+:root[data-theme="day"] .home__hero-psi,
+:root[data-theme="twilight"] .home__hero-psi {
+  mix-blend-mode: multiply;
+}
+
+
+/* ----------------------------------------------------------
+   LEFT: canvas panel
+   padding-top = half medallion height so canvas starts at
+   the circle's equator.
+   ---------------------------------------------------------- */
+
+.home__hero-media {
+  padding-top: calc(var(--medallion-size) / 2);
+
+  position: relative;
+  overflow: hidden;
+  min-height: 100%;
+
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black 0%,
+    black 72%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    black 0%,
+    black 72%,
+    transparent 100%
+  );
+}
+
+.home__hero-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+
+/* ----------------------------------------------------------
+   RIGHT: content panel
+   padding-block-start matches medallion top so title and
+   circle top are level.
+   padding-inline-start clears the half-medallion.
+   ---------------------------------------------------------- */
+
+.home__hero-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+
+  padding-block-start: var(--section-space-md);
+  padding-block-end:   var(--section-space-md);
+  padding-inline-start: var(--space-12);
+  padding-inline-end:   var(--page-padding-inline-desktop);
+}
+
+/* H1 */
+.home__hero-title {
+  margin: 0 0 var(--space-6);
+
+  font-family: var(--font-family-display);
+  font-size: var(--text-display-md);
+  font-weight: var(--font-weight-regular);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-snug);
+
+  color: var(--color-text);
+}
+
+/* Lede */
+.home__hero-lede {
+  margin: 0 0 var(--space-8);
+
+  font-family: var(--font-family-sans);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-relaxed);
+
+  color: var(--color-text-muted);
+}
+
+/* CTA row */
+.home__hero-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+/* Button base */
+.home__hero-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: var(--control-height-md);
+  padding-inline: var(--space-6);
+  border-radius: var(--radius-pill);
+
+  font-family: var(--font-family-display);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+  text-decoration: none;
+  white-space: nowrap;
+
+  transition:
+    background  var(--duration-fast) var(--ease-standard),
+    color       var(--duration-fast) var(--ease-standard),
+    opacity     var(--duration-fast) var(--ease-standard),
+    transform   var(--duration-base) var(--ease-emphasized),
+    box-shadow  var(--duration-base) var(--ease-emphasized);
+}
+
+.home__hero-btn--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: var(--shadow-glow);
+}
+.home__hero-btn--primary:hover {
+  background: var(--color-primary-hover);
+  transform: scale(1.04);
+}
+.home__hero-btn--primary:active {
+  background: var(--color-primary-active);
+  transform: scale(0.98);
+}
+
+.home__hero-btn--ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+  border: var(--border-width-thin) solid var(--color-border);
+}
+.home__hero-btn--ghost:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+  transform: scale(1.04);
+}
+.home__hero-btn--ghost:active {
+  transform: scale(0.98);
+}
+
+
+/* ----------------------------------------------------------
+   Reduced motion
+   ---------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .home__hero-btn { transition: none; }
+}
+
+
+/* ----------------------------------------------------------
+   Responsive — below 768px
+   ---------------------------------------------------------- */
+
+@media (max-width: 767px) {
+  .home__hero-eyebrow {
+    font-size: var(--text-lg);
+    padding-inline: var(--page-padding-inline-mobile);
+    text-align: left;
+  }
+
+  .home__hero-inner {
+    grid-template-columns: 1fr;
+    grid-template-rows: 55vw auto;
+  }
+
+  .home__hero-medallion {
+    left: 50%;
+    top: 0;
+    transform: translate(-50%, -50%);
+    width: clamp(10rem, 40vw, 14rem);
+  }
+
+  .home__hero-media {
+    padding-top: 0;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black 72%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black 72%,
+      transparent 100%
+    );
+  }
+
+  .home__hero-content {
+    padding-inline: var(--page-padding-inline-mobile);
+    padding-block: var(--section-space-sm);
+  }
+
+  .home__hero-title {
+    font-size: var(--text-display-sm);
+  }
+}
