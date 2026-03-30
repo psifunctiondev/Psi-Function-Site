@@ -1,18 +1,68 @@
 <header class="site-header">
-  <div class="container site-header__inner">
-    <a href="/" class="site-logo" aria-label="Psi Function home">
-      <span class="site-logo__wordmark">Psi Function</span>
-      <span class="site-logo__tagline">Technology consulting</span>
+  <div class="site-header__inner container">
+
+    <!-- LEFT: logo circle -->
+    <a class="site-logo" href="home.html">
+      <img
+        src="{{ url_for('static', filename='images/psi_logo_3.png') }}"
+        alt="Psi Function logo"
+        class="site-logo__img"
+      >
     </a>
 
-    <nav class="site-nav" aria-label="Primary navigation">
-      <a href="/" class="site-nav__link">Home</a>
-      <a href="/about" class="site-nav__link">About</a>
-      <a href="/contact" class="site-nav__link">Contact</a>
+    <!-- CENTER: nav pill -->
+    <nav class="site-nav" aria-label="Main navigation">
+      <a class="site-nav__link" href="/home">Home</a>
+      <a class="site-nav__link" href="/services">Services</a>
+      <a class="site-nav__link" href="/about">About</a>
+
+      <!--
+        Theme toggle — a button that looks like a nav link.
+        The popup is positioned relative to this wrapper.
+      -->
+      <div class="site-nav__theme-wrapper">
+        <button
+          class="site-nav__link site-nav__theme-toggle"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="theme-popup"
+          id="theme-toggle-btn"
+        >Theme</button>
+
+        <div
+          class="theme-popup"
+          id="theme-popup"
+          role="menu"
+          aria-labelledby="theme-toggle-btn"
+          hidden
+        >
+          <button class="theme-popup__option" role="menuitem" data-theme-value="auto">
+            <span class="theme-popup__check" aria-hidden="true">✓</span>
+            <span class="theme-popup__label">Auto</span>
+      <!--
+            <span class="theme-popup__hint">Follows time of day</span>
+      -->
+          </button>
+          <button class="theme-popup__option" role="menuitem" data-theme-value="day">
+            <span class="theme-popup__check" aria-hidden="true">✓</span>
+            <span class="theme-popup__label">Day</span>
+          </button>
+          <button class="theme-popup__option" role="menuitem" data-theme-value="twilight">
+            <span class="theme-popup__check" aria-hidden="true">✓</span>
+            <span class="theme-popup__label">Twilight</span>
+          </button>
+          <button class="theme-popup__option" role="menuitem" data-theme-value="night">
+            <span class="theme-popup__check" aria-hidden="true">✓</span>
+            <span class="theme-popup__label">Night</span>
+          </button>
+        </div>
+      </div>
     </nav>
 
+    <!-- RIGHT: Contact Us pill -->
     <div class="site-header__controls">
-      {% include "includes/theme_switcher.html" %}
+      <a class="contact-pill" href="/contact">Contact Us</a>
     </div>
+
   </div>
 </header>

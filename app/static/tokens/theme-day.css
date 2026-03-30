@@ -10,26 +10,26 @@
   color-scheme: light;
 
   /* --- Backgrounds / surfaces --- */
-  --color-bg:               var(--white-100);
-  --color-bg-subtle:        var(--white-50);
-  --color-surface:          #ffffff;
+  --color-bg:               var(--white-50);
+  --color-bg-subtle:        var(--warm-100);
+  --color-surface:          var(--warm-100);
   --color-surface-elevated: #ffffff;
   --color-surface-muted:    rgba(26, 36, 51, 0.03);
   --color-overlay:          rgba(26, 36, 51, 0.18);
 
   /* --- Text --- */
   --color-text:        var(--navy-900);
-  --color-text-muted:  #425066;
-  --color-text-subtle: #5a6a80;
+  --color-text-muted:  var(--steel-500);
+  --color-text-subtle: var(--steel-300);
   --color-heading:     var(--navy-950);
-  --color-link:        #c94f2e;
+  --color-link:        var(--graphite-800);
   --color-link-hover:  var(--navy-900);
 
   /* --- Brand / accent --- */
   --color-primary:        var(--coral-500);
   --color-primary-hover:  #db5934;
   --color-primary-active: #c94f2e;
-  --color-accent:         var(--navy-900);
+  --color-accent:         var(--coral-500);
   --color-accent-hover:   #243044;
   --color-accent-active:  #121a26;
 

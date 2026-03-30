@@ -6,23 +6,9 @@
 
 /* --- Switcher control --- */
 
-.theme-switcher {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .theme-switcher__label {
   color: var(--color-text-muted);
   font-size: 0.75rem;
-}
-
-.theme-switcher__select {
-  padding: 0.35rem 0.6rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
 }
 
 .theme-switcher__select:focus {

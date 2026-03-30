@@ -1,96 +1,334 @@
-/* =========================
-   header.css
-   Site header, logo, and navigation.
+/* =============================================================
+   css/header.css
+   Site header — three-zone layout:
+     LEFT   : logo circle (fills header height with inset)
+     CENTER : nav pill — Services | About | Theme (popup)
+     RIGHT  : Contact Us pill
+   Background: --color-surface-elevated fading to --color-bg.
    Depends on: tokens.css
-========================= */
+   JS: /static/js/theme-popup.js
+   ============================================================= */
+
+/* --- Outer bar --- */
 
 .site-header {
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-surface-elevated);
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
-  backdrop-filter: blur(10px);
 }
 
-/* The inner flex row lives inside .container */
+/*
+  Fade zone — 25% of header height, hanging below the header bar.
+  Transitions from the header surface color down to transparent,
+  which lets --color-bg show through for a soft dissolve into the
+  page background. Sticks with the header automatically since it
+  is part of the same positioned element.
+*/
+.site-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  transform: translateY(100%);
+  height: calc(var(--header-height) * 0.25);
+  background: linear-gradient(
+    to bottom,
+    var(--color-surface-elevated),
+    transparent
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* --- Inner row: three explicit zones --- */
+
 .site-header__inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--header-height) 1fr auto;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-4);
-  min-height: 72px;
-  padding-top: var(--space-3);
-  padding-bottom: var(--space-3);
-  flex-wrap: wrap;
+  height: var(--header-height);
+  padding-inline: var(--space-4);
 }
 
-/* --- Logo --- */
+/* -------------------------------------------------------
+   LEFT: Logo circle
+   Diameter = header height minus top+bottom inset.
+   The <img> inside shrinks to fit via object-fit: contain.
+
+   Expected markup:
+     <a class="site-logo" href="home.html">
+       <img class="site-logo__img" src="/assets/psi-symbol.png" alt="Psi Function">
+     </a>
+   ------------------------------------------------------- */
 
 .site-logo {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+
+  /* Circle geometry */
+  aspect-ratio: 1 / 1;
+  height: calc(var(--header-height) - var(--space-4) * 2);
+  border-radius: var(--radius-pill);
+
+  background: var(--color-bg);
+  overflow: hidden;
   text-decoration: none;
-  font-family: var(--font-title);
-  font-size: 0.9rem;
-  color: var(--color-heading);
+  flex-shrink: 0;
+
+  transition: transform var(--duration-base) var(--ease-emphasized);
 }
 
-.site-logo__wordmark {
-  font-family: var(--font-title);
-  font-size: 0.95rem;
-  line-height: 1.1;
-  color: var(--color-heading);
+.site-logo:hover {
+  transform: scale(1.12);
 }
 
-.site-logo__tagline {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
+.site-logo__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* Inset so the symbol has breathing room inside the circle */
+  padding: var(--space-2);
+  box-sizing: border-box;
 }
 
-/* --- Navigation --- */
+/* -------------------------------------------------------
+   CENTER: Nav pill
+   Rounded rect, only as wide as its content, centered
+   within the middle 1fr column.
+
+   Expected markup:
+     <nav class="site-nav">
+       <a class="site-nav__link" href="/services">Services</a>
+       <a class="site-nav__link" href="/about">About</a>
+       <div class="site-nav__theme-wrapper">
+         <button class="site-nav__link site-nav__theme-toggle" ...>Theme</button>
+         <div class="theme-popup" ...>...</div>
+       </div>
+     </nav>
+   ------------------------------------------------------- */
 
 .site-nav {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  flex-wrap: wrap;
+  justify-content: center;
+  justify-self: center;
+
+  background: var(--color-bg);
+  border-radius: var(--radius-pill);
+  height: calc(var(--header-height) - var(--space-4) * 2);
+  padding-inline: var(--space-6);
+  gap: var(--space-5);
+
+  white-space: nowrap;
 }
 
 .site-nav__link {
   color: var(--color-text);
   text-decoration: none;
-  font-size: 0.95rem;
+  font-family: var(--font-family-display);
+  font-size: var(--text-sm);
+  letter-spacing: var(--letter-spacing-wide);
   line-height: 1;
+  transition: color var(--duration-fast) var(--ease-standard);
 }
 
 .site-nav__link:hover {
-  color: var(--color-link-hover);
+  color: var(--color-accent);
 }
 
-/* --- Controls (theme switcher, CTA, etc.) --- */
+.site-nav__link[aria-current="page"] {
+  color: var(--color-primary);
+}
+
+/* -------------------------------------------------------
+   Theme toggle button (inside nav pill)
+   Looks like a nav link but is a <button> for a11y.
+   ------------------------------------------------------- */
+
+.site-nav__theme-wrapper {
+  position: relative; /* popup anchors to this */
+}
+
+.site-nav__theme-toggle {
+  /* Reset button chrome so it matches .site-nav__link exactly */
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: var(--font-family-display);
+  font-size: var(--text-sm);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: 1;
+  color: var(--color-text);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.site-nav__theme-toggle:hover {
+  color: var(--color-accent);
+}
+
+/* -------------------------------------------------------
+   Theme popup
+   Anchored below the Theme button, left-aligned to it.
+   ------------------------------------------------------- */
+
+.theme-popup {
+  position: absolute;
+  top: calc(100% + var(--space-3));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-dropdown);
+
+  background: var(--color-surface-elevated);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
+  min-width: 11rem;
+
+  box-shadow: var(--shadow-md);
+
+  /* Animate in */
+  animation: popup-appear var(--duration-base) var(--ease-emphasized) both;
+}
+
+@keyframes popup-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.theme-popup[hidden] {
+  display: none;
+}
+
+.theme-popup__option {
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  grid-template-rows: auto auto;
+  column-gap: var(--space-2);
+  align-items: center;
+
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text);
+  font-family: var(--font-family-display);
+  font-size: var(--text-sm);
+  letter-spacing: var(--letter-spacing-wide);
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+
+.theme-popup__option:hover {
+  background: var(--color-surface);
+  color: var(--color-accent);
+}
+
+/* Checkmark column — hidden unless active */
+.theme-popup__check {
+  grid-column: 1;
+  grid-row: 1;
+  font-size: var(--text-sm);
+  color: var(--color-primary);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.theme-popup__option--active .theme-popup__check {
+  opacity: 1;
+}
+
+.theme-popup__label {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+/* Small hint line (used for Auto) */
+.theme-popup__hint {
+  grid-column: 2;
+  grid-row: 2;
+  font-family: var(--font-family-sans);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0;
+  margin-top: 0.1rem;
+}
+
+/* -------------------------------------------------------
+   RIGHT: Contact Us pill
+   Styled as a filled pill using brand heading color.
+   ------------------------------------------------------- */
 
 .site-header__controls {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  justify-self: end;
 }
 
-/* --- Mobile --- */
+.contact-pill {
+  display: inline-flex;
+  align-items: center;
+
+  height: calc(var(--header-height) - var(--space-4) * 2);
+  padding-inline: var(--space-5);
+  border-radius: var(--radius-pill);
+
+  background: var(--color-heading);
+  color: var(--color-bg);
+  font-family: var(--font-family-display);
+  font-size: var(--text-sm);
+  font-color: var(--color-text);
+  letter-spacing: var(--letter-spacing-wide);
+  text-decoration: none;
+  white-space: nowrap;
+
+  transition: opacity var(--duration-fast) var(--ease-standard),
+              transform var(--duration-base) var(--ease-emphasized);
+}
+
+.contact-pill:hover {
+  opacity: 0.88;
+  transform: scale(1.04);
+}
+
+/* -------------------------------------------------------
+   Mobile: two-row collapse
+   Row 1: logo | spacer | controls
+   Row 2: nav pill stretches full width
+   ------------------------------------------------------- */
 
 @media (max-width: 767px) {
   .site-header__inner {
-    align-items: flex-start;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    height: auto;
+    padding-block: var(--space-3);
   }
 
   .site-nav {
-    width: 100%;
-    order: 3;
-    padding-top: var(--space-2);
-  }
-
-  .site-header__controls {
-    margin-left: auto;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    justify-content: flex-start;
+    border-radius: var(--radius-lg);
+    height: auto;
+    padding-block: var(--space-2);
+    overflow-x: auto;
   }
 }

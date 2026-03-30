@@ -1,0 +1,96 @@
+/* =========================
+   header.css
+   Site header, logo, and navigation.
+   Depends on: tokens.css
+========================= */
+
+.site-header {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  backdrop-filter: blur(10px);
+}
+
+/* The inner flex row lives inside .container */
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 72px;
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* --- Logo --- */
+
+.site-logo {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-decoration: none;
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  color: var(--color-heading);
+}
+
+.site-logo__wordmark {
+  font-family: var(--font-title);
+  font-size: 0.95rem;
+  line-height: 1.1;
+  color: var(--color-heading);
+}
+
+.site-logo__tagline {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* --- Navigation --- */
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.site-nav__link {
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.site-nav__link:hover {
+  color: var(--color-link-hover);
+}
+
+/* --- Controls (theme switcher, CTA, etc.) --- */
+
+.site-header__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* --- Mobile --- */
+
+@media (max-width: 767px) {
+  .site-header__inner {
+    align-items: flex-start;
+  }
+
+  .site-nav {
+    width: 100%;
+    order: 3;
+    padding-top: var(--space-2);
+  }
+
+  .site-header__controls {
+    margin-left: auto;
+  }
+}

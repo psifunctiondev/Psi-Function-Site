@@ -23,13 +23,13 @@
   --color-text-subtle: #5a6778;
   --color-heading:     var(--navy-900);
   --color-link:        var(--graphite-800);
-  --color-link-hover:  var(--coral-500);
+  --color-link-hover:  var(--navy-900);
 
   /* --- Brand / accent --- */
   --color-primary:        var(--graphite-800);
   --color-primary-hover:  var(--graphite-900);
   --color-primary-active: var(--black-900);
-  --color-accent:         var(--coral-500);
+  --color-accent:         var(--white-50);
   --color-accent-hover:   #ff7a56;
   --color-accent-active:  #da5c36;
 
