@@ -1,0 +1,70 @@
+/* =============================================================
+   tokens/theme-day.css
+   Semantic color tokens for the DAY theme.
+   Clean white/off-white with navy text and coral primary.
+   Activate with: <html data-theme="day">
+   Depends on: palette.css
+   ============================================================= */
+
+:root[data-theme="day"] {
+  color-scheme: light;
+
+  /* --- Backgrounds / surfaces --- */
+  --color-bg:               var(--white-100);
+  --color-bg-subtle:        var(--white-50);
+  --color-surface:          #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-surface-muted:    rgba(26, 36, 51, 0.03);
+  --color-overlay:          rgba(26, 36, 51, 0.18);
+
+  /* --- Text --- */
+  --color-text:        var(--navy-900);
+  --color-text-muted:  #425066;
+  --color-text-subtle: #5a6a80;
+  --color-heading:     var(--navy-950);
+  --color-link:        #c94f2e;
+  --color-link-hover:  var(--navy-900);
+
+  /* --- Brand / accent --- */
+  --color-primary:        var(--coral-500);
+  --color-primary-hover:  #db5934;
+  --color-primary-active: #c94f2e;
+  --color-accent:         var(--navy-900);
+  --color-accent-hover:   #243044;
+  --color-accent-active:  #121a26;
+
+  /* --- Borders / dividers --- */
+  --color-border:        rgba(26, 36, 51, 0.14);
+  --color-border-strong: rgba(26, 36, 51, 0.24);
+  --color-divider:       rgba(26, 36, 51, 0.08);
+
+  /* --- Status states --- */
+  --color-success: #2d8c5a;
+  --color-warning: #b27919;
+  --color-danger:  #b64747;
+  --color-info:    #356fd6;
+
+  /* --- On-color text --- */
+  --color-on-primary: var(--white-100);
+  --color-on-accent:  var(--white-100);
+  --color-on-dark:    var(--white-100);
+  --color-on-light:   var(--navy-900);
+
+  /* --- Focus / selection --- */
+  --color-focus-ring:     rgba(240, 100, 58, 0.3);
+  --color-selection-bg:   rgba(240, 100, 58, 0.18);
+  --color-selection-text: var(--navy-900);
+
+  /* --- Semantic gradient assignments --- */
+  --color-hero-bg:        linear-gradient(135deg, #F4F6F8 0%, #FFFFFF 60%, #FFB48F 100%);
+  --color-cta-bg:         linear-gradient(90deg, #1A2433 0%, #2E2F36 100%);
+  --color-page-accent-bg: linear-gradient(180deg, #FFFFFF 0%, #F4F6F8 100%);
+
+  /* --- Shadows (light-mode tuned) --- */
+  --shadow-xs:   0 1px 2px rgba(26, 36, 51, 0.06);
+  --shadow-sm:   0 4px 12px rgba(26, 36, 51, 0.08);
+  --shadow-md:   0 10px 24px rgba(26, 36, 51, 0.1);
+  --shadow-lg:   0 20px 40px rgba(26, 36, 51, 0.12);
+  --shadow-glow: 0 0 0 1px rgba(240, 100, 58, 0.08),
+                 0 10px 30px rgba(240, 100, 58, 0.12);
+}

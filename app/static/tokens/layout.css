@@ -1,0 +1,41 @@
+/* =============================================================
+   tokens/layout.css
+   Container widths, page padding, section spacing,
+   breakpoint reference values, and structural chrome heights.
+   Theme-neutral.
+   ============================================================= */
+
+:root {
+  /* --- Container widths --- */
+  --container-xs:  20rem;  /*  320px */
+  --container-sm:  36rem;  /*  576px */
+  --container-md:  48rem;  /*  768px */
+  --container-lg:  64rem;  /* 1024px */
+  --container-xl:  75rem;  /* 1200px */
+  --container-2xl: 80rem;  /* 1280px */
+  --container-max: var(--container-xl);
+
+  /* --- Page inline padding (responsive) --- */
+  --page-padding-inline-mobile:  1rem;
+  --page-padding-inline-tablet:  1.5rem;
+  --page-padding-inline-desktop: 2rem;
+
+  /* --- Section vertical spacing --- */
+  --section-space-sm: var(--space-12);  /* 48px */
+  --section-space-md: var(--space-16);  /* 64px */
+  --section-space-lg: var(--space-24);  /* 96px */
+
+  /* --- Chrome heights --- */
+  --header-height:        4.5rem;
+  --footer-padding-block: var(--space-12);
+
+  /*
+    Breakpoint reference values.
+    CSS custom properties cannot be used inside @media queries,
+    but these are useful for documentation, JS, and design tooling.
+  */
+  --breakpoint-sm: 40rem;  /*  640px */
+  --breakpoint-md: 48rem;  /*  768px */
+  --breakpoint-lg: 64rem;  /* 1024px */
+  --breakpoint-xl: 80rem;  /* 1280px */
+}

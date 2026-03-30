@@ -1,0 +1,24 @@
+/* =============================================================
+   tokens/motion.css
+   Animation durations, easing curves, and z-index layers.
+   Theme-neutral.
+   ============================================================= */
+
+:root {
+  /* --- Durations --- */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+
+  /* --- Easing curves --- */
+  --ease-standard:  cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* --- Z-index layers --- */
+  --z-base:     1;
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-overlay:  400;
+  --z-modal:    500;
+  --z-toast:    600;
+}

@@ -1,0 +1,16 @@
+/* =============================================================
+   tokens/global.css
+   Element-level defaults that consume token values.
+   Import last, after all theme files.
+   ============================================================= */
+
+:root {
+  /* Bridge vars so ::selection can reference theme tokens */
+  --selection-bg:   var(--color-selection-bg);
+  --selection-text: var(--color-selection-text);
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}

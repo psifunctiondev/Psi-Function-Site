@@ -1,0 +1,26 @@
+/* =============================================================
+   site.css  —  Master entry point
+   One <link> tag in HTML; everything flows from here.
+
+   Layer order:
+     1. Google Fonts (before tokens so font-family refs resolve)
+     2. tokens.css  — full design token layer
+     3. base        — document defaults
+     4. typography  — heading rules, text helpers
+     5. header      — sticky header + nav
+     6. hero        — home page hero section
+     7. components  — surfaces, cards, buttons, cta-band
+     8. about       — about page grid
+     9. theme-switcher — switcher control + live preview
+   ============================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Michroma&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=Cutive+Mono&display=swap');
+
+@import 'tokens.css';
+
+@import 'css/base.css';
+@import 'css/header.css';
+@import 'css/hero.css';
+@import 'css/components.css';
+@import 'css/about.css';
+@import 'css/theme-switcher.css';

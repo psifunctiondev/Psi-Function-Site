@@ -1,0 +1,70 @@
+/* =============================================================
+   tokens/theme-twilight.css
+   Semantic color tokens for the TWILIGHT theme.
+   Warm peach background, dark graphite text, coral accents.
+   Activate with: <html data-theme="twilight">
+   Depends on: palette.css
+   ============================================================= */
+
+:root[data-theme="twilight"] {
+  color-scheme: light;
+
+  /* --- Backgrounds / surfaces --- */
+  --color-bg:               var(--glow-300);
+  --color-bg-subtle:        var(--warm-200);
+  --color-surface:          var(--warm-150);
+  --color-surface-elevated: var(--white-100);
+  --color-surface-muted:    rgba(46, 47, 54, 0.04);
+  --color-overlay:          rgba(26, 36, 51, 0.22);
+
+  /* --- Text --- */
+  --color-text:        var(--graphite-800);
+  --color-text-muted:  var(--steel-500);
+  --color-text-subtle: #5a6778;
+  --color-heading:     var(--navy-900);
+  --color-link:        var(--graphite-800);
+  --color-link-hover:  var(--coral-500);
+
+  /* --- Brand / accent --- */
+  --color-primary:        var(--graphite-800);
+  --color-primary-hover:  var(--graphite-900);
+  --color-primary-active: var(--black-900);
+  --color-accent:         var(--coral-500);
+  --color-accent-hover:   #ff7a56;
+  --color-accent-active:  #da5c36;
+
+  /* --- Borders / dividers --- */
+  --color-border:        rgba(46, 47, 54, 0.16);
+  --color-border-strong: rgba(46, 47, 54, 0.28);
+  --color-divider:       rgba(46, 47, 54, 0.1);
+
+  /* --- Status states --- */
+  --color-success: #2d8c5a;
+  --color-warning: #b27919;
+  --color-danger:  #b64747;
+  --color-info:    #356fd6;
+
+  /* --- On-color text --- */
+  --color-on-primary: var(--white-100);
+  --color-on-accent:  var(--white-100);
+  --color-on-dark:    var(--white-100);
+  --color-on-light:   var(--navy-900);
+
+  /* --- Focus / selection --- */
+  --color-focus-ring:     rgba(46, 47, 54, 0.22);
+  --color-selection-bg:   rgba(46, 47, 54, 0.18);
+  --color-selection-text: var(--navy-900);
+
+  /* --- Semantic gradient assignments --- */
+  --color-hero-bg:        linear-gradient(135deg, #fff1e8 0%, #ffcfb6 45%, #2E2F36 100%);
+  --color-cta-bg:         linear-gradient(90deg, #2E2F36 0%, #F0643A 100%);
+  --color-page-accent-bg: linear-gradient(180deg, #fff8f4 0%, #ffe7da 100%);
+
+  /* --- Shadows (light-mode tuned) --- */
+  --shadow-xs:   0 1px 2px rgba(26, 36, 51, 0.06);
+  --shadow-sm:   0 4px 12px rgba(26, 36, 51, 0.08);
+  --shadow-md:   0 10px 24px rgba(26, 36, 51, 0.1);
+  --shadow-lg:   0 20px 40px rgba(26, 36, 51, 0.14);
+  --shadow-glow: 0 0 0 1px rgba(46, 47, 54, 0.06),
+                 0 10px 24px rgba(240, 100, 58, 0.12);
+}

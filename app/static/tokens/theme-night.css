@@ -1,0 +1,71 @@
+/* =============================================================
+   tokens/theme-night.css
+   Semantic color tokens for the NIGHT theme.
+   This is the default theme — values live on bare :root.
+   No data-theme attribute is needed on <html> for this theme;
+   it applies automatically unless overridden.
+   Depends on: palette.css
+   ============================================================= */
+
+:root {
+  color-scheme: dark;
+
+  /* --- Backgrounds / surfaces --- */
+  --color-bg:               var(--navy-900);
+  --color-bg-subtle:        var(--graphite-900);
+  --color-surface:          var(--graphite-800);
+  --color-surface-elevated: #38404b;
+  --color-surface-muted:    rgba(244, 246, 248, 0.04);
+  --color-overlay:          rgba(11, 15, 20, 0.72);
+
+  /* --- Text --- */
+  --color-text:        var(--white-50);
+  --color-text-muted:  var(--steel-200);
+  --color-text-subtle: var(--steel-300);
+  --color-heading:     var(--coral-500);
+  --color-link:        var(--glow-300);
+  --color-link-hover:  var(--white-100);
+
+  /* --- Brand / accent --- */
+  --color-primary:        var(--coral-500);
+  --color-primary-hover:  #db5934;
+  --color-primary-active: #c94f2e;
+  --color-accent:         var(--glow-300);
+  --color-accent-hover:   #ffbf9d;
+  --color-accent-active:  #f2aa87;
+
+  /* --- Borders / dividers --- */
+  --color-border:        rgba(183, 193, 207, 0.22);
+  --color-border-strong: rgba(183, 193, 207, 0.38);
+  --color-divider:       rgba(183, 193, 207, 0.14);
+
+  /* --- Status states --- */
+  --color-success: #56b881;
+  --color-warning: #f2b75d;
+  --color-danger:  #d96868;
+  --color-info:    #73a6ff;
+
+  /* --- On-color text --- */
+  --color-on-primary: var(--white-100);
+  --color-on-accent:  var(--navy-900);
+  --color-on-dark:    var(--white-100);
+  --color-on-light:   var(--navy-900);
+
+  /* --- Focus / selection --- */
+  --color-focus-ring:      rgba(255, 180, 143, 0.45);
+  --color-selection-bg:    rgba(240, 100, 58, 0.35);
+  --color-selection-text:  var(--white-100);
+
+  /* --- Semantic gradient assignments --- */
+  --color-hero-bg:         var(--gradient-hero);
+  --color-cta-bg:          var(--gradient-accent);
+  --color-page-accent-bg:  var(--gradient-page);
+
+  /* --- Shadows (dark-mode tuned) --- */
+  --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-sm:   0 4px 12px rgba(0, 0, 0, 0.16);
+  --shadow-md:   0 10px 24px rgba(0, 0, 0, 0.18);
+  --shadow-lg:   0 20px 40px rgba(0, 0, 0, 0.22);
+  --shadow-glow: 0 0 0 1px rgba(255, 180, 143, 0.08),
+                 0 10px 30px rgba(240, 100, 58, 0.18);
+}

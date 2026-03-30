@@ -1,0 +1,57 @@
+/* =============================================================
+   tokens/typography.css
+   Font families, weights, sizes, line-heights, letter-spacing.
+   Theme-neutral — never changes across night/twilight/day.
+   ============================================================= */
+
+:root {
+  /* --- Font families --- */
+  --font-family-display: "Michroma", "Segoe UI", Arial, sans-serif;
+  --font-family-sans:    "IBM Plex Sans", "Inter", "Segoe UI", Arial, sans-serif;
+  --font-family-mono:    "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+
+  /*
+    Backward-compat aliases for site.css components written
+    against the earlier token names. Remove once components
+    are updated to use --font-family-* names.
+  */
+  --font-title:   var(--font-family-display);
+  --font-body:    var(--font-family-mono);   /* site uses mono as body */
+  --font-sans:    var(--font-family-sans);
+  --font-numeric: var(--font-family-mono);
+
+  /* --- Weights --- */
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+
+  /* --- Line heights --- */
+  --line-height-tight:   1.1;
+  --line-height-snug:    1.25;
+  --line-height-normal:  1.5;
+  --line-height-relaxed: 1.7;
+
+  /* --- Letter spacing --- */
+  --letter-spacing-tight:   -0.02em;
+  --letter-spacing-normal:  0;
+  --letter-spacing-wide:    0.04em;
+  --letter-spacing-display: 0.06em;
+
+  /* --- Type scale --- */
+  --text-xs:   0.75rem;    /*  12px */
+  --text-sm:   0.875rem;   /*  14px */
+  --text-base: 1rem;       /*  16px */
+  --text-md:   1.125rem;   /*  18px */
+  --text-lg:   1.25rem;    /*  20px */
+  --text-xl:   1.5rem;     /*  24px */
+  --text-2xl:  1.875rem;   /*  30px */
+  --text-3xl:  2.25rem;    /*  36px */
+  --text-4xl:  3rem;       /*  48px */
+  --text-5xl:  3.75rem;    /*  60px */
+
+  /* --- Fluid display sizes --- */
+  --text-display-sm: clamp(2rem,   4vw, 3rem);
+  --text-display-md: clamp(2.5rem, 5vw, 4rem);
+  --text-display-lg: clamp(3rem,   7vw, 5.25rem);
+}

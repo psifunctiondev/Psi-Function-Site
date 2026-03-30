@@ -1,0 +1,31 @@
+/* =========================
+   about.css
+   About page — asymmetric 5-column grid layout.
+   Depends on: tokens.css
+========================= */
+
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
+}
+
+/* Span helpers */
+.about-grid__span-1 { grid-column: span 1; }
+.about-grid__span-2 { grid-column: span 2; }
+.about-grid__span-3 { grid-column: span 3; }
+.about-grid__span-4 { grid-column: span 4; }
+.about-grid__span-5 { grid-column: span 5; }
+
+/* Media card */
+.about-grid__media-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.about-grid__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}

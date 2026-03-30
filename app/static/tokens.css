@@ -1,0 +1,30 @@
+/* =============================================================
+   tokens.css  —  Token layer entry point
+   Single import target for all design tokens.
+   Your site.css (or any HTML <link>) imports only this file.
+
+   Import order is significant:
+     1. palette      — raw values; everything references these
+     2. theme-night  — default :root semantic colors (dark)
+     3. theme-twilight / theme-day — light theme overrides
+     4. typography   — font families, scale, rhythm
+     5. space-size   — spacing scale + control sizes
+     6. shape-shadow — radii, borders, base shadows
+     7. layout       — containers, breakpoints, chrome heights
+     8. motion       — durations, easings, z-index stack
+     9. global       — element defaults (::selection, etc.)
+   ============================================================= */
+
+@import 'tokens/palette.css';
+
+@import 'tokens/theme-night.css';
+@import 'tokens/theme-twilight.css';
+@import 'tokens/theme-day.css';
+
+@import 'tokens/typography.css';
+@import 'tokens/space-size.css';
+@import 'tokens/shape-shadow.css';
+@import 'tokens/layout.css';
+@import 'tokens/motion.css';
+
+@import 'tokens/global.css';
