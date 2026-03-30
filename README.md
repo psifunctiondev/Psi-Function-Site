@@ -1,20 +1,17 @@
 # Psi-Function-Site
 
-## Local development setup
-Note that you now have a local machine setup script in:
-	./deploy/scripts/bootstrap_local.sh
+Local Development Setup
 
-### Python
-```bash
-python3 -m venv .venv
+This project uses Python (Flask) and Node (Vite). Both environments must be initialized on a new machine.
+
+Bootstrap proceedure:
+export NVM_DIR="$HOME/.nvm"
+source "$NVM_DIR/nvm.sh"
+nvm use 20
+bash deploy/scripts/bootstrap_local.sh
+
+Then:
+
 source .venv/bin/activate
-pip install -e .[dev]
-
-### Node + frontend assets
-nvm install
-nvm use
-npm install
 npm run build
-
-### Run locally
 flask run
