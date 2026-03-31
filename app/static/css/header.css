@@ -97,6 +97,11 @@
   box-sizing: border-box;
 }
 
+.site-logo--hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* -------------------------------------------------------
    CENTER: Nav pill
    Rounded rect, only as wide as its content, centered

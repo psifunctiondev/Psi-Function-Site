@@ -2,7 +2,8 @@
   <div class="site-header__inner container">
 
     <!-- LEFT: logo circle -->
-    <a class="site-logo" href="home.html">
+
+    <a class="site-logo {% if request.endpoint == 'public.home' %}site-logo--hidden{% endif %}" href="/home">
       <img
         src="{{ url_for('static', filename='images/psi_logo_3.png') }}"
         alt="Psi Function logo"

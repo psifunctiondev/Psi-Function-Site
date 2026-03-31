@@ -52,6 +52,7 @@
   --text-5xl:  3.75rem;    /*  60px */
 
   /* --- Fluid display sizes --- */
+  --text-display-xs: clamp(1.5rem,   3vw, 2rem);
   --text-display-sm: clamp(2rem,   4vw, 3rem);
   --text-display-md: clamp(2.5rem, 5vw, 4rem);
   --text-display-lg: clamp(3rem,   7vw, 5.25rem);
