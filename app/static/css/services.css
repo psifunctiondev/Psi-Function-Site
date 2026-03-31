@@ -1,0 +1,401 @@
+/* =============================================================
+   css/services.css
+   Services page — eyebrow + 5-column grid with interactive
+   service selector (left, 3 cols) and detail panel (right, 2 cols).
+
+   Component dependencies (from components.css — do not redefine):
+     .card           — surface, border, border-radius, padding, hover
+     .card__title    — heading font, color, letter-spacing, margin
+     .card__text     — body font, color, line-height
+
+   Detail panel sizing strategy:
+     All service panels are rendered simultaneously inside
+     .services-detail__stack. They stack via position: absolute
+     so only the tallest panel drives the container height (the
+     stack itself is position: relative and sizes to its tallest
+     child via a transparent copy-in-flow trick — each panel is
+     absolutely positioned but the stack's height equals the
+     tallest because all panels contribute to its scroll height).
+     Visibility is toggled with opacity + pointer-events, never
+     display:none, so every panel always participates in layout.
+
+   Layout anatomy (desktop):
+   ┌─────────────────────────────────────────────────────────┐
+   │  services__eyebrow  (full width, above the grid)        │
+   ├──────────────────────────────┬──────────────────────────┤
+   │  services-holder  (3fr)      │  services-detail  (2fr)  │
+   │  .card                       │  .card (padding:0)       │
+   │  ┌──────────────────────┐    │  ┌────────────────────┐  │
+   │  │  Fractional CTO      │    │  │ __stack            │  │
+   │  ├──────┬───────┬───────┤    │  │  panel (abs)  ×7   │  │
+   │  │ Disc │ Blue  │Con│Re  │   │  │  (tallest sets h)  │  │
+   │  ├──────┴───────┴───────┤    │  └────────────────────┘  │
+   │  │  Project Management  │    │                          │
+   │  └──────────────────────┘    │                          │
+   └──────────────────────────────┴──────────────────────────┘
+
+   Depends on: components.css, tokens/ (palette, typography,
+               space-size, layout, motion, shape-shadow), theme-*.css
+   ============================================================= */
+
+
+/* ----------------------------------------------------------
+   Page shell — mirrors .about-page exactly.
+   ---------------------------------------------------------- */
+
+.services-page {
+  width: 100%;
+  overflow: hidden;
+}
+
+
+/* ----------------------------------------------------------
+   EYEBROW — mirrors .about__eyebrow exactly.
+   ---------------------------------------------------------- */
+
+.services__eyebrow {
+  margin: 0;
+  width: 100%;
+  padding-block: var(--space-1);
+  padding-inline: var(--page-padding-inline-desktop);
+
+  /* Absorb the header fade-zone */
+  padding-top: calc(var(--space-1) + var(--header-height) * 0.25);
+
+  font-family: var(--font-family-display);
+  font-size: var(--text-4xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-logo);
+  line-height: var(--line-height-tight);
+  text-align: center;
+
+  color: var(--color-primary);
+}
+
+
+/* ----------------------------------------------------------
+   Container spacing below eyebrow — mirrors .about-page .container
+   ---------------------------------------------------------- */
+
+.services-page .container {
+  padding-block-start: var(--section-space-sm);
+  padding-block-end:   var(--section-space-md);
+}
+
+
+/* ----------------------------------------------------------
+   Outer 5-column grid — mirrors .about-grid.
+   align-items: stretch keeps both columns the same height.
+   ---------------------------------------------------------- */
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+.services-grid__span-3 { grid-column: span 3; }
+.services-grid__span-2 { grid-column: span 2; }
+
+
+/* ----------------------------------------------------------
+   Holder card — uses .card from components.css for its surface.
+   Only layout overrides: flex column so the middle row grows
+   to push bottom edges flush with the detail panel.
+   ---------------------------------------------------------- */
+
+.services-holder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+
+/* ----------------------------------------------------------
+   Service card (inner cards inside the holder)
+   Surface styles come from .card (applied in HTML).
+   Only button-reset and interaction overrides live here.
+   ---------------------------------------------------------- */
+
+.svc-card {
+  /* Button reset */
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  cursor: pointer;
+
+  /* Layout overrides on top of .card */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  width: 100%;
+
+  /* Richer motion than .card default */
+  transition:
+    background   var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard),
+    box-shadow   var(--duration-base) var(--ease-standard),
+    transform    var(--duration-base) var(--ease-emphasized);
+}
+
+.svc-card:hover {
+  transform: translateY(-1px);
+}
+
+.svc-card:active {
+  transform: translateY(0);
+}
+
+.svc-card.is-active {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow);
+  transform: none;
+}
+
+.svc-card:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+
+/* ----------------------------------------------------------
+   Card title inside svc-cards — inherits .card__title base.
+   Only color and transition are overridden here.
+   ---------------------------------------------------------- */
+
+.svc-card .card__title {
+  color: var(--color-text);
+  margin-bottom: 0;
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-xwide);
+  transition: color var(--duration-base) var(--ease-standard);
+}
+
+.svc-card:hover .card__title {
+  color: var(--color-text);
+}
+
+.svc-card.is-active .card__title {
+  color: var(--color-primary);
+}
+
+
+/* ----------------------------------------------------------
+   Full-width spanning cards (Fractional CTO, Project Mgmt)
+   ---------------------------------------------------------- */
+
+.svc-card--span {
+  min-height: 5rem;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.svc-card--span .card__title {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-xwide);
+}
+
+
+/* ----------------------------------------------------------
+   Four-up step row — flex: 1 consumes remaining vertical
+   space so the holder bottom-aligns with the detail panel.
+   ---------------------------------------------------------- */
+
+.svc-card-row {
+  display: flex;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.svc-card--step {
+  flex: 1;
+  min-height: 7rem;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+
+/* ----------------------------------------------------------
+   Detail panel outer card
+   padding: 0 so the stack fills edge-to-edge (image panel
+   clips to the card's border-radius via overflow: hidden).
+   ---------------------------------------------------------- */
+
+.services-detail {
+  overflow: hidden;
+  padding: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Stack container — the sizing engine.
+
+   How it works:
+     All panels are position: absolute with inset: 0, so they
+     overlap each other and don't push siblings. The stack
+     itself is position: relative. Because absolutely-positioned
+     children are removed from normal flow, the stack would
+     collapse to 0 height — EXCEPT that we also keep every panel
+     in the stacking context with visibility rather than
+     display: none, so the browser can still measure them.
+
+     The trick to get the stack to size to the tallest panel:
+     we give the stack `display: grid` and each panel
+     `grid-area: 1 / 1`, which puts all children in the same
+     grid cell. Grid sizes the cell to the tallest child
+     automatically, exactly like we want.
+   ---------------------------------------------------------- */
+
+.services-detail__stack {
+  display: grid;         /* single-cell grid */
+  grid-template-areas: 'panel';
+  width: 100%;
+  height: 100%;          /* fill the .services-detail card */
+}
+
+.services-detail__panel {
+  grid-area: panel;      /* all panels share the same cell → tallest wins */
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-8);
+
+  /* Invisible by default — opacity:0 + pointer-events:none keeps
+     the panel in layout (sizing) but out of interaction */
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity   var(--duration-slow) var(--ease-standard);
+}
+
+/* Visible state */
+.services-detail__panel.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Entrance animation on the newly-visible panel */
+.services-detail__panel.is-entering {
+  animation: panel-enter var(--duration-slow) var(--ease-emphasized) forwards;
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Placeholder panel — image fills edge-to-edge so it needs
+   its own padding reset and object-fit treatment.
+   ---------------------------------------------------------- */
+
+.services-detail__panel--placeholder {
+  padding: 0;
+}
+
+.services-detail__placeholder-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  opacity: 0.72;
+}
+
+
+/* ----------------------------------------------------------
+   Detail panel typography — .card__title and .card__text
+   base styles come from components.css; only overrides here.
+   ---------------------------------------------------------- */
+
+.services-detail__panel .card__title {
+  font-size: var(--text-display-xs);
+  font-weight: var(--font-weight-regular);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-snug);
+  margin-bottom: var(--space-6);
+  color: var(--color-heading);
+}
+
+.services-detail__panel .card__text {
+  line-height: var(--line-height-relaxed);
+}
+
+.services-detail__panel .card__text p {
+  margin: 0 0 var(--space-4);
+}
+
+.services-detail__panel .card__text p:last-child {
+  margin-bottom: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Reduced motion
+   ---------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .svc-card                    { transition: none; }
+  .svc-card .card__title       { transition: none; }
+  .services-detail__panel      { transition: none; animation: none; }
+}
+
+
+/* ----------------------------------------------------------
+   Responsive — tablet (≤ 900px)
+   ---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .services__eyebrow {
+    font-size: var(--text-lg);
+    padding-inline: var(--page-padding-inline-mobile);
+    text-align: left;
+  }
+
+  .services-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .services-grid__span-3,
+  .services-grid__span-2 {
+    grid-column: span 1;
+  }
+
+  /* On mobile the detail panel is below the holder, so a
+     min-height prevents it from collapsing when the placeholder
+     image (which has no intrinsic height in this layout) shows. */
+  .services-detail__stack {
+    min-height: 20rem;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Responsive — mobile (≤ 600px): step cards go 2×2
+   ---------------------------------------------------------- */
+
+@media (max-width: 600px) {
+  .svc-card-row {
+    flex-wrap: wrap;
+  }
+
+  .svc-card--step {
+    flex: 1 1 calc(50% - var(--space-3) / 2);
+    min-height: 5rem;
+  }
+}

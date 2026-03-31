@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}Services — Psi Function{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/services.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="services-page">
+
+  <!-- EYEBROW: full-width, above the two-column grid -->
+  <p class="services__eyebrow">Psi Function Services</p>
+
+  <div class="container">
+    <div class="services-grid">
+
+      <!-- LEFT: 3-col holder card containing the 6 service cards -->
+      <div class="card services-grid__span-3 services-holder">
+
+        <!-- Card 1: Fractional CTO — full width, top -->
+        <button
+          class="card svc-card svc-card--span"
+          data-service="fractional-cto"
+          aria-pressed="false"
+        >
+          <span class="card__title">Fractional CTO</span>
+        </button>
+
+        <!-- Cards 2–5: four-up row -->
+        <div class="svc-card-row">
+
+          <button
+            class="card svc-card svc-card--step"
+            data-service="discovery"
+            aria-pressed="false"
+          >
+            <span class="card__title">Discover</span>
+          </button>
+
+          <button
+            class="card svc-card svc-card--step"
+            data-service="blueprint"
+            aria-pressed="false"
+          >
+            <span class="card__title">Blueprint</span>
+          </button>
+
+          <button
+            class="card svc-card svc-card--step"
+            data-service="construct"
+            aria-pressed="false"
+          >
+            <span class="card__title">Construct</span>
+          </button>
+
+          <button
+            class="card svc-card svc-card--step"
+            data-service="realize"
+            aria-pressed="false"
+          >
+            <span class="card__title">Realize</span>
+          </button>
+
+        </div><!-- /svc-card-row -->
+
+        <!-- Card 6: Project Management — full width, bottom -->
+        <button
+          class="card svc-card svc-card--span"
+          data-service="project-management"
+          aria-pressed="false"
+        >
+          <span class="card__title">Project Management</span>
+        </button>
+
+      </div><!-- /services-holder -->
+
+
+      <!-- RIGHT: 2-col detail panel.
+           All panels (placeholder + one per service) are rendered
+           simultaneously inside .services-detail__stack.
+           The stack sizes itself to the tallest panel; panels are
+           layered via position: absolute so they never push the
+           grid taller. Visibility toggled via .is-visible (opacity +
+           pointer-events) so all panels always occupy layout space. -->
+      <div class="card services-grid__span-2 services-detail" aria-live="polite">
+
+        <div class="services-detail__stack">
+
+          <!-- Default state: placeholder image -->
+          <div
+            class="services-detail__panel services-detail__panel--placeholder is-visible"
+            id="panel-placeholder"
+            aria-hidden="false"
+          >
+            <img
+              class="services-detail__placeholder-img"
+              src="{{ url_for('static', filename='images/canvas_recede.png') }}"
+              alt=""
+              aria-hidden="true"
+            >
+          </div>
+
+          <!-- Fractional CTO -->
+          <div
+            class="services-detail__panel"
+            id="panel-fractional-cto"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Fractional CTO</h2>
+            <div class="card__text">
+              <p>
+                A part-time chief technology officer brings flexible, strategic support to your business. Working alongside you, we help identify where technology can open new markets, strengthen your offerings, or make your operations significantly more efficient. We also keep pace with how technology is evolving in your industry — so you can act on opportunities before your competitors do. And for business owners who find technology more confusing than clarifying, we translate the possibilities into plain terms and help you decide what's actually worth pursuing.
+              </p>
+            </div>
+          </div>
+
+          <!-- Discovery -->
+          <div
+            class="services-detail__panel"
+            id="panel-discovery"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Discover</h2>
+            <div class="card__text">
+              <p>
+                Before we can improve your business, we need to understand it. In a focused set of conversations and working sessions we get to know your goals, your constraints, and the specific frustrations that are costing you time or money today. We listen more than we talk. After this step we have a shared, clear picture of where you are, where you want to go, and why getting there matters — and that picture becomes the foundation for everything that follows.
+              </p>
+            </div>
+          </div>
+
+          <!-- Blueprint -->
+          <div
+            class="services-detail__panel"
+            id="panel-blueprint"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Blueprint</h2>
+            <div class="card__text">
+              <p>
+                With a clear picture of where you want to go, we then figure out how to get there. We design an approach — the right combination of software, services, and tools — and map out the time, cost, and methodology required to bring it to life. You and your team stay involved throughout; this is your plan, not ours. And because no first draft is ever the final answer we deliberately refine and adjust until the path forward feels right to you.
+              </p>
+            </div>
+          </div>
+
+          <!-- Construct -->
+          <div
+            class="services-detail__panel"
+            id="panel-construct"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Construct</h2>
+            <div class="card__text">
+              <p>
+                The idea becomes real. Working from the plan we developed together, we build, configure, and assemble the technology solution — whether that means custom development, off-the-shelf tools, or a combination of both. We keep you informed and involved as the work progresses, not just at the finish line. And we don't consider the work done until your team understands what's been built, how to use it, and how to make it their own.
+              </p>
+            </div>
+          </div>
+
+          <!-- Realize -->
+          <div
+            class="services-detail__panel"
+            id="panel-realize"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Realize</h2>
+            <div class="card__text">
+              <p>
+                Shiny new technology doesn't improve your business the day it's built — it improves your business when your team uses it confidently and the results show up in the numbers. We work with you to establish clear before-and-after measures so you can see what's actually changed. We track results over time, identify what's working and what could be better, and help your team grow into the solution at whatever pace suits you. Some clients want us closely involved long-term; others want to take the wheel quickly. Either way, we're here.
+              </p>
+            </div>
+          </div>
+
+          <!-- Project Management -->
+          <div
+            class="services-detail__panel"
+            id="panel-project-management"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Project Management</h2>
+            <div class="card__text">
+              <p>
+                Any project can feel out of control when you're uninformed — timelines slip, costs creep, and the people doing the work don't always communicate clearly with the people paying for it. That's where disciplined project management makes the difference. We keep you involved in plain terms: where things stand, what's coming next, what's at risk, and what decisions need your attention. We can manage our own engagements or step in as an independent eye on a third party's work — giving you the oversight and confidence that your investment is heading somewhere worthwhile.
+              </p>
+            </div>
+          </div>
+
+        </div><!-- /services-detail__stack -->
+
+      </div><!-- /services-detail -->
+
+    </div><!-- /services-grid -->
+  </div><!-- /container -->
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/services.js') }}" defer></script>
+{% endblock %}

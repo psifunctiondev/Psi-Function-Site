@@ -37,6 +37,7 @@
   --letter-spacing-normal:  0;
   --letter-spacing-wide:    0.04em;
   --letter-spacing-display: 0.06em;
+  --letter-spacing-xwide:   0.10em;
   --letter-spacing-logo:    0.40em;
 
   /* --- Type scale --- */

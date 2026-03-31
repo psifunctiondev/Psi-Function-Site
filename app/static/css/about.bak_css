@@ -72,11 +72,3 @@
   height: 100%;
   object-fit: contain;
 }
-
-/* Headshot — cover fills the card fully, top anchor keeps
-   the face in frame. The image's dark background blends
-   naturally into the card surface. */
-.about-grid__img--headshot {
-  object-fit: cover;
-  object-position: center top;
-}

@@ -13,3 +13,11 @@ def home():
 @public_bp.get('/about')
 def about():
     return render_template('public/about.html')
+
+@public_bp.get('/services')
+def services():
+    return render_template('public/services.html')
+
+@public_bp.get('/contact')
+def contact():
+    return render_template('public/contact.html')

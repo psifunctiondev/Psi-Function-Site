@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}Services — Psi Function{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/services.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="services-page">
+
+  <!-- EYEBROW: full-width, above the two-column grid -->
+  <p class="services__eyebrow">Psi Function Services</p>
+
+  <div class="container">
+    <div class="services-grid">
+
+      <!-- LEFT: 3-col holder card containing the 6 service cards -->
+      <div class="card services-grid__span-3 services-holder">
+
+        <!-- Card 1: Fractional CTO — full width, top -->
+        <button
+          class="card svc-card svc-card--span"
+          data-service="fractional-cto"
+          aria-pressed="false"
+        >
+          <span class="card__title">Fractional CTO</span>
+        </button>
+
+        <!-- Cards 2–5: four-up row -->
+        <div class="svc-card-row">
+
+          <button
+            class="card svc-card svc-card--step"
+            data-service="discovery"
+            aria-pressed="false"
+          >
+            <span class="card__title">Discover</span>
+          </button>
+
+          <button
+            class="card svc-card svc-card--step"
+            data-service="blueprint"
+            aria-pressed="false"
+          >
+            <span class="card__title">Blueprint</span>
+          </button>
+
+          <button
+            class="card svc-card svc-card--step"
+            data-service="construct"
+            aria-pressed="false"
+          >
+            <span class="card__title">Construct</span>
+          </button>
+
+          <button
+            class="card svc-card svc-card--step"
+            data-service="realize"
+            aria-pressed="false"
+          >
+            <span class="card__title">Realize</span>
+          </button>
+
+        </div><!-- /svc-card-row -->
+
+        <!-- Card 6: Project Management — full width, bottom -->
+        <button
+          class="card svc-card svc-card--span"
+          data-service="project-management"
+          aria-pressed="false"
+        >
+          <span class="card__title">Project Management</span>
+        </button>
+
+      </div><!-- /services-holder -->
+
+
+      <!-- RIGHT: 2-col detail panel.
+           All panels (placeholder + one per service) are rendered
+           simultaneously inside .services-detail__stack.
+           The stack sizes itself to the tallest panel; panels are
+           layered via position: absolute so they never push the
+           grid taller. Visibility toggled via .is-visible (opacity +
+           pointer-events) so all panels always occupy layout space. -->
+      <div class="card services-grid__span-2 services-detail" aria-live="polite">
+
+        <div class="services-detail__stack">
+
+          <!-- Default state: placeholder image -->
+          <div
+            class="services-detail__panel services-detail__panel--placeholder is-visible"
+            id="panel-placeholder"
+            aria-hidden="false"
+          >
+            <img
+              class="services-detail__placeholder-img"
+              src="{{ url_for('static', filename='images/canvas_recede.png') }}"
+              alt=""
+              aria-hidden="true"
+            >
+          </div>
+
+          <!-- Fractional CTO -->
+          <div
+            class="services-detail__panel"
+            id="panel-fractional-cto"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Fractional CTO</h2>
+            <div class="card__text">
+              <p>
+                A part-time chief technology officer can help you find ways for technology to support your company's ambitions. By understanding your business's objectives to develop new offerings, to enter new markets, or to gain market share, these services can accelerate your plans. This function can also help your company to refine its strategy by showing how your industry is using modern technology. Finally, a trusted technology advisor can both help you see possibilities that you otherwise would not know existed and help understand your fears about what technology might mean to your business.
+              </p>
+            </div>
+          </div>
+
+          <!-- Discovery -->
+          <div
+            class="services-detail__panel"
+            id="panel-discovery"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Discover</h2>
+            <div class="card__text">
+              <p>
+                The journey to improving your business begins by understanding where you are. In short order we take measure of your envisioned gains and problematic pains. Perhaps you see a business opportunity ripe for your company to seize. Or maybe you are frustrated by the inefficiency of a part of your business today. We want to understand, in both qualitative and quantitative terms, what you see and why change would be for the best.
+              </p>
+            </div>
+          </div>
+
+          <!-- Blueprint -->
+          <div
+            class="services-detail__panel"
+            id="panel-blueprint"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Blueprint</h2>
+            <div class="card__text">
+              <p>
+                Based on an understanding of how your business can improve, we create an outline for how technology can be the catalyst. By drafting an approach to what software, hardware, services or products could combine together to perfectly address your needs, we create a plan. Plans include a forecast for time, cost, and methodology - including how you and your team will stay involved throughout. This planning effort is intentionally iterative, as we refine and adjust these variables until we find a path forward that meets your needs.
+              </p>
+            </div>
+          </div>
+
+          <!-- Construct -->
+          <div
+            class="services-detail__panel"
+            id="panel-construct"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Construct</h2>
+            <div class="card__text">
+              <p>
+                Starting with the end in mind we assemble and create the technology components that we jointly believe will improve your business. We can implement custom components or package configurations to provide the solution, and provide training or handover materials to help your company make the most of the new tools.
+              </p>
+            </div>
+          </div>
+
+          <!-- Realize -->
+          <div
+            class="services-detail__panel"
+            id="panel-realize"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Realize</h2>
+            <div class="card__text">
+              <p>
+                Fancy new technology doesn't help your business the day it is built. We will work with you to define metrics to compare how your business performed before you had the new tool set and after. Results over time can validate successes and identify improvements. We will also work to enable your team to operate and refine the solution to the extent you see fit. How your business's solution functions over time will be as unique as your business itself. Whatever the best scenario for you we will support it.
+              </p>
+            </div>
+          </div>
+
+          <!-- Project Management -->
+          <div
+            class="services-detail__panel"
+            id="panel-project-management"
+            aria-hidden="true"
+          >
+            <h2 class="card__title">Project Management</h2>
+            <div class="card__text">
+              <p>
+                Any effort to enhance your business can be complicated, and therefore stressful. You want to understand project schedule, cost, issues, and risks in clear terms so that you can control the journey and the outcome. Whether tracking one of our projects or serving as an independent overseer for a third party's efforts, we provide the project management visibility to keep your investment on track to deliver benefits.
+              </p>
+            </div>
+          </div>
+
+        </div><!-- /services-detail__stack -->
+
+      </div><!-- /services-detail -->
+
+    </div><!-- /services-grid -->
+  </div><!-- /container -->
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  let currentPanel = document.getElementById('panel-placeholder');
+
+  function activate(btn) {
+    // Deactivate all buttons
+    document.querySelectorAll('.svc-card').forEach(b => {
+      b.classList.remove('is-active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+
+    // Activate clicked button
+    btn.classList.add('is-active');
+    btn.setAttribute('aria-pressed', 'true');
+
+    // Find the target panel
+    const panelId   = 'panel-' + btn.dataset.service;
+    const nextPanel = document.getElementById(panelId);
+    if (!nextPanel || nextPanel === currentPanel) return;
+
+    // Hide current, show next
+    currentPanel.classList.remove('is-visible');
+    currentPanel.setAttribute('aria-hidden', 'true');
+
+    nextPanel.classList.add('is-visible');
+    nextPanel.setAttribute('aria-hidden', 'false');
+
+    // Trigger entrance animation
+    nextPanel.classList.remove('is-entering');
+    void nextPanel.offsetWidth; // reflow
+    nextPanel.classList.add('is-entering');
+
+    currentPanel = nextPanel;
+  }
+
+  document.querySelectorAll('.svc-card').forEach(btn => {
+    btn.addEventListener('click', () => activate(btn));
+  });
+})();
+</script>
+{% endblock %}

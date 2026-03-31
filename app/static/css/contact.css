@@ -1,0 +1,140 @@
+/* ----------------------------------------------------------
+   Page shell — needed so eyebrow can be full-width while
+   the grid sits inside a container.
+   ---------------------------------------------------------- */
+
+.contact-page {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ----------------------------------------------------------
+   EYEBROW — matches home page eyebrow style exactly.
+   Mixed case (not uppercase) per design spec.
+   ---------------------------------------------------------- */
+
+.contact__eyebrow {
+  margin: 0;
+  width: 100%;
+  padding-block: var(--space-1);
+  padding-inline: var(--page-padding-inline-desktop);
+
+  /* Absorb the header fade-zone */
+  padding-top: calc(var(--space-1) + var(--header-height) * 0.25);
+
+  font-family: var(--font-family-display);
+  font-size: var(--text-4xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-logo);
+  line-height: var(--line-height-tight);
+  text-align: center;
+
+  color: var(--color-primary);
+}
+
+/* ----------------------------------------------------------
+   Container spacing below eyebrow
+   ---------------------------------------------------------- */
+
+.contact-page .container {
+  padding-block-start: var(--section-space-sm);
+  padding-block-end:   var(--section-space-md);
+}
+
+/* =========================
+   contact.css
+   contact page — asymmetric 5-column grid layout.
+   Depends on: tokens.css
+========================= */
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 12rem;   /* single fixed-height row */
+  gap: var(--space-4);
+}
+
+/* Span helpers */
+.contact-grid__span-1 { grid-column: span 1; }
+.contact-grid__span-2 { grid-column: span 2; }
+.contact-grid__span-3 { grid-column: span 3; }
+.contact-grid__span-4 { grid-column: span 4; }
+.contact-grid__span-5 { grid-column: span 5; }
+
+/* Media card — image fills full width, crops vertically centred */
+.contact-grid__media-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.contact-grid__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+/* Contact action cards (email, linkedin) */
+.contact-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  text-align: center;
+  transition:
+    background   var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard),
+    box-shadow   var(--duration-base) var(--ease-standard),
+    transform    var(--duration-base) var(--ease-emphasized);
+}
+
+.contact-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.contact-card:active {
+  transform: translateY(0);
+}
+
+.contact-card:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.contact-card__icon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.contact-card .card__title {
+  margin-bottom: 0;
+}
+
+.contact-card__hint {
+  font-size: var(--text-xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-subtle);
+}
+
+/* Responsive — stack on mobile */
+@media (max-width: 767px) {
+  .contact-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .contact-grid__span-3 {
+    grid-column: span 2;
+  }
+
+  .contact-grid__span-1 {
+    grid-column: span 1;
+  }
+}
