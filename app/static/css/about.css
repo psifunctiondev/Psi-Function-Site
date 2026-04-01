@@ -1,3 +1,21 @@
+/* =============================================================
+   css/about.css
+   About page — eyebrow + asymmetric 5-column grid layout.
+
+   Layout anatomy (desktop):
+   ┌─────────────────────────────────────────────────────────┐
+   │  about__eyebrow  (full width, above the grid)           │
+   ├───────────────────────────────┬─────────────────────────┤
+   │  Inspiration text  (3fr)      │  Schrödinger img  (2fr) │
+   ├─────────────────┬─────────────────────────────────────  ┤
+   │  Headshot (1fr) │  Leadership text  (4fr)               │
+   └─────────────────┴─────────────────────────────────────  ┘
+
+   Depends on: components.css, tokens/ (palette, typography,
+               space-size, layout, motion, shape-shadow), theme-*.css
+   ============================================================= */
+
+
 /* ----------------------------------------------------------
    Page shell — needed so eyebrow can be full-width while
    the grid sits inside a container.
@@ -8,8 +26,9 @@
   overflow: hidden;
 }
 
+
 /* ----------------------------------------------------------
-   EYEBROW — matches home page eyebrow style exactly.
+   EYEBROW — matches home/services eyebrow style exactly.
    Mixed case (not uppercase) per design spec.
    ---------------------------------------------------------- */
 
@@ -32,6 +51,7 @@
   color: var(--color-primary);
 }
 
+
 /* ----------------------------------------------------------
    Container spacing below eyebrow
    ---------------------------------------------------------- */
@@ -41,11 +61,10 @@
   padding-block-end:   var(--section-space-md);
 }
 
-/* =========================
-   about.css
-   About page — asymmetric 5-column grid layout.
-   Depends on: tokens.css
-========================= */
+
+/* ----------------------------------------------------------
+   Outer 5-column grid.
+   ---------------------------------------------------------- */
 
 .about-grid {
   display: grid;
@@ -60,7 +79,11 @@
 .about-grid__span-4 { grid-column: span 4; }
 .about-grid__span-5 { grid-column: span 5; }
 
-/* Media card */
+
+/* ----------------------------------------------------------
+   Media cards
+   ---------------------------------------------------------- */
+
 .about-grid__media-card {
   padding: 0;
   overflow: hidden;
@@ -79,4 +102,63 @@
 .about-grid__img--headshot {
   object-fit: cover;
   object-position: center top;
+}
+
+
+/* ----------------------------------------------------------
+   Responsive — tablet (≤ 1024px): collapse to single column.
+   Mirrors the services page breakpoint exactly.
+   ---------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+  .about__eyebrow {
+    font-size: var(--text-lg);
+    padding-inline: var(--page-padding-inline-mobile);
+    text-align: left;
+  }
+
+  .about-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-grid__span-1,
+  .about-grid__span-2,
+  .about-grid__span-3,
+  .about-grid__span-4,
+  .about-grid__span-5 {
+    grid-column: span 1;
+  }
+
+  /* Schrödinger image: let it size naturally to its content
+     rather than stretching to fill a tall single-column card. */
+  .about-grid__media-card {
+    max-height: 24rem;
+  }
+
+  /* Headshot: fixed height so it reads as a portrait, not a
+     thin strip, when the card is full width. */
+  .about-grid__img--headshot {
+    height: 20rem;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Responsive — mobile (≤ 600px): tighten spacing.
+   ---------------------------------------------------------- */
+
+@media (max-width: 600px) {
+  .about-grid {
+    gap: var(--space-3);
+  }
+
+  /* Schrödinger image a little shorter on small phones. */
+  .about-grid__media-card {
+    max-height: 18rem;
+  }
+
+  /* Headshot slightly shorter too. */
+  .about-grid__img--headshot {
+    height: 16rem;
+  }
 }
