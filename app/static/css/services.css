@@ -217,6 +217,7 @@
 
 .svc-card--step {
   flex: 1;
+  min-width: 0;
   min-height: 7rem;
   justify-content: center;
   align-items: center;
@@ -360,7 +361,14 @@
    Responsive — tablet (≤ 900px)
    ---------------------------------------------------------- */
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
+  .svc-card--step,
+  .svc-card--span {
+    padding: var(--space-3);
+  }
+}
+
+@media (max-width: 1024px) {
   .services__eyebrow {
     font-size: var(--text-lg);
     padding-inline: var(--page-padding-inline-mobile);
