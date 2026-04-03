@@ -11,18 +11,24 @@
 /* --- Outer bar --- */
 
 .site-footer {
+  position: relative;
   background: var(--color-surface-elevated);
   margin-top: auto; /* push to bottom if page content is short */
 }
 
 /*
-  Fade zone — mirrors the header's ::after but sits ABOVE the footer.
-  Transitions from transparent (page bg showing through) up to
-  --color-surface-elevated for a soft dissolve into the footer.
+  Fade zone — mirrors the header's ::after but inverted.
+  Hangs ABOVE the footer bar, transitioning from transparent
+  (page --color-bg showing through) down to --color-surface-elevated.
+  Uses the same absolute-positioning technique as the header.
 */
 .site-footer::before {
   content: '';
-  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  transform: translateY(-100%);
   height: calc(var(--header-height) * 0.25);
   background: linear-gradient(
     to bottom,
@@ -30,6 +36,7 @@
     var(--color-surface-elevated)
   );
   pointer-events: none;
+  z-index: -1;
 }
 
 /* --- Inner row: three zones --- */
