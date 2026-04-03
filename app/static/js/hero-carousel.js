@@ -1,14 +1,12 @@
 /**
- * hero-carousel.js — Gentle crossfade animation for the home page hero.
+ * hero-carousel.js — Gentle animated transitions for the home page hero.
  *
  * Cycles through Psi logo variants and canvas background variants
- * independently, with random intervals (20–40s) and smooth opacity
- * transitions (~2.5s crossfade).
+ * independently, with random intervals (20–40s) and a WebGL swirl
+ * transition (~3s vortex dissolve). Falls back to CSS crossfade if
+ * WebGL is unavailable.
  *
- * Strategy: two stacked <img> elements per slot. The "back" image
- * loads the next variant, then we crossfade by swapping opacity.
- * After the transition completes, the back becomes the front and
- * we're ready for the next cycle.
+ * Zero external dependencies.
  */
 
 ;(function () {
@@ -39,9 +37,67 @@
     'canvas_wave.png',
   ]
 
-  const MIN_DELAY = 20000 // ms
+  const MIN_DELAY = 20000
   const MAX_DELAY = 40000
-  const FADE_DURATION = 2500 // ms — must match CSS transition
+  const SWIRL_DURATION = 3000 // ms
+
+  // --- GLSL Shaders ---
+
+  const VERTEX_SRC = `
+    attribute vec2 a_position;
+    varying vec2 v_uv;
+    void main() {
+      v_uv = a_position * 0.5 + 0.5;
+      gl_Position = vec4(a_position, 0.0, 1.0);
+    }
+  `
+
+  // Swirl/vortex transition shader
+  // progress: 0.0 = fully imageA, 1.0 = fully imageB
+  // The swirl intensifies in the first half, then calms as imageB emerges
+  const FRAGMENT_SRC = `
+    precision mediump float;
+    varying vec2 v_uv;
+    uniform sampler2D u_imageA;
+    uniform sampler2D u_imageB;
+    uniform float u_progress;
+
+    void main() {
+      vec2 center = vec2(0.5, 0.5);
+      vec2 uv = v_uv;
+
+      // Swirl strength: peaks at progress=0.5, zero at 0 and 1
+      float swirlAmount = sin(u_progress * 3.14159) * 2.5;
+
+      // Distance from center
+      vec2 delta = uv - center;
+      float dist = length(delta);
+
+      // Swirl angle — stronger near center, fades at edges
+      float angle = swirlAmount * (1.0 - smoothstep(0.0, 0.7, dist));
+
+      // Rotate UV around center
+      float cosA = cos(angle);
+      float sinA = sin(angle);
+      vec2 rotated = vec2(
+        cosA * delta.x - sinA * delta.y,
+        sinA * delta.x + cosA * delta.y
+      ) + center;
+
+      // Clamp to valid UV range
+      rotated = clamp(rotated, 0.0, 1.0);
+
+      // Sample both images with swirled UVs
+      vec4 colorA = texture2D(u_imageA, rotated);
+      vec4 colorB = texture2D(u_imageB, rotated);
+
+      // Smooth crossfade weighted by progress
+      // Use a slightly accelerated curve for a more dramatic reveal
+      float blend = smoothstep(0.3, 0.7, u_progress);
+
+      gl_FragColor = mix(colorA, colorB, blend);
+    }
+  `
 
   // --- Helpers ---
 
@@ -59,36 +115,215 @@
   }
 
   function imagePath(filename) {
-    // Resolve against the static images directory
     const staticBase = document.querySelector('.home__hero-psi')?.src || ''
     const dir = staticBase.substring(0, staticBase.lastIndexOf('/') + 1)
     return dir + filename
   }
 
-  function preloadImage(src) {
+  function loadImage(src) {
     return new Promise((resolve, reject) => {
       const img = new Image()
+      img.crossOrigin = 'anonymous'
       img.onload = () => resolve(img)
       img.onerror = reject
       img.src = src
     })
   }
 
-  // --- Carousel engine ---
+  // --- WebGL helpers ---
 
-  function createCarousel(frontEl, images, currentFilename) {
-    if (!frontEl || images.length <= 1) return
+  function createShader(gl, type, source) {
+    const shader = gl.createShader(type)
+    gl.shaderSource(shader, source)
+    gl.compileShader(shader)
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      console.warn('Shader compile error:', gl.getShaderInfoLog(shader))
+      gl.deleteShader(shader)
+      return null
+    }
+    return shader
+  }
 
-    // Figure out current index from the initial src
-    let currentIndex = images.findIndex((f) => currentFilename.includes(f))
+  function createProgram(gl, vertSrc, fragSrc) {
+    const vert = createShader(gl, gl.VERTEX_SHADER, vertSrc)
+    const frag = createShader(gl, gl.FRAGMENT_SHADER, fragSrc)
+    if (!vert || !frag) return null
+
+    const program = gl.createProgram()
+    gl.attachShader(program, vert)
+    gl.attachShader(program, frag)
+    gl.linkProgram(program)
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.warn('Program link error:', gl.getProgramInfoLog(program))
+      return null
+    }
+    return program
+  }
+
+  function createTexture(gl, image) {
+    const tex = gl.createTexture()
+    gl.bindTexture(gl.TEXTURE_2D, tex)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+    return tex
+  }
+
+  // --- WebGL Swirl Carousel ---
+
+  function createSwirlCarousel(targetEl, images, currentFilename) {
+    if (!targetEl || images.length <= 1) return
+
+    let currentIndex = images.findIndex((f) => currentFilename.includes(f.replace('.png', '')))
     if (currentIndex === -1) currentIndex = 0
 
-    // Create the back layer (hidden initially)
-    const backEl = frontEl.cloneNode(false)
-    backEl.classList.add('hero-carousel__back')
+    // Create canvas overlay
+    const canvas = document.createElement('canvas')
+    canvas.className = 'hero-carousel__gl'
+    canvas.style.cssText = `
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; opacity: 0; z-index: 1;
+    `
+
+    // Insert canvas as sibling overlay
+    targetEl.parentNode.style.position = 'relative'
+    targetEl.parentNode.insertBefore(canvas, targetEl.nextSibling)
+
+    const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false })
+    if (!gl) {
+      // Fallback: remove canvas, use CSS crossfade instead
+      canvas.remove()
+      createFallbackCarousel(targetEl, images, currentIndex)
+      return
+    }
+
+    const program = createProgram(gl, VERTEX_SRC, FRAGMENT_SRC)
+    if (!program) {
+      canvas.remove()
+      createFallbackCarousel(targetEl, images, currentIndex)
+      return
+    }
+
+    gl.useProgram(program)
+
+    // Fullscreen quad
+    const posLoc = gl.getAttribLocation(program, 'a_position')
+    const buf = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf)
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+      gl.STATIC_DRAW
+    )
+    gl.enableVertexAttribArray(posLoc)
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0)
+
+    // Uniform locations
+    const uImageA = gl.getUniformLocation(program, 'u_imageA')
+    const uImageB = gl.getUniformLocation(program, 'u_imageB')
+    const uProgress = gl.getUniformLocation(program, 'u_progress')
+
+    let transitioning = false
+
+    function resize() {
+      const rect = canvas.parentNode.getBoundingClientRect()
+      const dpr = window.devicePixelRatio || 1
+      canvas.width = rect.width * dpr
+      canvas.height = rect.height * dpr
+      gl.viewport(0, 0, canvas.width, canvas.height)
+    }
+    resize()
+    window.addEventListener('resize', resize)
+
+    function renderFrame(texA, texB, progress) {
+      gl.activeTexture(gl.TEXTURE0)
+      gl.bindTexture(gl.TEXTURE_2D, texA)
+      gl.uniform1i(uImageA, 0)
+
+      gl.activeTexture(gl.TEXTURE1)
+      gl.bindTexture(gl.TEXTURE_2D, texB)
+      gl.uniform1i(uImageB, 1)
+
+      gl.uniform1f(uProgress, progress)
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    }
+
+    async function cycle() {
+      if (transitioning) return
+      transitioning = true
+
+      const nextIndex = pickRandom(images, currentIndex)
+      const nextSrc = imagePath(images[nextIndex])
+
+      let currentImg, nextImg
+      try {
+        ;[currentImg, nextImg] = await Promise.all([
+          loadImage(targetEl.src),
+          loadImage(nextSrc),
+        ])
+      } catch {
+        transitioning = false
+        scheduleNext()
+        return
+      }
+
+      resize()
+      const texA = createTexture(gl, currentImg)
+      const texB = createTexture(gl, nextImg)
+
+      // Show the GL canvas on top
+      canvas.style.opacity = '1'
+
+      const start = performance.now()
+
+      function animate(now) {
+        const elapsed = now - start
+        const progress = Math.min(elapsed / SWIRL_DURATION, 1.0)
+
+        // Ease in-out for smoother feel
+        const eased = progress < 0.5
+          ? 2 * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2
+
+        renderFrame(texA, texB, eased)
+
+        if (progress < 1.0) {
+          requestAnimationFrame(animate)
+        } else {
+          // Transition complete — update the real image and hide GL canvas
+          targetEl.src = nextSrc
+          canvas.style.opacity = '0'
+
+          // Clean up textures
+          gl.deleteTexture(texA)
+          gl.deleteTexture(texB)
+
+          currentIndex = nextIndex
+          transitioning = false
+          scheduleNext()
+        }
+      }
+
+      requestAnimationFrame(animate)
+    }
+
+    function scheduleNext() {
+      setTimeout(cycle, randomDelay())
+    }
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    scheduleNext()
+  }
+
+  // --- CSS Crossfade Fallback ---
+
+  function createFallbackCarousel(targetEl, images, currentIndex) {
+    const backEl = targetEl.cloneNode(false)
+    backEl.className += ' hero-carousel__back'
     backEl.style.opacity = '0'
-    frontEl.classList.add('hero-carousel__front')
-    frontEl.parentNode.insertBefore(backEl, frontEl.nextSibling)
+    targetEl.parentNode.insertBefore(backEl, targetEl.nextSibling)
 
     let transitioning = false
 
@@ -100,55 +335,44 @@
       const nextSrc = imagePath(images[nextIndex])
 
       try {
-        await preloadImage(nextSrc)
+        await loadImage(nextSrc)
       } catch {
-        // Image failed to load — skip this cycle
         transitioning = false
-        scheduleNext()
+        setTimeout(cycle, randomDelay())
         return
       }
 
-      // Load into back layer and crossfade
       backEl.src = nextSrc
-      // Force reflow so the transition triggers
       void backEl.offsetWidth
-
       backEl.style.opacity = '1'
-      frontEl.style.opacity = '0'
+      targetEl.style.opacity = '0'
 
-      // After transition completes, swap roles
       setTimeout(() => {
-        frontEl.src = nextSrc
-        frontEl.style.opacity = '1'
+        targetEl.src = nextSrc
+        targetEl.style.opacity = '1'
         backEl.style.opacity = '0'
         currentIndex = nextIndex
         transitioning = false
-        scheduleNext()
-      }, FADE_DURATION + 100)
+        setTimeout(cycle, randomDelay())
+      }, 2600)
     }
 
-    function scheduleNext() {
-      setTimeout(cycle, randomDelay())
-    }
-
-    // Respect prefers-reduced-motion
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    scheduleNext()
+    setTimeout(cycle, randomDelay())
   }
 
-  // --- Init on DOM ready ---
+  // --- Init ---
 
   function init() {
     const psiImg = document.querySelector('.home__hero-psi')
     const canvasImg = document.querySelector('.home__hero-canvas')
 
     if (psiImg) {
-      createCarousel(psiImg, PSI_LOGOS, psiImg.src)
+      createSwirlCarousel(psiImg, PSI_LOGOS, psiImg.src)
     }
 
     if (canvasImg) {
-      createCarousel(canvasImg, CANVASES, canvasImg.src)
+      createSwirlCarousel(canvasImg, CANVASES, canvasImg.src)
     }
   }
 

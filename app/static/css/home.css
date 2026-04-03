@@ -366,15 +366,20 @@
 
 
 /* ----------------------------------------------------------
-   Hero carousel — crossfade layers for logo + canvas rotation
+   Hero carousel — WebGL swirl transition overlay + CSS fallback
    ---------------------------------------------------------- */
 
+/* WebGL canvas overlay — positioned by JS, just needs smooth show/hide */
+.hero-carousel__gl {
+  transition: opacity 0.3s var(--ease-standard);
+}
+
+/* CSS fallback layers (used when WebGL unavailable) */
 .home__hero-psi,
 .home__hero-canvas {
   transition: opacity 2.5s var(--ease-standard);
 }
 
-.hero-carousel__front,
 .hero-carousel__back {
   position: absolute;
   top: 0;
@@ -384,28 +389,15 @@
   transition: opacity 2.5s var(--ease-standard);
 }
 
-/* Psi logo carousel — layers within the medallion */
-.home__hero-medallion {
-  /* Already position: absolute — just ensure children stack */
-}
-
-.home__hero-medallion .hero-carousel__front,
 .home__hero-medallion .hero-carousel__back {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 76%;
-  height: auto;
   aspect-ratio: 1 / 1;
   object-fit: contain;
-  /* Center within medallion */
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
 }
 
-/* Canvas carousel — layers within the media panel */
-.home__hero-media .hero-carousel__front,
 .home__hero-media .hero-carousel__back {
   object-fit: cover;
   object-position: center center;
@@ -414,8 +406,8 @@
 @media (prefers-reduced-motion: reduce) {
   .home__hero-psi,
   .home__hero-canvas,
-  .hero-carousel__front,
-  .hero-carousel__back {
+  .hero-carousel__back,
+  .hero-carousel__gl {
     transition: none;
   }
 }
