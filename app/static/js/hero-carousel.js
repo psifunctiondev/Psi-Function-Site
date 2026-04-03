@@ -2,13 +2,11 @@
  * hero-carousel.js — Gentle crossfade animation for the home page hero.
  *
  * Cycles through Psi logo variants and canvas background variants
- * independently, with random intervals (20–40s) and smooth opacity
+ * independently, with random intervals (40–60s) and smooth opacity
  * transitions (~2.5s crossfade).
  *
- * Strategy: two stacked <img> elements per slot. The "back" image
- * loads the next variant, then we crossfade by swapping opacity.
- * After the transition completes, the back becomes the front and
- * we're ready for the next cycle.
+ * Strategy: single <img> per slot. Fade out → swap src → fade in.
+ * No cloned elements, so existing layout geometry is untouched.
  */
 
 ;(function () {
@@ -39,9 +37,10 @@
     'canvas_wave.png',
   ]
 
-  const MIN_DELAY = 20000 // ms
-  const MAX_DELAY = 40000
-  const FADE_DURATION = 2500 // ms — must match CSS transition
+  const MIN_DELAY = 40000 // ms
+  const MAX_DELAY = 60000
+  const FADE_OUT_MS = 1200 // fade to transparent
+  const FADE_IN_MS = 1200 // fade new image in
 
   // --- Helpers ---
 
@@ -76,19 +75,15 @@
 
   // --- Carousel engine ---
 
-  function createCarousel(frontEl, images, currentFilename) {
-    if (!frontEl || images.length <= 1) return
+  function createCarousel(el, images, currentFilename) {
+    if (!el || images.length <= 1) return
 
     // Figure out current index from the initial src
     let currentIndex = images.findIndex((f) => currentFilename.includes(f))
     if (currentIndex === -1) currentIndex = 0
 
-    // Create the back layer (hidden initially)
-    const backEl = frontEl.cloneNode(false)
-    backEl.classList.add('hero-carousel__back')
-    backEl.style.opacity = '0'
-    frontEl.classList.add('hero-carousel__front')
-    frontEl.parentNode.insertBefore(backEl, frontEl.nextSibling)
+    // Apply transition style
+    el.style.transition = `opacity ${FADE_OUT_MS}ms ease`
 
     let transitioning = false
 
@@ -99,32 +94,37 @@
       const nextIndex = pickRandom(images, currentIndex)
       const nextSrc = imagePath(images[nextIndex])
 
+      // Preload next image before starting the fade
       try {
         await preloadImage(nextSrc)
       } catch {
-        // Image failed to load — skip this cycle
         transitioning = false
         scheduleNext()
         return
       }
 
-      // Load into back layer and crossfade
-      backEl.src = nextSrc
-      // Force reflow so the transition triggers
-      void backEl.offsetWidth
+      // Phase 1: fade out
+      el.style.opacity = '0'
 
-      backEl.style.opacity = '1'
-      frontEl.style.opacity = '0'
-
-      // After transition completes, swap roles
       setTimeout(() => {
-        frontEl.src = nextSrc
-        frontEl.style.opacity = '1'
-        backEl.style.opacity = '0'
-        currentIndex = nextIndex
-        transitioning = false
-        scheduleNext()
-      }, FADE_DURATION + 100)
+        // Phase 2: swap src while invisible
+        el.src = nextSrc
+        el.style.transition = `opacity ${FADE_IN_MS}ms ease`
+
+        // Force reflow before fading in
+        void el.offsetWidth
+
+        // Phase 3: fade in
+        el.style.opacity = '1'
+
+        setTimeout(() => {
+          currentIndex = nextIndex
+          transitioning = false
+          // Reset transition for next cycle's fade-out
+          el.style.transition = `opacity ${FADE_OUT_MS}ms ease`
+          scheduleNext()
+        }, FADE_IN_MS + 50)
+      }, FADE_OUT_MS + 50)
     }
 
     function scheduleNext() {
