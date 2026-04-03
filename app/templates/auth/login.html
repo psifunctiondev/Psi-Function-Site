@@ -1,16 +1,54 @@
 {% extends 'base.html' %}
-{% block title %}Login{% endblock %}
+
+{% block title %}Client Login — Psi Function{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+{% endblock %}
+
 {% block content %}
-<form method="post" class="mx-auto max-w-md space-y-4 rounded-2xl border border-slate-200 p-6">
-  <h1 class="text-2xl font-semibold">Client Login</h1>
-  <label class="block">
-    <span class="mb-1 block text-sm">Email</span>
-    <input type="email" name="email" class="w-full rounded-lg border px-3 py-2">
-  </label>
-  <label class="block">
-    <span class="mb-1 block text-sm">Password</span>
-    <input type="password" name="password" class="w-full rounded-lg border px-3 py-2">
-  </label>
-  <button class="rounded-lg border px-4 py-2">Sign in</button>
-</form>
+
+<section class="portal-page">
+
+  <p class="portal__eyebrow">Client Login</p>
+
+  <div class="container section-stack">
+    <form method="post" class="card portal-login-form">
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <p class="portal-login-form__flash portal-login-form__flash--{{ category }}">{{ message }}</p>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <label class="portal-login-form__field">
+        <span class="portal-login-form__label">Email</span>
+        <input
+          type="email"
+          name="email"
+          required
+          autocomplete="email"
+          class="portal-login-form__input"
+        >
+      </label>
+
+      <label class="portal-login-form__field">
+        <span class="portal-login-form__label">Password</span>
+        <input
+          type="password"
+          name="password"
+          required
+          autocomplete="current-password"
+          class="portal-login-form__input"
+        >
+      </label>
+
+      <button type="submit" class="portal-login-form__submit">Sign in</button>
+    </form>
+  </div>
+
+</section>
+
 {% endblock %}

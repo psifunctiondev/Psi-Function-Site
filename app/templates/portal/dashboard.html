@@ -1,8 +1,49 @@
 {% extends 'base.html' %}
-{% block title %}Portal{% endblock %}
+
+{% block title %}{{ client.name }} — Portal{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="space-y-6">
-  <h1 class="text-3xl font-bold">Client Portal</h1>
-  <div id="graph-view" class="h-96 rounded-2xl border border-slate-200 p-4"></div>
-</div>
+
+<section class="portal-page">
+
+  <p class="portal__eyebrow">{{ client.name }}</p>
+
+  <div class="container section-stack">
+
+    {% if not grouped_resources %}
+      <div class="portal-empty card">
+        <p class="card__text">No resources available yet. Check back soon.</p>
+      </div>
+    {% endif %}
+
+    {% for cat_key, cat_label in categories.items() %}
+      {% if cat_key in grouped_resources %}
+      <div class="portal-section">
+        <h2 class="portal-section__title">{{ cat_label }}</h2>
+        <div class="portal-resource-grid">
+          {% for resource in grouped_resources[cat_key] %}
+          <a
+            class="card portal-resource-card"
+            href="{{ resource.external_url or url_for('static', filename=resource.file_path) }}"
+            {% if resource.external_url %}target="_blank" rel="noopener noreferrer"{% endif %}
+          >
+            <span class="card__title">{{ resource.title }}</span>
+            {% if resource.description %}
+              <span class="card__text">{{ resource.description }}</span>
+            {% endif %}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    {% endfor %}
+
+  </div>
+
+</section>
+
 {% endblock %}
