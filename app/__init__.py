@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from flask import Flask
 
 from .blueprints.health.routes import bp as health_bp
@@ -25,5 +27,9 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(health_bp)
+
+    @app.context_processor
+    def inject_now():
+        return {'now': datetime.now(timezone.utc)}
 
     return app
