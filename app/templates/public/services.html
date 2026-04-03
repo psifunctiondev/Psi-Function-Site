@@ -193,6 +193,34 @@
     </div><!-- /services-grid -->
   </div><!-- /container -->
 
+  <!-- KNOWLEDGE GRAPH: interactive map of business functions ↔ technologies -->
+  <div class="container section-stack">
+    <div class="knowledge-graph-section">
+      <h2 class="knowledge-graph-section__title">How Technology Meets Your Business</h2>
+      <p class="knowledge-graph-section__subtitle">
+        Click any node to explore how modern technologies connect to the
+        functions that drive your business forward.
+      </p>
+      <div
+        class="knowledge-graph-container card"
+        id="graph-view"
+        data-graph-url="{{ url_for('static', filename='data/knowledge-graph.json') }}"
+      ></div>
+
+      <!-- Legend -->
+      <div class="knowledge-graph-legend">
+        <span class="knowledge-graph-legend__item">
+          <span class="knowledge-graph-legend__dot knowledge-graph-legend__dot--function"></span>
+          Business Function
+        </span>
+        <span class="knowledge-graph-legend__item">
+          <span class="knowledge-graph-legend__dot knowledge-graph-legend__dot--technology"></span>
+          Technology
+        </span>
+      </div>
+    </div>
+  </div>
+
 </section>
 
 {% endblock %}

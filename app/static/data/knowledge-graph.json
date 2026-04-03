@@ -1,0 +1,122 @@
+{
+  "nodes": [
+    {
+      "id": "marketing",
+      "label": "Marketing",
+      "type": "function",
+      "description": "Reaching the right audience with the right message. Modern tools make targeted, data-driven marketing accessible to businesses of any size."
+    },
+    {
+      "id": "sales",
+      "label": "Sales",
+      "type": "function",
+      "description": "Converting interest into revenue. Technology streamlines lead tracking, proposal generation, and customer relationship management."
+    },
+    {
+      "id": "customer-service",
+      "label": "Customer Service",
+      "type": "function",
+      "description": "Supporting customers after the sale. AI-powered tools can provide instant responses while keeping the human touch for complex issues."
+    },
+    {
+      "id": "finance",
+      "label": "Finance",
+      "type": "function",
+      "description": "Managing cash flow, invoicing, and financial planning. Automation eliminates manual bookkeeping and surfaces insights that drive better decisions."
+    },
+    {
+      "id": "operations",
+      "label": "Operations",
+      "type": "function",
+      "description": "The day-to-day engine of your business. Streamlined workflows, inventory management, and process automation free your team to focus on growth."
+    },
+    {
+      "id": "hr",
+      "label": "Human Resources",
+      "type": "function",
+      "description": "Hiring, onboarding, and retaining talent. Modern HR platforms simplify compliance and create better employee experiences."
+    },
+    {
+      "id": "strategy",
+      "label": "Strategy",
+      "type": "function",
+      "description": "Setting direction and making trade-offs. Data-driven insights help small businesses compete strategically, not just reactively."
+    },
+    {
+      "id": "gen-ai",
+      "label": "Generative AI",
+      "type": "technology",
+      "description": "AI that creates — text, images, code, and ideas. From drafting proposals to generating marketing copy, it amplifies what a small team can produce."
+    },
+    {
+      "id": "cloud",
+      "label": "Cloud Computing",
+      "type": "technology",
+      "description": "Enterprise-grade infrastructure without the data center. Pay for what you use, scale when you need to, access from anywhere."
+    },
+    {
+      "id": "rpa",
+      "label": "Robotic Process Automation",
+      "type": "technology",
+      "description": "Software robots that handle repetitive tasks — data entry, report generation, system updates — so your people don't have to."
+    },
+    {
+      "id": "analytics",
+      "label": "Data Analytics",
+      "type": "technology",
+      "description": "Turning raw data into actionable insight. Dashboards, trend analysis, and predictive models help you see what's coming, not just what happened."
+    },
+    {
+      "id": "crm",
+      "label": "CRM Systems",
+      "type": "technology",
+      "description": "A single source of truth for every customer interaction. Modern CRMs integrate with email, phone, social, and web to give you the full picture."
+    },
+    {
+      "id": "cybersecurity",
+      "label": "Cybersecurity",
+      "type": "technology",
+      "description": "Protecting your business and your customers' data. Small businesses are increasingly targeted — modern security tools make defense affordable."
+    },
+    {
+      "id": "ecommerce",
+      "label": "E-Commerce",
+      "type": "technology",
+      "description": "Selling online with professional-grade storefronts, payment processing, and fulfillment — no longer limited to big retailers."
+    },
+    {
+      "id": "integration",
+      "label": "System Integration",
+      "type": "technology",
+      "description": "Connecting your tools so data flows automatically between them. Eliminates double-entry, reduces errors, and creates a unified view of your business."
+    }
+  ],
+  "edges": [
+    { "source": "gen-ai", "target": "marketing", "label": "Content creation, ad copy, personalization" },
+    { "source": "gen-ai", "target": "sales", "label": "Proposal drafting, lead scoring" },
+    { "source": "gen-ai", "target": "customer-service", "label": "Chatbots, response drafting" },
+    { "source": "gen-ai", "target": "strategy", "label": "Research synthesis, scenario planning" },
+    { "source": "cloud", "target": "operations", "label": "Remote access, scalable infrastructure" },
+    { "source": "cloud", "target": "finance", "label": "Cloud accounting, real-time reporting" },
+    { "source": "cloud", "target": "hr", "label": "HR platforms, remote onboarding" },
+    { "source": "rpa", "target": "finance", "label": "Invoice processing, reconciliation" },
+    { "source": "rpa", "target": "operations", "label": "Workflow automation, data migration" },
+    { "source": "rpa", "target": "hr", "label": "Onboarding automation, compliance" },
+    { "source": "analytics", "target": "marketing", "label": "Campaign performance, audience insights" },
+    { "source": "analytics", "target": "sales", "label": "Pipeline analytics, forecasting" },
+    { "source": "analytics", "target": "finance", "label": "Cash flow analysis, trend detection" },
+    { "source": "analytics", "target": "strategy", "label": "Market intelligence, KPI tracking" },
+    { "source": "crm", "target": "sales", "label": "Lead management, deal tracking" },
+    { "source": "crm", "target": "marketing", "label": "Segmentation, campaign targeting" },
+    { "source": "crm", "target": "customer-service", "label": "Ticket history, customer context" },
+    { "source": "cybersecurity", "target": "operations", "label": "Data protection, access control" },
+    { "source": "cybersecurity", "target": "finance", "label": "Payment security, compliance" },
+    { "source": "cybersecurity", "target": "customer-service", "label": "Privacy, trust" },
+    { "source": "ecommerce", "target": "sales", "label": "Online revenue, digital storefront" },
+    { "source": "ecommerce", "target": "marketing", "label": "SEO, conversion optimization" },
+    { "source": "ecommerce", "target": "operations", "label": "Order fulfillment, inventory" },
+    { "source": "integration", "target": "operations", "label": "Connected workflows, single source of truth" },
+    { "source": "integration", "target": "finance", "label": "Automated reconciliation, unified reporting" },
+    { "source": "integration", "target": "sales", "label": "CRM-to-ERP data flow" }
+  ]
+}
