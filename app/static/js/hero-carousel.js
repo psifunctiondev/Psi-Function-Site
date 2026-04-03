@@ -1,12 +1,12 @@
 /**
  * hero-carousel.js — Gentle crossfade animation for the home page hero.
  *
- * Cycles through Psi logo variants and canvas background variants
- * independently, with random intervals (40–60s) and smooth opacity
- * transitions (~2.5s crossfade).
+ * Cycles through Psi logo variants and canvas background variants,
+ * alternating which one transitions each cycle (never both at once).
+ * Uses a two-layer stack per slot so the outgoing and incoming images
+ * overlap seamlessly — no blank/white flash.
  *
- * Strategy: single <img> per slot. Fade out → swap src → fade in.
- * No cloned elements, so existing layout geometry is untouched.
+ * Timing: 40–60s hold, ~2.4s crossfade.
  */
 
 ;(function () {
@@ -39,8 +39,7 @@
 
   const MIN_DELAY = 40000 // ms
   const MAX_DELAY = 60000
-  const FADE_OUT_MS = 1200 // fade to transparent
-  const FADE_IN_MS = 1200 // fade new image in
+  const CROSSFADE_MS = 2400 // slower, more gentle
 
   // --- Helpers ---
 
@@ -58,7 +57,6 @@
   }
 
   function imagePath(filename) {
-    // Resolve against the static images directory
     const staticBase = document.querySelector('.home__hero-psi')?.src || ''
     const dir = staticBase.substring(0, staticBase.lastIndexOf('/') + 1)
     return dir + filename
@@ -74,82 +72,123 @@
   }
 
   // --- Carousel engine ---
+  // Creates an invisible "back" <img> behind the original, positioned
+  // identically. To transition: load new image into back, fade back in
+  // while fading front out simultaneously, then swap.
 
   function createCarousel(el, images, currentFilename) {
-    if (!el || images.length <= 1) return
+    if (!el || images.length <= 1) return null
 
-    // Figure out current index from the initial src
     let currentIndex = images.findIndex((f) => currentFilename.includes(f))
     if (currentIndex === -1) currentIndex = 0
 
-    // Apply transition style
-    el.style.transition = `opacity ${FADE_OUT_MS}ms ease`
+    // Create back layer — copy all inline styles and classes from original
+    const backEl = el.cloneNode(false)
+    backEl.removeAttribute('class')
+    // Copy the original's classes except any carousel-specific ones
+    el.classList.forEach((c) => backEl.classList.add(c))
+    backEl.classList.add('hero-carousel-back')
+    backEl.style.position = 'absolute'
+    backEl.style.top = '0'
+    backEl.style.left = '0'
+    backEl.style.width = '100%'
+    backEl.style.height = '100%'
+    backEl.style.opacity = '0'
+    backEl.style.transition = `opacity ${CROSSFADE_MS}ms ease`
+    backEl.style.pointerEvents = 'none'
+    backEl.setAttribute('aria-hidden', 'true')
+
+    // The front el needs transition too
+    el.style.transition = `opacity ${CROSSFADE_MS}ms ease`
+
+    // Insert back behind the front (visually behind due to DOM order,
+    // but we'll control with opacity)
+    el.parentNode.insertBefore(backEl, el)
 
     let transitioning = false
 
-    async function cycle() {
+    async function doTransition() {
       if (transitioning) return
       transitioning = true
 
       const nextIndex = pickRandom(images, currentIndex)
       const nextSrc = imagePath(images[nextIndex])
 
-      // Preload next image before starting the fade
       try {
         await preloadImage(nextSrc)
       } catch {
         transitioning = false
-        scheduleNext()
         return
       }
 
-      // Phase 1: fade out
+      // Load new image into back layer
+      backEl.src = nextSrc
+      void backEl.offsetWidth // force reflow
+
+      // Simultaneously: fade back in, fade front out
+      backEl.style.opacity = '1'
       el.style.opacity = '0'
 
+      // After crossfade completes, swap the front src and reset
       setTimeout(() => {
-        // Phase 2: swap src while invisible
         el.src = nextSrc
-        el.style.transition = `opacity ${FADE_IN_MS}ms ease`
-
-        // Force reflow before fading in
-        void el.offsetWidth
-
-        // Phase 3: fade in
         el.style.opacity = '1'
-
-        setTimeout(() => {
-          currentIndex = nextIndex
-          transitioning = false
-          // Reset transition for next cycle's fade-out
-          el.style.transition = `opacity ${FADE_OUT_MS}ms ease`
-          scheduleNext()
-        }, FADE_IN_MS + 50)
-      }, FADE_OUT_MS + 50)
+        backEl.style.opacity = '0'
+        currentIndex = nextIndex
+        transitioning = false
+      }, CROSSFADE_MS + 100)
     }
 
-    function scheduleNext() {
+    return { doTransition, images, currentIndex }
+  }
+
+  // --- Alternating coordinator ---
+  // Each cycle, only ONE of the two carousels transitions.
+
+  function startAlternating(psiCarousel, canvasCarousel) {
+    const carousels = [psiCarousel, canvasCarousel].filter(Boolean)
+    if (!carousels.length) return
+
+    let lastIndex = -1 // which carousel transitioned last
+
+    function cycle() {
+      // Pick the other one (alternate), or random if only one exists
+      let idx
+      if (carousels.length === 1) {
+        idx = 0
+      } else {
+        idx = lastIndex === 0 ? 1 : lastIndex === 1 ? 0 : Math.round(Math.random())
+      }
+
+      const carousel = carousels[idx]
+      carousel.doTransition()
+      lastIndex = idx
+
+      // Schedule next cycle
       setTimeout(cycle, randomDelay())
     }
 
     // Respect prefers-reduced-motion
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-    scheduleNext()
+    // Start after initial hold
+    setTimeout(cycle, randomDelay())
   }
 
-  // --- Init on DOM ready ---
+  // --- Init ---
 
   function init() {
     const psiImg = document.querySelector('.home__hero-psi')
     const canvasImg = document.querySelector('.home__hero-canvas')
 
-    if (psiImg) {
-      createCarousel(psiImg, PSI_LOGOS, psiImg.src)
-    }
+    const psiCarousel = psiImg
+      ? createCarousel(psiImg, PSI_LOGOS, psiImg.src)
+      : null
+    const canvasCarousel = canvasImg
+      ? createCarousel(canvasImg, CANVASES, canvasImg.src)
+      : null
 
-    if (canvasImg) {
-      createCarousel(canvasImg, CANVASES, canvasImg.src)
-    }
+    startAlternating(psiCarousel, canvasCarousel)
   }
 
   if (document.readyState === 'loading') {

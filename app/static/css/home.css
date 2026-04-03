@@ -366,15 +366,40 @@
 
 
 /* ----------------------------------------------------------
-   Hero carousel — fade-out / swap / fade-in on the existing
-   <img> elements. No extra layers, no layout disruption.
-   Transition timing is set by JS; this just ensures reduced
-   motion is respected.
+   Hero carousel — simultaneous crossfade between two stacked
+   images. JS inserts a .hero-carousel-back behind the original.
    ---------------------------------------------------------- */
+
+/* Back layer in the medallion — match the Psi img sizing exactly */
+.home__hero-medallion .hero-carousel-back {
+  width: 76% !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  padding: var(--space-2);
+  box-sizing: border-box;
+  /* Center within medallion */
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: screen;
+}
+
+:root[data-theme="day"] .home__hero-medallion .hero-carousel-back,
+:root[data-theme="twilight"] .home__hero-medallion .hero-carousel-back {
+  mix-blend-mode: multiply;
+}
+
+/* Back layer in the media panel — match canvas sizing */
+.home__hero-media > .hero-carousel-back {
+  object-fit: cover;
+  object-position: center center;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .home__hero-psi,
-  .home__hero-canvas {
+  .home__hero-canvas,
+  .hero-carousel-back {
     transition: none !important;
   }
 }
