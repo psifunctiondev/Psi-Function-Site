@@ -1,0 +1,172 @@
+/* =============================================================
+   css/zeitgeist.css
+   Curated news feed — filter sidebar + article card feed.
+   Depends on: tokens.css, components.css
+   ============================================================= */
+
+.zeitgeist-page {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Eyebrow */
+.zeitgeist__eyebrow {
+  margin: 0;
+  width: 100%;
+  padding-block: var(--space-1);
+  padding-inline: var(--page-padding-inline-desktop);
+  padding-top: calc(var(--space-1) + var(--header-height) * 0.25);
+
+  font-family: var(--font-family-display);
+  font-size: var(--text-4xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-logo);
+  line-height: var(--line-height-tight);
+  text-align: center;
+  color: var(--color-primary);
+}
+
+
+/* --- Two-column layout: filters + feed --- */
+
+.zeitgeist-layout {
+  display: grid;
+  grid-template-columns: 16rem 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+
+/* --- Filter sidebar --- */
+
+.zeitgeist-filters {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.zeitgeist-filters__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.zeitgeist-filters__heading {
+  font-family: var(--font-family-display);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-xwide);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-1);
+}
+
+.zeitgeist-filters__tag {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  padding: var(--space-1) 0;
+}
+
+.zeitgeist-filters__checkbox {
+  accent-color: var(--color-primary);
+}
+
+.zeitgeist-filters__label {
+  font-family: var(--font-family-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  line-height: 1;
+}
+
+
+/* --- Article feed --- */
+
+.zeitgeist-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.zeitgeist-article {
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.zeitgeist-article__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.zeitgeist-article__source {
+  font-weight: var(--font-weight-medium);
+}
+
+.zeitgeist-article__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.zeitgeist-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-elevated);
+  border: var(--border-width-thin) solid var(--color-border);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/* Empty state */
+.zeitgeist-empty {
+  text-align: center;
+  padding: var(--space-8);
+}
+
+
+/* --- Responsive --- */
+
+@media (max-width: 1024px) {
+  .zeitgeist__eyebrow {
+    font-size: var(--text-lg);
+    padding-inline: var(--page-padding-inline-mobile);
+    text-align: left;
+  }
+
+  .zeitgeist-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .zeitgeist-filters {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .zeitgeist-filters__group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .zeitgeist-filters__heading {
+    margin: 0;
+  }
+}

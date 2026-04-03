@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}Zeitgeist — Psi Function{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/zeitgeist.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="zeitgeist-page">
+
+  <p class="zeitgeist__eyebrow">Zeitgeist</p>
+
+  <p class="page-intro container">
+    Curated insights at the intersection of technology and small business —
+    the trends, tools, and ideas shaping how independent companies compete.
+  </p>
+
+  <div class="container section-stack">
+    <div class="zeitgeist-layout">
+
+      <!-- LEFT: Filter sidebar -->
+      <aside class="zeitgeist-filters" aria-label="Article filters">
+        {% for cat_key, cat_label in tag_categories.items() %}
+          {% if cat_key in tags_by_category %}
+          <div class="zeitgeist-filters__group">
+            <h3 class="zeitgeist-filters__heading">{{ cat_label }}</h3>
+            {% for tag in tags_by_category[cat_key] %}
+            <label class="zeitgeist-filters__tag">
+              <input
+                type="checkbox"
+                class="zeitgeist-filters__checkbox"
+                name="tag"
+                value="{{ tag.slug }}"
+                {% if tag.slug in selected_slugs %}checked{% endif %}
+              >
+              <span class="zeitgeist-filters__label">{{ tag.name }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% endif %}
+        {% endfor %}
+      </aside>
+
+      <!-- RIGHT: Article feed -->
+      <div class="zeitgeist-feed" id="zeitgeist-feed">
+        {% if articles %}
+          {% for article in articles %}
+          <a class="card zeitgeist-article" href="{{ article.url }}" target="_blank" rel="noopener noreferrer">
+            <div class="zeitgeist-article__meta">
+              {% if article.source %}
+                <span class="zeitgeist-article__source">{{ article.source }}</span>
+              {% endif %}
+              {% if article.published_at %}
+                <time class="zeitgeist-article__date" datetime="{{ article.published_at.isoformat() }}">
+                  {{ article.published_at.strftime('%b %d, %Y') }}
+                </time>
+              {% endif %}
+            </div>
+            <h3 class="card__title">{{ article.title }}</h3>
+            <p class="card__text">{{ article.summary }}</p>
+            <div class="zeitgeist-article__tags">
+              {% for tag in article.tags %}
+                <span class="zeitgeist-tag-pill">{{ tag.name }}</span>
+              {% endfor %}
+            </div>
+          </a>
+          {% endfor %}
+        {% else %}
+          <div class="card zeitgeist-empty">
+            <p class="card__text">
+              {% if selected_slugs %}
+                No articles match the selected filters. Try removing some filters.
+              {% else %}
+                Articles coming soon. Check back shortly.
+              {% endif %}
+            </p>
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/zeitgeist.js') }}" defer></script>
+{% endblock %}

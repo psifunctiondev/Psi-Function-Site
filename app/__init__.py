@@ -18,8 +18,10 @@ def create_app(config_name: str | None = None) -> Flask:
     from .blueprints.auth.routes import auth_bp
     from .blueprints.portal.routes import portal_bp
     from .blueprints.public.routes import public_bp
+    from .blueprints.zeitgeist.routes import zeitgeist_bp
 
     app.register_blueprint(public_bp)
+    app.register_blueprint(zeitgeist_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(portal_bp, url_prefix='/portal')
     app.register_blueprint(api_bp, url_prefix='/api')
