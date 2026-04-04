@@ -363,15 +363,22 @@
     min-height: auto;
   }
 
-  /* Fix canvas zoom: remove percentage heights that chain up to
-     viewport-based ancestors. Let the image size naturally. */
   .home__hero-media {
     min-height: auto;
   }
 
-  .home__hero-media .hero-carousel-wrap,
-  .home__hero-media .hero-carousel-wrap > img {
+  /* Fix canvas zoom on scroll: force the canvas into its own
+     compositing layer and fix its dimensions so the browser
+     never recalculates during scroll. */
+  .home__hero-media .hero-carousel-wrap {
     height: auto;
+    transform: translateZ(0); /* Force GPU layer */
+  }
+
+  .home__hero-media .hero-carousel-wrap > img,
+  .home__hero-media > .home__hero-canvas {
+    height: auto;
+    transform: translateZ(0); /* Force GPU layer */
   }
 
   .home__hero-content {
