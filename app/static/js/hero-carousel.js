@@ -39,6 +39,7 @@
     'canvas_wave.webp',
   ]
 
+  const FIRST_DELAY = 10000  // first transition comes quickly
   const MIN_DELAY = 30000
   const MAX_DELAY = 45000
   const CROSSFADE_MS = 2400
@@ -197,7 +198,7 @@
     }
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    setTimeout(cycle, randomDelay())
+    setTimeout(cycle, FIRST_DELAY)
   }
 
   // --- Init ---
