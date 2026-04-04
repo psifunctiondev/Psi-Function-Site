@@ -133,6 +133,8 @@
   justify-content: flex-end;
   gap: var(--space-1);
   width: 100%;
+  position: relative;
+  overflow: hidden;
 
   /* Richer motion than .card default */
   transition:
@@ -142,8 +144,58 @@
     transform    var(--duration-base) var(--ease-emphasized);
 }
 
+/* Fog cloud — three-color radial gradient with heavy blur.
+   Uses CSS custom properties so each theme provides its own fog palette.
+   Hidden by default, fades in on hover. */
+
+.svc-card {
+  --fog-color-1: var(--coral-500);
+  --fog-color-2: var(--steel-500);
+  --fog-color-3: var(--navy-900);
+}
+
+:root[data-theme="twilight"] .svc-card {
+  --fog-color-1: var(--warm-300);
+  --fog-color-2: var(--glow-300);
+  --fog-color-3: var(--graphite-800);
+}
+
+:root[data-theme="day"] .svc-card {
+  --fog-color-1: var(--coral-500);
+  --fog-color-2: var(--steel-300);
+  --fog-color-3: var(--navy-900);
+}
+
+.svc-card::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  z-index: 0;
+
+  background:
+    radial-gradient(ellipse at 25% 40%, var(--fog-color-1) 0%, transparent 55%),
+    radial-gradient(ellipse at 70% 30%, var(--fog-color-2) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 75%, var(--fog-color-3) 0%, transparent 55%);
+
+  filter: blur(30px);
+  opacity: 0;
+  transition: opacity var(--duration-slow, 0.4s) var(--ease-standard);
+  pointer-events: none;
+}
+
+/* Ensure card content sits above the fog */
+.svc-card > * {
+  position: relative;
+  z-index: 1;
+}
+
 .svc-card:hover {
-  transform: translateY(-1px);
+  border-color: transparent;
+  background: transparent;
+}
+
+.svc-card:hover::before {
+  opacity: 0.5;
 }
 
 .svc-card:active {
