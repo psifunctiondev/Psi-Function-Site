@@ -110,6 +110,7 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
+  overflow: hidden; /* Contains fog bleed from phase cards */
 }
 
 
@@ -134,7 +135,6 @@
   gap: var(--space-1);
   width: 100%;
   position: relative;
-  overflow: hidden;
 
   /* Richer motion than .card default */
   transition:
@@ -192,6 +192,7 @@
 .svc-card:hover {
   border-color: transparent;
   background: transparent;
+  box-shadow: none;
 }
 
 .svc-card:hover::before {
