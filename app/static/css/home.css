@@ -354,13 +354,24 @@
     width: clamp(10rem, 40vw, 14rem);
   }
 
-  /* Lock hero section height on mobile so scrolling doesn't cause resize */
+  /* Lock hero section height on mobile — no viewport-based sizing */
   .home__hero {
     min-height: auto;
   }
 
   .home__hero-inner {
     min-height: auto;
+  }
+
+  /* Fix canvas zoom: remove percentage heights that chain up to
+     viewport-based ancestors. Let the image size naturally. */
+  .home__hero-media {
+    min-height: auto;
+  }
+
+  .home__hero-media .hero-carousel-wrap,
+  .home__hero-media .hero-carousel-wrap > img {
+    height: auto;
   }
 
   .home__hero-content {
