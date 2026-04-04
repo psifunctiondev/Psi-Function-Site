@@ -398,10 +398,12 @@
   aspect-ratio: 1 / 1;
 }
 
-/* Both front and back Psi images fill the wrapper */
+/* Both front and back Psi images fill the wrapper.
+   Override the original .home__hero-psi width: 76% since
+   the wrapper already handles that sizing. */
 .home__hero-medallion .hero-carousel-wrap > img {
   display: block;
-  width: 100%;
+  width: 100% !important;
   height: 100%;
   object-fit: contain;
   padding: var(--space-2);
