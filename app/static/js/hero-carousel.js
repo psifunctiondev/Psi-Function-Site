@@ -39,8 +39,8 @@
     'canvas_wave.png',
   ]
 
-  const MIN_DELAY = 40000
-  const MAX_DELAY = 60000
+  const MIN_DELAY = 30000
+  const MAX_DELAY = 45000
   const CROSSFADE_MS = 2400
 
   // --- Helpers ---
