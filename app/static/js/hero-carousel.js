@@ -17,26 +17,26 @@
   // --- Configuration ---
 
   const PSI_LOGOS = [
-    'psi_logo_1.png',
-    'psi_logo_2.png',
-    'psi_logo_3.png',
-    'psi_logo_4.png',
-    'psi_logo_5.png',
-    'psi_logo_6.png',
-    'psi_logo_7.png',
-    'psi_logo_8.png',
+    'psi_logo_1.webp',
+    'psi_logo_2.webp',
+    'psi_logo_3.webp',
+    'psi_logo_4.webp',
+    'psi_logo_5.webp',
+    'psi_logo_6.webp',
+    'psi_logo_7.webp',
+    'psi_logo_8.webp',
   ]
 
   const CANVASES = [
-    'canvas_1.png',
-    'canvas_2.png',
-    'canvas_3.png',
-    'canvas_4.png',
-    'canvas_5.png',
-    'canvas_6.png',
-    'canvas_7.png',
-    'canvas_recede.png',
-    'canvas_wave.png',
+    'canvas_1.webp',
+    'canvas_2.webp',
+    'canvas_3.webp',
+    'canvas_4.webp',
+    'canvas_5.webp',
+    'canvas_6.webp',
+    'canvas_7.webp',
+    'canvas_recede.webp',
+    'canvas_wave.webp',
   ]
 
   const MIN_DELAY = 30000
