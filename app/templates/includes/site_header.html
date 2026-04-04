@@ -1,6 +1,37 @@
 <header class="site-header">
   <div class="site-header__inner container">
 
+    <!-- MOBILE: hamburger toggle (top-left, hidden on desktop) -->
+    <button
+      class="hamburger-toggle"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+      id="hamburger-btn"
+    >
+      <span class="hamburger-toggle__bar"></span>
+      <span class="hamburger-toggle__bar"></span>
+      <span class="hamburger-toggle__bar"></span>
+    </button>
+
+    <!-- MOBILE: slide-out menu panel -->
+    <div class="mobile-menu" id="mobile-menu" hidden>
+      <a class="mobile-menu__link" href="/home">Home</a>
+      <a class="mobile-menu__link" href="/services">Services</a>
+      <a class="mobile-menu__link" href="/about">About</a>
+      <a class="mobile-menu__link" href="/contact">Contact Us</a>
+
+      <div class="mobile-menu__divider"></div>
+
+      <div class="mobile-menu__theme-group">
+        <span class="mobile-menu__theme-label">Theme</span>
+        <button class="mobile-menu__theme-option" data-theme-value="auto">Auto</button>
+        <button class="mobile-menu__theme-option" data-theme-value="day">Day</button>
+        <button class="mobile-menu__theme-option" data-theme-value="twilight">Twilight</button>
+        <button class="mobile-menu__theme-option" data-theme-value="night">Night</button>
+      </div>
+    </div>
+
     <!-- LEFT: logo circle -->
 
     <a class="site-logo {% if request.endpoint == 'public.home' %}site-logo--hidden{% endif %}" href="/home">
@@ -11,7 +42,7 @@
       >
     </a>
 
-    <!-- CENTER: nav pill -->
+    <!-- CENTER: nav pill (desktop only) -->
     <nav class="site-nav" aria-label="Main navigation">
       <a class="site-nav__link" href="/home">Home</a>
       <a class="site-nav__link" href="/services">Services</a>
