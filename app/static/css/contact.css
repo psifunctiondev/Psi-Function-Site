@@ -123,7 +123,15 @@
   color: var(--color-text-subtle);
 }
 
-/* Responsive — stack on mobile */
+/* Responsive — eyebrow + grid on mobile */
+@media (max-width: 1024px) {
+  .contact__eyebrow {
+    font-size: var(--text-lg);
+    padding-inline: var(--page-padding-inline-mobile);
+    text-align: left;
+  }
+}
+
 @media (max-width: 767px) {
   .contact-grid {
     grid-template-columns: 1fr 1fr;
