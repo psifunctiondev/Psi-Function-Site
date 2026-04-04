@@ -366,22 +366,49 @@
 
 
 /* ----------------------------------------------------------
-   Hero carousel — simultaneous crossfade between two stacked
-   images. JS inserts a .hero-carousel-back behind the original.
+   Hero carousel — wrapper + back layer for seamless crossfade.
+   JS wraps each <img> in .hero-carousel-wrap and adds a
+   .hero-carousel-back clone inside it.
    ---------------------------------------------------------- */
 
-/* Back layer in the medallion — match the Psi img sizing exactly */
-.home__hero-medallion .hero-carousel-back {
-  width: 76% !important;
-  height: auto !important;
+/* Wrapper: takes the shape of the front image, acts as
+   positioning context for the back layer */
+.hero-carousel-wrap {
+  position: relative;
+  display: block;
+}
+
+/* Back layer: overlays the front image exactly */
+.hero-carousel-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* --- Psi logo: wrapper inherits medallion flex centering --- */
+
+.home__hero-medallion .hero-carousel-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76%;
   aspect-ratio: 1 / 1;
+}
+
+/* Both front and back Psi images fill the wrapper */
+.home__hero-medallion .hero-carousel-wrap > img {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   padding: var(--space-2);
   box-sizing: border-box;
-  /* Center within medallion */
-  left: 50% !important;
-  top: 50% !important;
-  transform: translate(-50%, -50%);
+}
+
+.home__hero-medallion .hero-carousel-back {
   mix-blend-mode: screen;
 }
 
@@ -390,8 +417,18 @@
   mix-blend-mode: multiply;
 }
 
-/* Back layer in the media panel — match canvas sizing */
-.home__hero-media > .hero-carousel-back {
+/* --- Canvas: wrapper fills the media panel flow position --- */
+
+.home__hero-media > .hero-carousel-wrap {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.home__hero-media .hero-carousel-wrap > img {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   object-position: center center;
 }

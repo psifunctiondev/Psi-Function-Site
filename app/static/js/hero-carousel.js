@@ -3,8 +3,7 @@
  *
  * Cycles through Psi logo variants and canvas background variants,
  * alternating which one transitions each cycle (never both at once).
- * Uses a two-layer stack per slot so the outgoing and incoming images
- * overlap seamlessly — no blank/white flash.
+ * Uses a thin wrapper + absolute back layer for seamless overlap.
  *
  * Timing: 40–60s hold, ~2.4s crossfade.
  */
@@ -37,9 +36,9 @@
     'canvas_wave.png',
   ]
 
-  const MIN_DELAY = 40000 // ms
+  const MIN_DELAY = 40000
   const MAX_DELAY = 60000
-  const CROSSFADE_MS = 2400 // slower, more gentle
+  const CROSSFADE_MS = 2400
 
   // --- Helpers ---
 
@@ -72,9 +71,6 @@
   }
 
   // --- Carousel engine ---
-  // Creates an invisible "back" <img> behind the original, positioned
-  // identically. To transition: load new image into back, fade back in
-  // while fading front out simultaneously, then swap.
 
   function createCarousel(el, images, currentFilename) {
     if (!el || images.length <= 1) return null
@@ -82,28 +78,24 @@
     let currentIndex = images.findIndex((f) => currentFilename.includes(f))
     if (currentIndex === -1) currentIndex = 0
 
-    // Create back layer — copy all inline styles and classes from original
+    // Wrap the <img> in a position:relative container that inherits
+    // the img's display footprint exactly. The back layer then sits
+    // absolutely within this wrapper, matching the front img bounds.
+    const wrapper = document.createElement('div')
+    wrapper.className = 'hero-carousel-wrap'
+    el.parentNode.insertBefore(wrapper, el)
+    wrapper.appendChild(el)
+
+    // Clone the image for the back layer
     const backEl = el.cloneNode(false)
-    backEl.removeAttribute('class')
-    // Copy the original's classes except any carousel-specific ones
-    el.classList.forEach((c) => backEl.classList.add(c))
     backEl.classList.add('hero-carousel-back')
-    backEl.style.position = 'absolute'
-    backEl.style.top = '0'
-    backEl.style.left = '0'
-    backEl.style.width = '100%'
-    backEl.style.height = '100%'
-    backEl.style.opacity = '0'
-    backEl.style.transition = `opacity ${CROSSFADE_MS}ms ease`
-    backEl.style.pointerEvents = 'none'
     backEl.setAttribute('aria-hidden', 'true')
+    wrapper.appendChild(backEl)
 
-    // The front el needs transition too
+    // Transition on both layers
     el.style.transition = `opacity ${CROSSFADE_MS}ms ease`
-
-    // Insert back behind the front (visually behind due to DOM order,
-    // but we'll control with opacity)
-    el.parentNode.insertBefore(backEl, el)
+    backEl.style.transition = `opacity ${CROSSFADE_MS}ms ease`
+    backEl.style.opacity = '0'
 
     let transitioning = false
 
@@ -123,13 +115,12 @@
 
       // Load new image into back layer
       backEl.src = nextSrc
-      void backEl.offsetWidth // force reflow
+      void backEl.offsetWidth
 
-      // Simultaneously: fade back in, fade front out
+      // Simultaneous crossfade
       backEl.style.opacity = '1'
       el.style.opacity = '0'
 
-      // After crossfade completes, swap the front src and reset
       setTimeout(() => {
         el.src = nextSrc
         el.style.opacity = '1'
@@ -139,20 +130,18 @@
       }, CROSSFADE_MS + 100)
     }
 
-    return { doTransition, images, currentIndex }
+    return { doTransition }
   }
 
   // --- Alternating coordinator ---
-  // Each cycle, only ONE of the two carousels transitions.
 
   function startAlternating(psiCarousel, canvasCarousel) {
     const carousels = [psiCarousel, canvasCarousel].filter(Boolean)
     if (!carousels.length) return
 
-    let lastIndex = -1 // which carousel transitioned last
+    let lastIndex = -1
 
     function cycle() {
-      // Pick the other one (alternate), or random if only one exists
       let idx
       if (carousels.length === 1) {
         idx = 0
@@ -160,18 +149,12 @@
         idx = lastIndex === 0 ? 1 : lastIndex === 1 ? 0 : Math.round(Math.random())
       }
 
-      const carousel = carousels[idx]
-      carousel.doTransition()
+      carousels[idx].doTransition()
       lastIndex = idx
-
-      // Schedule next cycle
       setTimeout(cycle, randomDelay())
     }
 
-    // Respect prefers-reduced-motion
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    // Start after initial hold
     setTimeout(cycle, randomDelay())
   }
 
