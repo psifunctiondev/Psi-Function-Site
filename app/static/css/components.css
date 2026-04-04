@@ -26,6 +26,27 @@
   border-color: var(--color-border-strong);
 }
 
+/* --- Page intro — short blurb between eyebrow and content --- */
+
+.page-intro {
+  margin: 0;
+  padding-block: var(--space-3) var(--space-1);
+  font-family: var(--font-family-sans);
+  font-size: var(--text-lg);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-muted);
+  text-align: center;
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+@media (max-width: 1024px) {
+  .page-intro {
+    text-align: left;
+    font-size: var(--text-base);
+  }
+}
+
 /* --- Card grid --- */
 
 .card-grid {
