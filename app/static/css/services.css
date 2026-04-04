@@ -193,6 +193,7 @@
   border-color: transparent;
   background: transparent;
   box-shadow: none;
+  z-index: 2; /* Fog overlaps adjacent cards */
 }
 
 .svc-card:hover::before {
