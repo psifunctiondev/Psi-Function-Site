@@ -20,10 +20,17 @@ def create_app(config_name: str | None = None) -> Flask:
     from .blueprints.public.routes import public_bp
 
     app.register_blueprint(public_bp)
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(portal_bp, url_prefix='/portal')
+    app.register_blueprint(auth_bp)     # Routes use /p/ prefix directly
+    app.register_blueprint(portal_bp)   # Routes use /p/ prefix directly
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(health_bp)
+
+    # Update login redirect to portal login
+    login_manager.login_view = 'auth.login'
+
+    # Register CLI commands
+    from .cli import register_cli
+    register_cli(app)
 
     return app

@@ -14,9 +14,21 @@
 
   <div class="container section-stack">
 
+    <!-- Welcome + logout -->
+    <div class="portal-welcome">
+      <span class="portal-welcome__greeting">
+        Welcome, {{ user.display_name or user.email }}
+      </span>
+      <a class="portal-welcome__logout" href="{{ url_for('auth.logout') }}">Log out</a>
+    </div>
+
     {% if not grouped_resources %}
-      <div class="portal-empty card">
-        <p class="card__text">No resources available yet. Check back soon.</p>
+      <div class="card portal-empty">
+        <p class="card__text">
+          Your portal is being set up. We'll let you know when your
+          resources are ready. In the meantime, reach out anytime at
+          <a href="mailto:info@psifunction.com">info@psifunction.com</a>.
+        </p>
       </div>
     {% endif %}
 
@@ -24,7 +36,7 @@
       {% if cat_key in grouped_resources %}
       <div class="portal-section">
         <h2 class="portal-section__title">{{ cat_label }}</h2>
-        <div class="portal-resource-grid">
+        <div class="portal-resource-list">
           {% for resource in grouped_resources[cat_key] %}
           <a
             class="card portal-resource-card"
