@@ -318,22 +318,185 @@
    Row 2: nav pill stretches full width
    ------------------------------------------------------- */
 
+/* -------------------------------------------------------
+   HAMBURGER TOGGLE — hidden on desktop, top-left on mobile
+   Three animated bars that morph into an X when open.
+   ------------------------------------------------------- */
+
+.hamburger-toggle {
+  display: none; /* Hidden on desktop */
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: calc(var(--header-height) - var(--space-4) * 2);
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  cursor: pointer;
+  z-index: calc(var(--z-dropdown) + 1);
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.hamburger-toggle:hover {
+  background: var(--color-surface);
+}
+
+.hamburger-toggle__bar {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--color-text);
+  border-radius: 1px;
+  transition:
+    transform var(--duration-base) var(--ease-emphasized),
+    opacity var(--duration-fast) var(--ease-standard);
+}
+
+/* X shape when open */
+.hamburger-toggle[aria-expanded="true"] .hamburger-toggle__bar:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+.hamburger-toggle[aria-expanded="true"] .hamburger-toggle__bar:nth-child(2) {
+  opacity: 0;
+}
+.hamburger-toggle[aria-expanded="true"] .hamburger-toggle__bar:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+
+/* -------------------------------------------------------
+   MOBILE MENU — slide-out panel styled like theme popup
+   ------------------------------------------------------- */
+
+.mobile-menu {
+  display: none; /* Hidden on desktop */
+}
+
+.mobile-menu[hidden] {
+  display: none !important;
+}
+
+.mobile-menu__link {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  text-decoration: none;
+  font-family: var(--font-family-display);
+  font-size: var(--text-sm);
+  letter-spacing: var(--letter-spacing-wide);
+  transition:
+    background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.mobile-menu__link:hover {
+  background: var(--color-surface);
+  color: var(--color-accent);
+}
+
+.mobile-menu__divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--space-2) var(--space-3);
+}
+
+.mobile-menu__theme-group {
+  padding: var(--space-1) var(--space-3);
+}
+
+.mobile-menu__theme-label {
+  display: block;
+  font-family: var(--font-family-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--letter-spacing-xwide);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--space-1);
+}
+
+.mobile-menu__theme-option {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-md);
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text);
+  font-family: var(--font-family-display);
+  font-size: var(--text-sm);
+  letter-spacing: var(--letter-spacing-wide);
+  transition:
+    background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.mobile-menu__theme-option:hover {
+  background: var(--color-surface);
+  color: var(--color-accent);
+}
+
+.mobile-menu__theme-option--active {
+  color: var(--color-primary);
+}
+
+
+/* -------------------------------------------------------
+   Mobile: hamburger replaces nav pill
+   ------------------------------------------------------- */
+
 @media (max-width: 767px) {
   .site-header__inner {
     grid-template-columns: auto 1fr auto;
-    grid-template-rows: auto auto;
     height: auto;
     padding-block: var(--space-3);
   }
 
+  /* Show hamburger, hide desktop nav */
+  .hamburger-toggle {
+    display: flex;
+  }
+
   .site-nav {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    justify-self: stretch;
-    justify-content: flex-start;
+    display: none;
+  }
+
+  /* Mobile menu panel — positioned below header */
+  .mobile-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: var(--space-4);
+    z-index: var(--z-dropdown);
+
+    background: var(--color-surface-elevated);
+    border: var(--border-width-thin) solid var(--color-border);
     border-radius: var(--radius-lg);
-    height: auto;
-    padding-block: var(--space-2);
-    overflow-x: auto;
+    padding: var(--space-2);
+    min-width: 13rem;
+    box-shadow: var(--shadow-md);
+
+    /* Slide + fade animation */
+    animation: mobile-menu-enter var(--duration-base) var(--ease-emphasized) both;
+  }
+
+  .mobile-menu.is-open {
+    display: block;
+  }
+
+  @keyframes mobile-menu-enter {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
