@@ -3,7 +3,10 @@
  *
  * Cycles through Psi logo variants and canvas background variants,
  * alternating which one transitions each cycle (never both at once).
- * Uses a thin wrapper + absolute back layer for seamless overlap.
+ *
+ * Two strategies to avoid layout disruption:
+ *   - Psi logo: simple fade-out → swap → fade-in (medallion bg fills gap)
+ *   - Canvas: wrapper + back layer for seamless overlap (no flash)
  *
  * Timing: 40–60s hold, ~2.4s crossfade.
  */
@@ -70,32 +73,75 @@
     })
   }
 
-  // --- Carousel engine ---
+  // --- Strategy 1: Simple fade (for Psi logo) ---
+  // Fade out → swap src → fade in. Works because the medallion's
+  // solid background fills the gap. Zero layout impact.
 
-  function createCarousel(el, images, currentFilename) {
+  function createFadeCarousel(el, images, currentFilename) {
     if (!el || images.length <= 1) return null
 
     let currentIndex = images.findIndex((f) => currentFilename.includes(f))
     if (currentIndex === -1) currentIndex = 0
 
-    // Wrap the <img> in a position:relative container that inherits
-    // the img's display footprint exactly. The back layer then sits
-    // absolutely within this wrapper, matching the front img bounds.
+    el.style.transition = `opacity ${CROSSFADE_MS}ms ease`
+    let transitioning = false
+
+    async function doTransition() {
+      if (transitioning) return
+      transitioning = true
+
+      const nextIndex = pickRandom(images, currentIndex)
+      const nextSrc = imagePath(images[nextIndex])
+
+      try { await preloadImage(nextSrc) } catch {
+        transitioning = false; return
+      }
+
+      // Fade out
+      el.style.opacity = '0'
+
+      setTimeout(() => {
+        // Swap while invisible
+        el.src = nextSrc
+        void el.offsetWidth
+        // Fade in
+        el.style.opacity = '1'
+
+        setTimeout(() => {
+          currentIndex = nextIndex
+          transitioning = false
+        }, CROSSFADE_MS + 50)
+      }, CROSSFADE_MS + 50)
+    }
+
+    return { doTransition }
+  }
+
+  // --- Strategy 2: Overlap fade (for canvas) ---
+  // Wrapper + back layer so both images are visible simultaneously
+  // during the crossfade. No blank flash.
+
+  function createOverlapCarousel(el, images, currentFilename) {
+    if (!el || images.length <= 1) return null
+
+    let currentIndex = images.findIndex((f) => currentFilename.includes(f))
+    if (currentIndex === -1) currentIndex = 0
+
+    // Wrap the canvas in a container
     const wrapper = document.createElement('div')
     wrapper.className = 'hero-carousel-wrap'
     el.parentNode.insertBefore(wrapper, el)
     wrapper.appendChild(el)
 
-    // Clone the image for the back layer
+    // Clone for back layer
     const backEl = el.cloneNode(false)
     backEl.classList.add('hero-carousel-back')
     backEl.setAttribute('aria-hidden', 'true')
+    backEl.style.opacity = '0'
     wrapper.appendChild(backEl)
 
-    // Transition on both layers
     el.style.transition = `opacity ${CROSSFADE_MS}ms ease`
     backEl.style.transition = `opacity ${CROSSFADE_MS}ms ease`
-    backEl.style.opacity = '0'
 
     let transitioning = false
 
@@ -106,14 +152,10 @@
       const nextIndex = pickRandom(images, currentIndex)
       const nextSrc = imagePath(images[nextIndex])
 
-      try {
-        await preloadImage(nextSrc)
-      } catch {
-        transitioning = false
-        return
+      try { await preloadImage(nextSrc) } catch {
+        transitioning = false; return
       }
 
-      // Load new image into back layer
       backEl.src = nextSrc
       void backEl.offsetWidth
 
@@ -164,11 +206,14 @@
     const psiImg = document.querySelector('.home__hero-psi')
     const canvasImg = document.querySelector('.home__hero-canvas')
 
+    // Psi: simple fade (medallion bg fills gap)
     const psiCarousel = psiImg
-      ? createCarousel(psiImg, PSI_LOGOS, psiImg.src)
+      ? createFadeCarousel(psiImg, PSI_LOGOS, psiImg.src)
       : null
+
+    // Canvas: overlap fade (no blank flash)
     const canvasCarousel = canvasImg
-      ? createCarousel(canvasImg, CANVASES, canvasImg.src)
+      ? createOverlapCarousel(canvasImg, CANVASES, canvasImg.src)
       : null
 
     startAlternating(psiCarousel, canvasCarousel)

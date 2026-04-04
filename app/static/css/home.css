@@ -366,19 +366,27 @@
 
 
 /* ----------------------------------------------------------
-   Hero carousel — wrapper + back layer for seamless crossfade.
-   JS wraps each <img> in .hero-carousel-wrap and adds a
-   .hero-carousel-back clone inside it.
+   Hero carousel
+   - Psi logo: JS fades in-place (no extra elements)
+   - Canvas: JS wraps in .hero-carousel-wrap with a back layer
    ---------------------------------------------------------- */
 
-/* Wrapper: takes the shape of the front image, acts as
-   positioning context for the back layer */
+/* Canvas wrapper: inherits the flow position of the original img */
 .hero-carousel-wrap {
   position: relative;
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
-/* Back layer: overlays the front image exactly */
+.hero-carousel-wrap > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
 .hero-carousel-back {
   position: absolute;
   top: 0;
@@ -386,53 +394,6 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-}
-
-/* --- Psi logo: wrapper inherits medallion flex centering --- */
-
-.home__hero-medallion .hero-carousel-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 76%;
-  aspect-ratio: 1 / 1;
-}
-
-/* Both front and back Psi images fill the wrapper.
-   Override the original .home__hero-psi width: 76% since
-   the wrapper already handles that sizing. */
-.home__hero-medallion .hero-carousel-wrap > img {
-  display: block;
-  width: 100% !important;
-  height: 100%;
-  object-fit: contain;
-  padding: var(--space-2);
-  box-sizing: border-box;
-}
-
-.home__hero-medallion .hero-carousel-back {
-  mix-blend-mode: screen;
-}
-
-:root[data-theme="day"] .home__hero-medallion .hero-carousel-back,
-:root[data-theme="twilight"] .home__hero-medallion .hero-carousel-back {
-  mix-blend-mode: multiply;
-}
-
-/* --- Canvas: wrapper fills the media panel flow position --- */
-
-.home__hero-media > .hero-carousel-wrap {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.home__hero-media .hero-carousel-wrap > img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center center;
 }
 
 @media (prefers-reduced-motion: reduce) {
