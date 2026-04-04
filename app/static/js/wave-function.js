@@ -19,19 +19,27 @@
   const GLOW = '#FFB48F'
 
   // --- Wave parameters ---
+  // Real and imaginary are now fully independent wave systems
+  // with different wavelengths, speeds, and envelopes.
   const WAVE = {
-    // Base wave packet
-    k0: 6,              // central wave number
-    sigma: 0.18,        // packet width (fraction of canvas)
-    speed: 0.4,         // phase velocity
-    // Secondary wave (interference)
-    k1: 4.2,
-    sigma1: 0.22,
-    speed1: -0.25,
-    amp1: 0.4,          // relative amplitude
-    // Breathing
-    breathRate: 0.15,   // how fast the amplitude pulses
-    breathDepth: 0.12,  // how much it pulses (0–1)
+    // Real component (coral) — longer wavelength, slower
+    real: {
+      k: 4.5,             // wave number (fewer oscillations)
+      sigma: 0.22,         // wider packet
+      speed: 0.3,          // slower phase velocity
+      breathRate: 0.12,
+      breathDepth: 0.10,
+      drift: { center: 0.48, range: 0.10, rate: 0.08 },
+    },
+    // Imaginary component (steel) — shorter wavelength, faster
+    imag: {
+      k: 7.5,             // more oscillations
+      sigma: 0.16,         // tighter packet
+      speed: 0.55,         // faster phase velocity
+      breathRate: 0.19,
+      breathDepth: 0.14,
+      drift: { center: 0.52, range: 0.07, rate: 0.11 },
+    },
     // Rendering
     lineWidth: 2,
     fillAlpha: 0.12,
@@ -77,36 +85,29 @@
       return Math.exp(-0.5 * d * d)
     }
 
-    function computeWave(t) {
-      const points = Math.ceil(width)
-      const re = new Float32Array(points)
-      const im = new Float32Array(points)
-      const prob = new Float32Array(points)
-
-      // Breathing modulation
-      const breath = 1 - WAVE.breathDepth * (0.5 + 0.5 * Math.sin(t * WAVE.breathRate * Math.PI * 2))
-
-      // Gentle drift for the packet center
-      const drift = 0.5 + 0.08 * Math.sin(t * 0.1)
-      const drift1 = 0.5 - 0.06 * Math.sin(t * 0.07 + 1.5)
+    function computeComponent(cfg, t, points) {
+      const data = new Float32Array(points)
+      const breath = 1 - cfg.breathDepth * (0.5 + 0.5 * Math.sin(t * cfg.breathRate * Math.PI * 2))
+      const center = cfg.drift.center + cfg.drift.range * Math.sin(t * cfg.drift.rate)
 
       for (let i = 0; i < points; i++) {
-        const x = i / points // normalized 0–1
+        const x = i / points
+        const env = gaussian(x, center, cfg.sigma) * breath
+        const phase = cfg.k * Math.PI * 2 * x - t * cfg.speed
+        data[i] = env * Math.sin(phase)
+      }
 
-        // Primary wave packet
-        const env0 = gaussian(x, drift, WAVE.sigma) * breath
-        const phase0 = WAVE.k0 * Math.PI * 2 * x - t * WAVE.speed
-        const re0 = env0 * Math.cos(phase0)
-        const im0 = env0 * Math.sin(phase0)
+      return data
+    }
 
-        // Secondary wave packet (creates interference)
-        const env1 = gaussian(x, drift1, WAVE.sigma1) * WAVE.amp1 * breath
-        const phase1 = WAVE.k1 * Math.PI * 2 * x - t * WAVE.speed1
-        const re1 = env1 * Math.cos(phase1)
-        const im1 = env1 * Math.sin(phase1)
+    function computeWave(t) {
+      const points = Math.ceil(width)
+      const re = computeComponent(WAVE.real, t, points)
+      const im = computeComponent(WAVE.imag, t, points)
 
-        re[i] = re0 + re1
-        im[i] = im0 + im1
+      // Probability density from both independent components
+      const prob = new Float32Array(points)
+      for (let i = 0; i < points; i++) {
         prob[i] = re[i] * re[i] + im[i] * im[i]
       }
 
