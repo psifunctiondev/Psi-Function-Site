@@ -31,11 +31,13 @@
       breathDepth: 0.10,
       drift: { center: 0.48, range: 0.10, rate: 0.08 },
     },
-    // Imaginary component (steel) — shorter wavelength, faster
+    // Imaginary component (steel) — wavelength evolves over time
     imag: {
-      k: 7.5,             // more oscillations
-      sigma: 0.16,         // tighter packet
-      speed: 0.55,         // faster phase velocity
+      kMin: 5,             // wave number range low
+      kMax: 10,            // wave number range high
+      kRate: 0.06,         // how fast k oscillates
+      sigma: 0.16,
+      speed: 0.55,
       breathRate: 0.19,
       breathDepth: 0.14,
       drift: { center: 0.52, range: 0.07, rate: 0.11 },
@@ -85,15 +87,71 @@
       return Math.exp(-0.5 * d * d)
     }
 
-    function computeComponent(cfg, t, points) {
+    // --- Cursor tracking for real wave interaction ---
+    let mouseX = -1  // normalized 0–1, -1 = not hovering
+    let mouseSmooth = -1
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect()
+      mouseX = (e.clientX - rect.left) / rect.width
+    })
+
+    canvas.addEventListener('mouseleave', () => {
+      mouseX = -1
+    })
+
+    // Touch support
+    canvas.addEventListener('touchmove', (e) => {
+      const rect = canvas.getBoundingClientRect()
+      mouseX = (e.touches[0].clientX - rect.left) / rect.width
+    }, { passive: true })
+
+    canvas.addEventListener('touchend', () => {
+      mouseX = -1
+    })
+
+    function computeReal(cfg, t, points) {
       const data = new Float32Array(points)
       const breath = 1 - cfg.breathDepth * (0.5 + 0.5 * Math.sin(t * cfg.breathRate * Math.PI * 2))
       const center = cfg.drift.center + cfg.drift.range * Math.sin(t * cfg.drift.rate)
 
+      // Smoothly interpolate toward mouse position
+      if (mouseX >= 0) {
+        mouseSmooth += (mouseX - mouseSmooth) * 0.05
+      } else {
+        mouseSmooth += (-1 - mouseSmooth) * 0.03
+      }
+
+      for (let i = 0; i < points; i++) {
+        const x = i / points
+        let env = gaussian(x, center, cfg.sigma) * breath
+
+        // If hovering, add a local amplitude boost near the cursor
+        if (mouseSmooth >= 0) {
+          const cursorEffect = gaussian(x, mouseSmooth, 0.08) * 0.6
+          env = env + cursorEffect
+        }
+
+        const phase = cfg.k * Math.PI * 2 * x - t * cfg.speed
+        data[i] = env * Math.sin(phase)
+      }
+
+      return data
+    }
+
+    function computeImag(cfg, t, points) {
+      const data = new Float32Array(points)
+      const breath = 1 - cfg.breathDepth * (0.5 + 0.5 * Math.sin(t * cfg.breathRate * Math.PI * 2))
+      const center = cfg.drift.center + cfg.drift.range * Math.sin(t * cfg.drift.rate)
+
+      // Wavelength evolves over time
+      const kRange = cfg.kMax - cfg.kMin
+      const k = cfg.kMin + kRange * (0.5 + 0.5 * Math.sin(t * cfg.kRate * Math.PI * 2))
+
       for (let i = 0; i < points; i++) {
         const x = i / points
         const env = gaussian(x, center, cfg.sigma) * breath
-        const phase = cfg.k * Math.PI * 2 * x - t * cfg.speed
+        const phase = k * Math.PI * 2 * x - t * cfg.speed
         data[i] = env * Math.sin(phase)
       }
 
@@ -102,8 +160,8 @@
 
     function computeWave(t) {
       const points = Math.ceil(width)
-      const re = computeComponent(WAVE.real, t, points)
-      const im = computeComponent(WAVE.imag, t, points)
+      const re = computeReal(WAVE.real, t, points)
+      const im = computeImag(WAVE.imag, t, points)
 
       // Probability density from both independent components
       const prob = new Float32Array(points)
