@@ -31,12 +31,7 @@
         </p>
       </div>
 
-      <div class="card about-grid__span-2 about-grid__media-card">
-        <img
-          src="{{ url_for('static', filename='images/Schrodinger.webp') }}"
-          alt="Schrodinger equation"
-          class="about-grid__img"
-        >
+      <div class="card about-grid__span-2 about-grid__media-card" id="wave-function">
       </div>
 
       <!-- Row 2: 2-col image + 3-col text -->
@@ -62,4 +57,8 @@
 </section>
 
 
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/wave-function.js') }}" defer></script>
 {% endblock %}
