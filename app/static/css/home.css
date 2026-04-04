@@ -354,6 +354,15 @@
     width: clamp(10rem, 40vw, 14rem);
   }
 
+  /* Lock hero section height on mobile so scrolling doesn't cause resize */
+  .home__hero {
+    min-height: auto;
+  }
+
+  .home__hero-inner {
+    min-height: auto;
+  }
+
   .home__hero-content {
     padding-inline: var(--page-padding-inline-mobile);
     padding-block: var(--section-space-sm);
