@@ -28,15 +28,17 @@
   // --- Image carousel (reuses home page pattern) ---
 
   const IMAGES = [
-    'canvas_1.webp',
-    'canvas_2.webp',
-    'canvas_3.webp',
-    'canvas_4.webp',
-    'canvas_5.webp',
-    'canvas_6.webp',
-    'canvas_7.webp',
-    'canvas_recede.webp',
-    'canvas_wave.webp',
+    'door_1.webp',
+    'door_2.webp',
+    'door_3.webp',
+    'door_4.webp',
+    'door_5.webp',
+    'door_6.webp',
+    'door_7.webp',
+    'door_8.webp',
+    'door_9.webp',
+    'door_10.webp',
+    'door_11.webp',
   ]
 
   const FIRST_DELAY = 8000
