@@ -45,7 +45,7 @@
     // Rendering
     lineWidth: 2,
     fillAlpha: 0.12,
-    gridAlpha: 0.22,
+    gridAlpha: 0.30,
     gridLines: 5,
   }
 
