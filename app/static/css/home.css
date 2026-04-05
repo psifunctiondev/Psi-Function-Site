@@ -45,7 +45,9 @@
 
 .home__hero {
   width: 100%;
-  min-height: calc(100svh - var(--header-height));
+  /* Avoid viewport units — they cause canvas zoom on iOS/iPadOS
+     when the browser chrome animates during scroll */
+  min-height: 40rem;
   background: var(--color-bg);
   overflow: hidden;
 }
@@ -84,7 +86,7 @@
   display: grid;
   grid-template-columns: 2fr 3fr;
   min-height: calc(
-    100svh
+    40rem
     - var(--header-height)
     - var(--space-5) * 2
     - var(--header-height) * 0.25
