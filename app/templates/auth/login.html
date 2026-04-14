@@ -1,16 +1,149 @@
 {% extends 'base.html' %}
-{% block title %}Login{% endblock %}
+
+{% block title %}Client Portal — Psi Function{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+{% endblock %}
+
 {% block content %}
-<form method="post" class="mx-auto max-w-md space-y-4 rounded-2xl border border-slate-200 p-6">
-  <h1 class="text-2xl font-semibold">Client Login</h1>
-  <label class="block">
-    <span class="mb-1 block text-sm">Email</span>
-    <input type="email" name="email" class="w-full rounded-lg border px-3 py-2">
-  </label>
-  <label class="block">
-    <span class="mb-1 block text-sm">Password</span>
-    <input type="password" name="password" class="w-full rounded-lg border px-3 py-2">
-  </label>
-  <button class="rounded-lg border px-4 py-2">Sign in</button>
-</form>
+
+<section class="portal-page">
+
+  <p class="portal__eyebrow">Client Portal</p>
+
+  <p class="page-intro">
+    Secure access to your projects, deliverables, and resources.
+  </p>
+
+  <div class="container section-stack">
+    <div class="portal-login-grid">
+
+      <!-- LEFT: image carousel (2 cols) -->
+      <div class="card portal-login-grid__media" id="portal-carousel">
+        <img
+          class="portal-login-grid__img"
+          src="{{ url_for('static', filename='images/door_1.webp') }}"
+          alt=""
+          aria-hidden="true"
+        >
+      </div>
+
+      <!-- RIGHT: auth card (3 cols) -->
+      <div class="card portal-login-grid__auth">
+
+        <!-- Tab switcher -->
+        <div class="portal-auth-tabs">
+          <button
+            class="portal-auth-tabs__tab {% if mode == 'login' %}is-active{% endif %}"
+            data-tab="login"
+          >Sign In</button>
+          <button
+            class="portal-auth-tabs__tab {% if mode == 'register' %}is-active{% endif %}"
+            data-tab="register"
+          >Register</button>
+          <button
+            class="portal-auth-tabs__tab {% if mode == 'reset' %}is-active{% endif %}"
+            data-tab="reset"
+          >Reset Password</button>
+        </div>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <p class="portal-flash portal-flash--{{ category }}">{{ message }}</p>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- SIGN IN form -->
+        <form
+          class="portal-auth-form {% if mode == 'login' %}is-active{% endif %}"
+          data-tab="login"
+          method="post"
+        >
+          <input type="hidden" name="action" value="login">
+          <label class="portal-auth-form__field">
+            <span class="portal-auth-form__label">Email</span>
+            <input type="email" name="email" required autocomplete="email" class="portal-auth-form__input">
+          </label>
+          <label class="portal-auth-form__field">
+            <span class="portal-auth-form__label">Password</span>
+            <input type="password" name="password" required autocomplete="current-password" class="portal-auth-form__input">
+          </label>
+          <button type="submit" class="portal-auth-form__submit">Sign In</button>
+        </form>
+
+        <!-- REGISTER form -->
+        <form
+          class="portal-auth-form {% if mode == 'register' %}is-active{% endif %}"
+          data-tab="register"
+          method="post"
+        >
+          <input type="hidden" name="action" value="register">
+          <input type="hidden" name="token" value="{{ token }}">
+          {% if not token %}
+            <p class="portal-auth-form__note">
+              Registration requires an invite link from Psi Function.
+              Please check your email.
+            </p>
+          {% else %}
+            <label class="portal-auth-form__field">
+              <span class="portal-auth-form__label">Your Name</span>
+              <input type="text" name="display_name" required autocomplete="name" class="portal-auth-form__input">
+            </label>
+            <label class="portal-auth-form__field">
+              <span class="portal-auth-form__label">Password</span>
+              <input type="password" name="password" required minlength="8" autocomplete="new-password" class="portal-auth-form__input">
+            </label>
+            <label class="portal-auth-form__field">
+              <span class="portal-auth-form__label">Confirm Password</span>
+              <input type="password" name="password_confirm" required minlength="8" autocomplete="new-password" class="portal-auth-form__input">
+            </label>
+            <button type="submit" class="portal-auth-form__submit">Create Account</button>
+          {% endif %}
+        </form>
+
+        <!-- RESET PASSWORD form -->
+        <form
+          class="portal-auth-form {% if mode == 'reset' %}is-active{% endif %}"
+          data-tab="reset"
+          method="post"
+        >
+          {% if token and mode == 'reset' %}
+            <!-- Confirm new password (user clicked reset link) -->
+            <input type="hidden" name="action" value="reset-confirm">
+            <input type="hidden" name="token" value="{{ token }}">
+            <label class="portal-auth-form__field">
+              <span class="portal-auth-form__label">New Password</span>
+              <input type="password" name="password" required minlength="8" autocomplete="new-password" class="portal-auth-form__input">
+            </label>
+            <label class="portal-auth-form__field">
+              <span class="portal-auth-form__label">Confirm New Password</span>
+              <input type="password" name="password_confirm" required minlength="8" autocomplete="new-password" class="portal-auth-form__input">
+            </label>
+            <button type="submit" class="portal-auth-form__submit">Update Password</button>
+          {% else %}
+            <!-- Request reset email -->
+            <input type="hidden" name="action" value="reset-request">
+            <label class="portal-auth-form__field">
+              <span class="portal-auth-form__label">Email</span>
+              <input type="email" name="email" required autocomplete="email" class="portal-auth-form__input">
+            </label>
+            <button type="submit" class="portal-auth-form__submit">Send Reset Link</button>
+          {% endif %}
+        </form>
+
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/portal-auth.js') }}" defer></script>
 {% endblock %}

@@ -1,9 +1,37 @@
-from flask import Blueprint, render_template
-from flask_login import login_required
+"""Client portal dashboard — authenticated, per-client resource view."""
+
+from flask import Blueprint, abort, render_template
+from flask_login import current_user, login_required
+
+from app.models.client import ClientResource
 
 portal_bp = Blueprint('portal', __name__)
 
-@portal_bp.get('/')
+
+@portal_bp.get('/p/dashboard')
 @login_required
 def dashboard():
-    return render_template('portal/dashboard.html')
+    """Client dashboard — shows resources grouped by category."""
+    client = current_user.client
+    if not client or not client.is_active:
+        abort(403)
+
+    resources = (
+        ClientResource.query
+        .filter_by(client_id=client.id, is_visible=True)
+        .order_by(ClientResource.category, ClientResource.sort_order)
+        .all()
+    )
+
+    # Group resources by category
+    grouped = {}
+    for r in resources:
+        grouped.setdefault(r.category, []).append(r)
+
+    return render_template(
+        'portal/dashboard.html',
+        client=client,
+        user=current_user,
+        grouped_resources=grouped,
+        categories=ClientResource.CATEGORIES,
+    )
