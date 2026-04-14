@@ -1,7 +1,7 @@
 """User model with password hashing and invite token support."""
 
-from datetime import datetime, timedelta, timezone
 import secrets
+from datetime import UTC, datetime, timedelta
 
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -38,12 +38,12 @@ class User(UserMixin, db.Model):
 
     def generate_invite_token(self, expires_hours=72):
         self.invite_token = secrets.token_urlsafe(32)
-        self.invite_expires = datetime.now(timezone.utc) + timedelta(hours=expires_hours)
+        self.invite_expires = datetime.now(UTC) + timedelta(hours=expires_hours)
         return self.invite_token
 
     def generate_reset_token(self, expires_hours=24):
         self.reset_token = secrets.token_urlsafe(32)
-        self.reset_expires = datetime.now(timezone.utc) + timedelta(hours=expires_hours)
+        self.reset_expires = datetime.now(UTC) + timedelta(hours=expires_hours)
         return self.reset_token
 
     @property
@@ -54,13 +54,13 @@ class User(UserMixin, db.Model):
     def is_invite_valid(self):
         if not self.invite_token or not self.invite_expires:
             return False
-        return datetime.now(timezone.utc) < self.invite_expires
+        return datetime.now(UTC) < self.invite_expires
 
     @property
     def is_reset_valid(self):
         if not self.reset_token or not self.reset_expires:
             return False
-        return datetime.now(timezone.utc) < self.reset_expires
+        return datetime.now(UTC) < self.reset_expires
 
     def __repr__(self):
         return f'<User {self.email}>'
