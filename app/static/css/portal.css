@@ -35,17 +35,20 @@
   display: grid;
   grid-template-columns: 1fr 4fr;
   gap: var(--space-4);
-  align-items: stretch;
+  align-items: start;       /* auth card sets the row height */
 }
 
-/* Image carousel card */
+/* Image carousel card — fixed to auth card height */
 .portal-login-grid__media {
   padding: 0;
   overflow: hidden;
+  position: relative;
+  align-self: stretch;      /* stretch to match auth card row height */
 }
 
 .portal-login-grid__img {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
