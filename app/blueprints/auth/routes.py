@@ -93,7 +93,7 @@ def _handle_reset_request():
 
     user = User.query.filter_by(email=email, is_active_user=True).first()
     if user and user.is_registered:
-        token = user.generate_reset_token()
+        _token = user.generate_reset_token()  # noqa: F841 — needed when AgentMail integration lands
         db.session.commit()
         # TODO: Send reset email via AgentMail
         # For now, token is generated and stored — email integration next
