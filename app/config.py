@@ -1,9 +1,14 @@
 import os
 
+_basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
 
 class BaseConfig:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret')
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///instance/dev.db')
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        'DATABASE_URL',
+        f'sqlite:///{os.path.join(_basedir, "instance", "dev.db")}',
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0')
     SESSION_COOKIE_HTTPONLY = True
