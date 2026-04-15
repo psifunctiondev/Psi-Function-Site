@@ -83,6 +83,25 @@ def list_users():
         click.echo(f'{u.email:<35} {name:<20} {client_name:<20} {status:<12}')
 
 
+@user_cli.command('make-admin')
+@click.option('--email', required=True, help='Email of user to promote')
+@with_appcontext
+def make_admin(email):
+    """Grant admin privileges to a portal user."""
+    user = User.query.filter_by(email=email.strip().lower()).first()
+    if not user:
+        click.echo(f'User {email} not found.')
+        return
+
+    if user.is_admin:
+        click.echo(f'{email} is already an admin.')
+        return
+
+    user.is_admin = True
+    db.session.commit()
+    click.echo(f'Granted admin privileges to {email}.')
+
+
 @user_cli.command('deactivate')
 @click.option('--email', required=True, help='Email of user to deactivate')
 @with_appcontext
