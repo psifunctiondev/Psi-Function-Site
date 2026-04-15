@@ -13,7 +13,21 @@
   :root {
     --client-primary: {{ client.primary_color or '#6C7D94' }};
     --client-accent: {{ client.accent_color or '#F0643A' }};
+    --client-radius: 0px;
     {% if client.font_display %}--client-font-display: {{ client.font_display }};{% endif %}
+  }
+
+  /* Lock client portal area to light theme regardless of site theme */
+  .portal-page .container {
+    --color-bg: #ffffff;
+    --color-surface: #f5f5f5;
+    --color-text: #313131;
+    --color-text-muted: #878787;
+    --color-heading: #313131;
+    --color-border: #e0e0e0;
+    --color-link: var(--client-primary);
+    --color-link-hover: var(--client-accent);
+    color: var(--color-text);
   }
 </style>
 {% endblock %}

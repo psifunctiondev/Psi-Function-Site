@@ -228,15 +228,17 @@
   margin: 0;
   text-align: center;
   padding-inline: var(--page-padding-inline-desktop);
-  font-family: var(--font-family-sans);
+  font-family: var(--client-font-display, var(--font-family-sans));
   font-size: var(--text-base);
-  color: var(--color-text-muted);
+  color: var(--client-accent, var(--color-text-muted));
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
   line-height: var(--line-height-relaxed);
 }
 
 /* Banner hero */
 .portal-banner {
-  border-radius: var(--radius-lg);
+  border-radius: var(--client-radius, var(--radius-lg));
   overflow: hidden;
   margin-bottom: var(--space-4);
 }
@@ -313,7 +315,7 @@
 .portal-dashboard-col {
   background: var(--color-surface);
   border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--client-radius, var(--radius-lg));
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
@@ -325,7 +327,8 @@
   font-size: var(--text-base);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);
-  color: var(--client-primary, var(--color-heading));
+  color: var(--client-accent, var(--color-heading));
+  text-transform: uppercase;
   margin: 0;
   padding-bottom: var(--space-2);
   border-bottom: var(--border-width-thin) solid var(--color-border);
@@ -362,7 +365,7 @@ a.portal-dashboard-col__item:hover {
 }
 
 .portal-dashboard-col__add {
-  font-family: var(--font-family-display);
+  font-family: var(--client-font-display, var(--font-family-display));
   font-size: var(--text-sm);
   letter-spacing: var(--letter-spacing-wide);
   color: var(--client-primary, var(--color-primary));
@@ -388,14 +391,14 @@ a.portal-dashboard-col__item:hover {
 }
 
 .portal-welcome__greeting {
-  font-family: var(--font-family-display);
+  font-family: var(--client-font-display, var(--font-family-display));
   font-size: var(--text-lg);
   letter-spacing: var(--letter-spacing-wide);
   color: var(--color-heading);
 }
 
 .portal-welcome__logout {
-  font-family: var(--font-family-display);
+  font-family: var(--client-font-display, var(--font-family-display));
   font-size: var(--text-sm);
   letter-spacing: var(--letter-spacing-wide);
   color: var(--color-text-muted);
