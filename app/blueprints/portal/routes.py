@@ -1,6 +1,18 @@
 """Client portal dashboard — authenticated, per-client resource view."""
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+import os
+
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -8,6 +20,44 @@ from app.models.client import Client, ClientResource
 from app.models.user import User
 
 portal_bp = Blueprint('portal', __name__)
+
+
+# ---------- Legacy redirects (old Bluehost URLs) ---------- #
+
+@portal_bp.get('/clients/ctai/truview-guide')
+@portal_bp.get('/clients/ctai/trueview-guide')
+def legacy_truview_guide():
+    """Redirect old Bluehost URL to portal-hosted guide."""
+    return redirect('/guides/ctai/truview/', code=301)
+
+
+# ---------- Client guide serving ---------- #
+
+@portal_bp.get('/guides/<slug>/<guide>/')
+@portal_bp.get('/guides/<slug>/<guide>/<path:path>')
+def serve_guide(slug, guide, path='index.html'):
+    """Serve static MkDocs guide content from client-content directory."""
+    if not path or path.endswith('/'):
+        path = path + 'index.html'
+    guide_dir = os.path.join(
+        current_app.static_folder,
+        'client-content', slug, guide,
+    )
+    guide_dir = os.path.realpath(guide_dir)
+
+    # If path is a directory, redirect to add trailing slash
+    # so relative links resolve correctly.
+    full = os.path.join(guide_dir, path)
+    if os.path.isdir(full):
+        return redirect(request.path + '/', code=301)
+
+    # If file doesn't exist but path/index.html does, serve it.
+    if not os.path.isfile(full):
+        index_candidate = os.path.join(full + '/', 'index.html')
+        if os.path.isfile(index_candidate):
+            return redirect(request.path + '/', code=301)
+
+    return send_from_directory(guide_dir, path)
 
 
 @portal_bp.get('/p/dashboard')

@@ -239,7 +239,117 @@ def update_client(slug, name, primary, accent, logo, banner, tagline, font_url, 
     click.echo(f'Updated client: {client.name} ({client.slug})')
 
 
+@click.group('resource')
+def resource_cli():
+    """Manage client resources (guides, tools, links)."""
+    pass
+
+
+@resource_cli.command('add')
+@click.option('--client', required=True, help='Client slug')
+@click.option('--title', required=True, help='Resource display title')
+@click.option(
+    '--category', required=True,
+    type=click.Choice(
+        ['proposal', 'backlog', 'custom', 'guide'],
+        case_sensitive=False,
+    ),
+    help='Dashboard category',
+)
+@click.option('--url', default=None, help='External URL')
+@click.option(
+    '--file', 'file_path', default=None,
+    help='Static file path (relative to app/static/)',
+)
+@click.option('--order', 'sort_order', default=0, help='Sort order within category')
+@with_appcontext
+def add_resource(client, title, category, url, file_path, sort_order):
+    """Add a resource to a client portal."""
+    from app.models.client import ClientResource
+
+    client_org = Client.query.filter_by(slug=client).first()
+    if not client_org:
+        click.echo(f'Client "{client}" not found.')
+        return
+
+    resource = ClientResource(
+        client_id=client_org.id,
+        title=title,
+        category=category.lower(),
+        external_url=url,
+        file_path=file_path,
+        sort_order=sort_order,
+    )
+    db.session.add(resource)
+    db.session.commit()
+    click.echo(f'Added "{title}" ({category}) to {client_org.name}')
+
+
+@resource_cli.command('remove')
+@click.option('--client', required=True, help='Client slug')
+@click.option('--title', required=True, help='Resource title to remove')
+@with_appcontext
+def remove_resource(client, title):
+    """Remove a resource from a client portal."""
+    from app.models.client import ClientResource
+
+    client_org = Client.query.filter_by(slug=client).first()
+    if not client_org:
+        click.echo(f'Client "{client}" not found.')
+        return
+
+    resources = ClientResource.query.filter_by(
+        client_id=client_org.id, title=title,
+    ).all()
+
+    if not resources:
+        click.echo(f'No resource "{title}" found for {client_org.name}.')
+        return
+
+    for r in resources:
+        db.session.delete(r)
+        target = r.external_url or r.file_path or 'no url'
+        click.echo(f'Removed "{r.title}" ({r.category}) — {target}')
+
+    db.session.commit()
+    click.echo(f'Deleted {len(resources)} resource(s).')
+
+
+@resource_cli.command('list')
+@click.option('--client', default=None, help='Filter by client slug')
+@with_appcontext
+def list_resources(client):
+    """List client resources."""
+    from app.models.client import ClientResource
+
+    query = ClientResource.query
+    if client:
+        client_org = Client.query.filter_by(slug=client).first()
+        if not client_org:
+            click.echo(f'Client "{client}" not found.')
+            return
+        query = query.filter_by(client_id=client_org.id)
+
+    resources = query.order_by(
+        ClientResource.client_id,
+        ClientResource.category,
+        ClientResource.sort_order,
+    ).all()
+
+    if not resources:
+        click.echo('No resources found.')
+        return
+
+    click.echo(f'{"Title":<40} {"Category":<12} {"Client":<12} {"URL/Path"}')
+    click.echo('-' * 100)
+    for r in resources:
+        client_slug = r.client.slug if r.client else '?'
+        target = r.external_url or r.file_path or '—'
+        click.echo(f'{r.title:<40} {r.category:<12} {client_slug:<12} {target}')
+
+
 def register_cli(app):
     """Register CLI commands with the Flask app."""
     app.cli.add_command(user_cli)
     app.cli.add_command(client_cli)
+    app.cli.add_command(resource_cli)
