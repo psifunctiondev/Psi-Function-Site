@@ -213,8 +213,8 @@
 }
 
 .portal__eyebrow-logo {
-  height: 2.5rem;
-  width: auto;
+  max-width: min(90vw, 36rem);
+  height: auto;
   object-fit: contain;
 }
 

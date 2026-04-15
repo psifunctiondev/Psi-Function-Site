@@ -18,9 +18,10 @@
 
   <div class="portal__eyebrow-row">
     {% if client.logo_url %}
-      <img class="portal__eyebrow-logo" src="{{ client.logo_url }}" alt="{{ client.name }} logo">
+      <img class="portal__eyebrow-logo" src="{{ client.logo_url }}" alt="{{ client.name }}">
+    {% else %}
+      <p class="portal__eyebrow portal__eyebrow--client">{{ client.name }}</p>
     {% endif %}
-    <p class="portal__eyebrow portal__eyebrow--client">{{ client.name }}</p>
   </div>
 
   {% if client.tagline %}
