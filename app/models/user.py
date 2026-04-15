@@ -54,13 +54,15 @@ class User(UserMixin, db.Model):
     def is_invite_valid(self):
         if not self.invite_token or not self.invite_expires:
             return False
-        return datetime.now(UTC) < self.invite_expires
+        expires = self.invite_expires.replace(tzinfo=UTC) if self.invite_expires.tzinfo is None else self.invite_expires
+        return datetime.now(UTC) < expires
 
     @property
     def is_reset_valid(self):
         if not self.reset_token or not self.reset_expires:
             return False
-        return datetime.now(UTC) < self.reset_expires
+        expires = self.reset_expires.replace(tzinfo=UTC) if self.reset_expires.tzinfo is None else self.reset_expires
+        return datetime.now(UTC) < expires
 
     def __repr__(self):
         return f'<User {self.email}>'
