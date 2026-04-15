@@ -5,6 +5,7 @@ import os
 from flask import (
     Blueprint,
     abort,
+    current_app,
     flash,
     redirect,
     render_template,
@@ -39,8 +40,8 @@ def serve_guide(slug, guide, path='index.html'):
     if not path or path.endswith('/'):
         path = path + 'index.html'
     guide_dir = os.path.join(
-        portal_bp.root_path, os.pardir,
-        'static', 'client-content', slug, guide,
+        current_app.static_folder,
+        'client-content', slug, guide,
     )
     guide_dir = os.path.realpath(guide_dir)
     return send_from_directory(guide_dir, path)
