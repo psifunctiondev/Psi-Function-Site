@@ -1,5 +1,7 @@
 """Auth routes — login, register (via invite), password reset, logout."""
 
+from datetime import timedelta
+
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_user, logout_user
 
@@ -38,9 +40,11 @@ def _handle_login():
     email = request.form.get('email', '').strip().lower()
     password = request.form.get('password', '')
 
+    remember = request.form.get('remember') == '1'
+
     user = User.query.filter_by(email=email).first()
     if user and user.is_active_user and user.check_password(password):
-        login_user(user)
+        login_user(user, remember=remember, duration=timedelta(days=30))
         return redirect(url_for('portal.dashboard'))
 
     flash('Invalid email or password.', 'error')

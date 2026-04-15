@@ -208,9 +208,11 @@ ln -sfn "$SHARED_DIR/uploads" "$NEW_RELEASE/uploads"
 ln -sfn "$SHARED_DIR/logs" "$NEW_RELEASE/logs"
 ln -sfn "$SHARED_DIR/tmp" "$NEW_RELEASE/tmp"
 
-if [ -f "manage.py" ]; then
+if [ -d "migrations" ]; then
   log "Running database migrations"
-  python manage.py db upgrade
+  FLASK_APP=wsgi:app flask db upgrade
+else
+  log "No migrations directory found; skipping database migrations"
 fi
 
 log "Running pre-activation validation"

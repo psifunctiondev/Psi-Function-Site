@@ -8,6 +8,8 @@
 .portal-page {
   width: 100%;
   overflow: hidden;
+  flex: 1;         /* fill vertical space between header and footer */
+  min-height: 0;
 }
 
 /* Eyebrow */
@@ -139,6 +141,23 @@
   border-color: var(--color-primary);
 }
 
+.portal-auth-form__remember {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-family-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.portal-auth-form__remember input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
 .portal-auth-form__submit {
   display: inline-flex;
   align-items: center;
@@ -198,7 +217,188 @@
 
 
 /* -------------------------------------------------------
-   DASHBOARD — vertical card stack
+   CLIENT-THEMED DASHBOARD
+   ------------------------------------------------------- */
+
+/* Eyebrow row with optional logo */
+.portal__eyebrow-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding-block: var(--space-1);
+  padding-inline: var(--page-padding-inline-desktop);
+  padding-top: calc(var(--space-1) + var(--header-height) * 0.25);
+}
+
+.portal__eyebrow-logo {
+  max-width: min(90vw, 36rem);
+  height: auto;
+  object-fit: contain;
+}
+
+.portal__eyebrow--client {
+  padding: 0;
+  color: var(--client-primary, var(--color-primary));
+  font-family: var(--client-font-display, var(--font-family-display));
+}
+
+.portal__tagline {
+  margin: 0;
+  text-align: center;
+  padding-inline: var(--page-padding-inline-desktop);
+  font-family: var(--client-font-display, var(--font-family-sans));
+  font-size: var(--text-base);
+  color: var(--client-accent, var(--color-text-muted));
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  line-height: var(--line-height-relaxed);
+}
+
+/* Banner hero */
+.portal-banner {
+  border-radius: var(--client-radius, var(--radius-lg));
+  overflow: hidden;
+  margin-bottom: var(--space-4);
+}
+
+.portal-banner__img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  max-height: 18rem;
+}
+
+/* Section title — client-themed */
+.portal-section__title--client {
+  color: var(--client-primary, var(--color-heading));
+}
+
+/* -------------------------------------------------------
+   ADMIN OVERVIEW
+   ------------------------------------------------------- */
+
+.portal-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-4);
+}
+
+.portal-admin-card {
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.portal-admin-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.portal-admin-card__logo {
+  height: 2rem;
+  width: auto;
+  object-fit: contain;
+}
+
+.portal-admin-card__slug {
+  font-family: var(--font-family-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.portal-admin-card__stats {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.portal-admin-card__stat {
+  font-family: var(--font-family-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* -------------------------------------------------------
+   DASHBOARD — 5-column grid
+   ------------------------------------------------------- */
+
+.portal-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
+}
+
+.portal-dashboard-col {
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--client-radius, var(--radius-lg));
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.portal-dashboard-col__title {
+  font-family: var(--client-font-display, var(--font-family-display));
+  font-size: var(--text-base);
+  font-weight: var(--client-font-weight, var(--font-weight-semibold));
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--client-accent, var(--color-heading));
+  text-transform: uppercase;
+  margin: 0;
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-width-thin) solid var(--color-border);
+}
+
+.portal-dashboard-col__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.portal-dashboard-col__item {
+  font-family: var(--font-family-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  text-decoration: none;
+  padding: var(--space-1) 0;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+a.portal-dashboard-col__item:hover {
+  color: var(--client-primary, var(--color-primary));
+}
+
+.portal-dashboard-col__item--user {
+  color: var(--color-text-muted);
+}
+
+.portal-dashboard-col__empty {
+  font-family: var(--font-family-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.portal-dashboard-col__add {
+  font-family: var(--client-font-display, var(--font-family-display));
+  font-size: var(--text-sm);
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--client-primary, var(--color-primary));
+  text-decoration: none;
+  margin-top: var(--space-2);
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.portal-dashboard-col__add:hover {
+  opacity: 0.75;
+}
+
+/* -------------------------------------------------------
+   DASHBOARD — vertical card stack (legacy)
    ------------------------------------------------------- */
 
 /* Welcome bar */
@@ -210,14 +410,14 @@
 }
 
 .portal-welcome__greeting {
-  font-family: var(--font-family-display);
+  font-family: var(--client-font-display, var(--font-family-display));
   font-size: var(--text-lg);
   letter-spacing: var(--letter-spacing-wide);
   color: var(--color-heading);
 }
 
 .portal-welcome__logout {
-  font-family: var(--font-family-display);
+  font-family: var(--client-font-display, var(--font-family-display));
   font-size: var(--text-sm);
   letter-spacing: var(--letter-spacing-wide);
   color: var(--color-text-muted);
@@ -276,6 +476,10 @@
    ------------------------------------------------------- */
 
 @media (max-width: 1024px) {
+  .portal-dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .portal__eyebrow {
     font-size: var(--text-lg);
     padding-inline: var(--page-padding-inline-mobile);
@@ -292,6 +496,10 @@
 }
 
 @media (max-width: 600px) {
+  .portal-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
   .portal-auth-tabs {
     flex-wrap: wrap;
   }

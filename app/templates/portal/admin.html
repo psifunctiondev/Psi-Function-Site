@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin — Client Overview{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="portal-page">
+
+  <p class="portal__eyebrow">Client Overview</p>
+
+  <div class="container section-stack">
+
+    {% if not client_stats %}
+      <div class="card portal-empty">
+        <p class="card__text">No active clients yet.</p>
+      </div>
+    {% endif %}
+
+    <div class="portal-admin-grid">
+      {% for entry in client_stats %}
+      <a class="card portal-admin-card" href="{{ url_for('portal.client_dashboard', slug=entry.client.slug) }}">
+        <div class="portal-admin-card__header">
+          {% if entry.client.logo_url %}
+            <img class="portal-admin-card__logo" src="{{ entry.client.logo_url }}" alt="{{ entry.client.name }} logo">
+          {% endif %}
+          <span class="card__title">{{ entry.client.name }}</span>
+        </div>
+        <span class="portal-admin-card__slug">/p/{{ entry.client.slug }}</span>
+        <div class="portal-admin-card__stats">
+          <span class="portal-admin-card__stat">{{ entry.user_count }} user{{ 's' if entry.user_count != 1 }}</span>
+          <span class="portal-admin-card__stat">{{ entry.resource_count }} resource{{ 's' if entry.resource_count != 1 }}</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+
+  </div>
+
+</section>
+
+{% endblock %}

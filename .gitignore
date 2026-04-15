@@ -24,3 +24,13 @@ node_modules/
 
 # Build artifacts
 app/static/dist/
+
+# SQLite databases
+instance/
+*.db
+
+# Egg-info
+*.egg-info/
+
+# Flask migrations — track versions/ but not local alembic state
+migrations/alembic.ini
