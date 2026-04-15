@@ -300,7 +300,82 @@
 }
 
 /* -------------------------------------------------------
-   DASHBOARD — vertical card stack
+   DASHBOARD — 5-column grid
+   ------------------------------------------------------- */
+
+.portal-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
+}
+
+.portal-dashboard-col {
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.portal-dashboard-col__title {
+  font-family: var(--font-family-display);
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--client-primary, var(--color-heading));
+  margin: 0;
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-width-thin) solid var(--color-border);
+}
+
+.portal-dashboard-col__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.portal-dashboard-col__item {
+  font-family: var(--font-family-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  text-decoration: none;
+  padding: var(--space-1) 0;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+a.portal-dashboard-col__item:hover {
+  color: var(--client-primary, var(--color-primary));
+}
+
+.portal-dashboard-col__item--user {
+  color: var(--color-text-muted);
+}
+
+.portal-dashboard-col__empty {
+  font-family: var(--font-family-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.portal-dashboard-col__add {
+  font-family: var(--font-family-display);
+  font-size: var(--text-sm);
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--client-primary, var(--color-primary));
+  text-decoration: none;
+  margin-top: var(--space-2);
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.portal-dashboard-col__add:hover {
+  opacity: 0.75;
+}
+
+/* -------------------------------------------------------
+   DASHBOARD — vertical card stack (legacy)
    ------------------------------------------------------- */
 
 /* Welcome bar */
@@ -378,6 +453,10 @@
    ------------------------------------------------------- */
 
 @media (max-width: 1024px) {
+  .portal-dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .portal__eyebrow {
     font-size: var(--text-lg);
     padding-inline: var(--page-padding-inline-mobile);
@@ -394,6 +473,10 @@
 }
 
 @media (max-width: 600px) {
+  .portal-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
   .portal-auth-tabs {
     flex-wrap: wrap;
   }

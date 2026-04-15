@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Invite User — {{ client.name }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+<style>
+  :root {
+    --client-primary: {{ client.primary_color or '#6C7D94' }};
+    --client-accent: {{ client.accent_color or '#F0643A' }};
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="portal-page">
+
+  <div class="portal__eyebrow-row">
+    {% if client.logo_url %}
+      <img class="portal__eyebrow-logo" src="{{ client.logo_url }}" alt="{{ client.name }}">
+    {% else %}
+      <p class="portal__eyebrow portal__eyebrow--client">{{ client.name }}</p>
+    {% endif %}
+  </div>
+
+  <div class="container section-stack">
+
+    <div class="portal-welcome">
+      <span class="portal-welcome__greeting">Invite a User</span>
+      <a class="portal-welcome__logout" href="{{ url_for('portal.client_dashboard', slug=client.slug) }}">← Back to Dashboard</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <p class="portal-flash portal-flash--{{ category }}">{{ message }}</p>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="card" style="max-width: 32rem;">
+      <form class="portal-auth-form is-active" method="post" action="{{ url_for('portal.invite_user_submit', slug=client.slug) }}">
+        <div class="portal-auth-form__field">
+          <label class="portal-auth-form__label" for="email">Email address</label>
+          <input class="portal-auth-form__input" type="email" id="email" name="email" required placeholder="user@example.com">
+        </div>
+        <button class="portal-auth-form__submit" type="submit">Send Invite</button>
+        <p class="portal-auth-form__note">
+          The user will receive an email with a link to set up their account and access the portal.
+        </p>
+      </form>
+    </div>
+
+  </div>
+
+</section>
+
+{% endblock %}

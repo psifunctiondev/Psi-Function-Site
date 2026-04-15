@@ -44,7 +44,7 @@
       <a class="portal-welcome__logout" href="{{ url_for('auth.logout') }}">Log out</a>
     </div>
 
-    {% if not grouped_resources %}
+    {% if not grouped_resources and not client_users %}
       <div class="card portal-empty">
         <p class="card__text">
           Your portal is being set up. We'll let you know when your
@@ -52,29 +52,84 @@
           <a href="mailto:info@psifunction.com">info@psifunction.com</a>.
         </p>
       </div>
-    {% endif %}
+    {% else %}
 
-    {% for cat_key, cat_label in categories.items() %}
-      {% if cat_key in grouped_resources %}
-      <div class="portal-section">
-        <h2 class="portal-section__title portal-section__title--client">{{ cat_label }}</h2>
-        <div class="portal-resource-list">
-          {% for resource in grouped_resources[cat_key] %}
-          <a
-            class="card portal-resource-card"
-            href="{{ resource.external_url or url_for('static', filename=resource.file_path) }}"
-            {% if resource.external_url %}target="_blank" rel="noopener noreferrer"{% endif %}
-          >
-            <span class="card__title">{{ resource.title }}</span>
-            {% if resource.description %}
-              <span class="card__text">{{ resource.description }}</span>
-            {% endif %}
-          </a>
+    <div class="portal-dashboard-grid">
+
+      <!-- Column 1: Proposals -->
+      <div class="portal-dashboard-col">
+        <h2 class="portal-dashboard-col__title">Proposals</h2>
+        <div class="portal-dashboard-col__items">
+          {% for r in resources_by_cat.get('proposal', []) %}
+            <a class="portal-dashboard-col__item" href="{{ r.external_url or url_for('static', filename=r.file_path) }}" {% if r.external_url %}target="_blank" rel="noopener noreferrer"{% endif %}>
+              {{ r.title }}
+            </a>
+          {% else %}
+            <span class="portal-dashboard-col__empty">No proposals yet</span>
           {% endfor %}
         </div>
       </div>
-      {% endif %}
-    {% endfor %}
+
+      <!-- Column 2: Projects -->
+      <div class="portal-dashboard-col">
+        <h2 class="portal-dashboard-col__title">Projects</h2>
+        <div class="portal-dashboard-col__items">
+          {% for r in resources_by_cat.get('backlog', []) %}
+            <a class="portal-dashboard-col__item" href="{{ r.external_url or url_for('static', filename=r.file_path) }}" {% if r.external_url %}target="_blank" rel="noopener noreferrer"{% endif %}>
+              {{ r.title }}
+            </a>
+          {% else %}
+            <span class="portal-dashboard-col__empty">No projects yet</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Column 3: Tools -->
+      <div class="portal-dashboard-col">
+        <h2 class="portal-dashboard-col__title">Tools</h2>
+        <div class="portal-dashboard-col__items">
+          {% for r in resources_by_cat.get('custom', []) %}
+            <a class="portal-dashboard-col__item" href="{{ r.external_url or url_for('static', filename=r.file_path) }}" {% if r.external_url %}target="_blank" rel="noopener noreferrer"{% endif %}>
+              {{ r.title }}
+            </a>
+          {% else %}
+            <span class="portal-dashboard-col__empty">No tools yet</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Column 4: User Guides -->
+      <div class="portal-dashboard-col">
+        <h2 class="portal-dashboard-col__title">User Guides</h2>
+        <div class="portal-dashboard-col__items">
+          {% for r in resources_by_cat.get('guide', []) %}
+            <a class="portal-dashboard-col__item" href="{{ r.external_url or url_for('static', filename=r.file_path) }}" {% if r.external_url %}target="_blank" rel="noopener noreferrer"{% endif %}>
+              {{ r.title }}
+            </a>
+          {% else %}
+            <span class="portal-dashboard-col__empty">No guides yet</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Column 5: Registered Users -->
+      <div class="portal-dashboard-col">
+        <h2 class="portal-dashboard-col__title">Registered Users</h2>
+        <div class="portal-dashboard-col__items">
+          {% for u in client_users %}
+            <span class="portal-dashboard-col__item portal-dashboard-col__item--user">
+              {{ u.display_name or u.email }}
+            </span>
+          {% else %}
+            <span class="portal-dashboard-col__empty">No users yet</span>
+          {% endfor %}
+          <a class="portal-dashboard-col__add" href="{{ url_for('portal.invite_user', slug=client.slug) }}">+ Add User</a>
+        </div>
+      </div>
+
+    </div>
+
+    {% endif %}
 
   </div>
 
