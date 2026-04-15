@@ -285,6 +285,36 @@ def add_resource(client, title, category, url, file_path, sort_order):
     click.echo(f'Added "{title}" ({category}) to {client_org.name}')
 
 
+@resource_cli.command('remove')
+@click.option('--client', required=True, help='Client slug')
+@click.option('--title', required=True, help='Resource title to remove')
+@with_appcontext
+def remove_resource(client, title):
+    """Remove a resource from a client portal."""
+    from app.models.client import ClientResource
+
+    client_org = Client.query.filter_by(slug=client).first()
+    if not client_org:
+        click.echo(f'Client "{client}" not found.')
+        return
+
+    resources = ClientResource.query.filter_by(
+        client_id=client_org.id, title=title,
+    ).all()
+
+    if not resources:
+        click.echo(f'No resource "{title}" found for {client_org.name}.')
+        return
+
+    for r in resources:
+        db.session.delete(r)
+        target = r.external_url or r.file_path or 'no url'
+        click.echo(f'Removed "{r.title}" ({r.category}) — {target}')
+
+    db.session.commit()
+    click.echo(f'Deleted {len(resources)} resource(s).')
+
+
 @resource_cli.command('list')
 @click.option('--client', default=None, help='Filter by client slug')
 @with_appcontext
