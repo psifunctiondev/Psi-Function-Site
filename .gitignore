@@ -32,5 +32,8 @@ instance/
 # Egg-info
 *.egg-info/
 
+# Client content (static guides, assets — too large for git)
+app/static/client-content/
+
 # Flask migrations — track versions/ but not local alembic state
 migrations/alembic.ini

@@ -10,6 +10,18 @@ from app.models.user import User
 portal_bp = Blueprint('portal', __name__)
 
 
+# ---------- Legacy redirects (old Bluehost URLs) ---------- #
+
+@portal_bp.get('/clients/ctai/truview-guide')
+@portal_bp.get('/clients/ctai/trueview-guide')
+def legacy_truview_guide():
+    """Redirect old Bluehost URL to portal-hosted guide."""
+    return redirect(
+        url_for('static', filename='client-content/ctai/truview-guide/index.html'),
+        code=301,
+    )
+
+
 @portal_bp.get('/p/dashboard')
 @login_required
 def dashboard():
