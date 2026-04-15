@@ -1,9 +1,9 @@
 """Client portal dashboard — authenticated, per-client resource view."""
 
-from flask import Blueprint, abort, render_template
+from flask import Blueprint, abort, redirect, render_template, url_for
 from flask_login import current_user, login_required
 
-from app.models.client import ClientResource
+from app.models.client import Client, ClientResource
 
 portal_bp = Blueprint('portal', __name__)
 
@@ -11,9 +11,52 @@ portal_bp = Blueprint('portal', __name__)
 @portal_bp.get('/p/dashboard')
 @login_required
 def dashboard():
-    """Client dashboard — shows resources grouped by category."""
+    """Redirect to the slug-based client dashboard."""
     client = current_user.client
     if not client or not client.is_active:
+        abort(403)
+    return redirect(url_for('portal.client_dashboard', slug=client.slug))
+
+
+@portal_bp.get('/p/admin')
+@login_required
+def admin_overview():
+    """Admin overview — list all active clients with stats."""
+    if not current_user.is_admin:
+        abort(403)
+
+    clients = (
+        Client.query
+        .filter_by(is_active=True)
+        .order_by(Client.name)
+        .all()
+    )
+
+    # Build stats for each client
+    client_stats = []
+    for c in clients:
+        client_stats.append({
+            'client': c,
+            'user_count': c.users.count(),
+            'resource_count': c.resources.filter_by(is_visible=True).count(),
+        })
+
+    return render_template(
+        'portal/admin.html',
+        client_stats=client_stats,
+    )
+
+
+@portal_bp.get('/p/<slug>')
+@login_required
+def client_dashboard(slug: str):
+    """Client dashboard — shows resources grouped by category, themed per client."""
+    client = Client.query.filter_by(slug=slug, is_active=True).first_or_404()
+
+    # Check access: user must belong to this client or be an admin
+    if not current_user.is_admin and (
+        not current_user.client or current_user.client.id != client.id
+    ):
         abort(403)
 
     resources = (

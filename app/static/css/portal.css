@@ -198,6 +198,108 @@
 
 
 /* -------------------------------------------------------
+   CLIENT-THEMED DASHBOARD
+   ------------------------------------------------------- */
+
+/* Eyebrow row with optional logo */
+.portal__eyebrow-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding-block: var(--space-1);
+  padding-inline: var(--page-padding-inline-desktop);
+  padding-top: calc(var(--space-1) + var(--header-height) * 0.25);
+}
+
+.portal__eyebrow-logo {
+  height: 2.5rem;
+  width: auto;
+  object-fit: contain;
+}
+
+.portal__eyebrow--client {
+  padding: 0;
+  color: var(--client-primary, var(--color-primary));
+}
+
+.portal__tagline {
+  margin: 0;
+  text-align: center;
+  padding-inline: var(--page-padding-inline-desktop);
+  font-family: var(--font-family-sans);
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+/* Banner hero */
+.portal-banner {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--space-4);
+}
+
+.portal-banner__img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  max-height: 18rem;
+}
+
+/* Section title — client-themed */
+.portal-section__title--client {
+  color: var(--client-primary, var(--color-heading));
+}
+
+/* -------------------------------------------------------
+   ADMIN OVERVIEW
+   ------------------------------------------------------- */
+
+.portal-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-4);
+}
+
+.portal-admin-card {
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.portal-admin-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.portal-admin-card__logo {
+  height: 2rem;
+  width: auto;
+  object-fit: contain;
+}
+
+.portal-admin-card__slug {
+  font-family: var(--font-family-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.portal-admin-card__stats {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.portal-admin-card__stat {
+  font-family: var(--font-family-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* -------------------------------------------------------
    DASHBOARD — vertical card stack
    ------------------------------------------------------- */
 

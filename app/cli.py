@@ -123,6 +123,94 @@ def reset_password(email, hours):
     click.echo(f'Expires: {hours} hours')
 
 
+@click.group('client')
+def client_cli():
+    """Manage client organizations."""
+    pass
+
+
+@client_cli.command('create')
+@click.option('--slug', required=True, help='URL slug (e.g. ctai)')
+@click.option('--name', required=True, help='Display name')
+@click.option('--primary', default=None, help='Primary hex color (e.g. #2B4C6F)')
+@click.option('--accent', default=None, help='Accent hex color (e.g. #C4956A)')
+@click.option('--logo', default=None, help='Logo URL')
+@click.option('--banner', default=None, help='Banner image URL')
+@click.option('--tagline', default=None, help='Short welcome tagline')
+@with_appcontext
+def create_client(slug, name, primary, accent, logo, banner, tagline):
+    """Create a new client organization."""
+    existing = Client.query.filter_by(slug=slug).first()
+    if existing:
+        click.echo(f'Client with slug "{slug}" already exists.')
+        return
+
+    client = Client(
+        slug=slug,
+        name=name,
+        primary_color=primary,
+        accent_color=accent,
+        logo_url=logo,
+        banner_url=banner,
+        tagline=tagline,
+    )
+    db.session.add(client)
+    db.session.commit()
+    click.echo(f'Created client: {client.name} ({client.slug})')
+
+
+@client_cli.command('list')
+@with_appcontext
+def list_clients():
+    """List all client organizations."""
+    clients = Client.query.order_by(Client.name).all()
+    if not clients:
+        click.echo('No clients found.')
+        return
+
+    click.echo(f'{"Name":<40} {"Slug":<16} {"Active":<8} {"Primary":<10} {"Accent":<10}')
+    click.echo('-' * 86)
+    for c in clients:
+        click.echo(
+            f'{c.name:<40} {c.slug:<16} {"yes" if c.is_active else "no":<8} '
+            f'{c.primary_color or "—":<10} {c.accent_color or "—":<10}'
+        )
+
+
+@client_cli.command('update')
+@click.option('--slug', required=True, help='Client slug to update')
+@click.option('--name', default=None, help='New display name')
+@click.option('--primary', default=None, help='Primary hex color')
+@click.option('--accent', default=None, help='Accent hex color')
+@click.option('--logo', default=None, help='Logo URL')
+@click.option('--banner', default=None, help='Banner image URL')
+@click.option('--tagline', default=None, help='Short welcome tagline')
+@with_appcontext
+def update_client(slug, name, primary, accent, logo, banner, tagline):
+    """Update an existing client organization."""
+    client = Client.query.filter_by(slug=slug).first()
+    if not client:
+        click.echo(f'Client "{slug}" not found.')
+        return
+
+    if name is not None:
+        client.name = name
+    if primary is not None:
+        client.primary_color = primary
+    if accent is not None:
+        client.accent_color = accent
+    if logo is not None:
+        client.logo_url = logo
+    if banner is not None:
+        client.banner_url = banner
+    if tagline is not None:
+        client.tagline = tagline
+
+    db.session.commit()
+    click.echo(f'Updated client: {client.name} ({client.slug})')
+
+
 def register_cli(app):
     """Register CLI commands with the Flask app."""
     app.cli.add_command(user_cli)
+    app.cli.add_command(client_cli)

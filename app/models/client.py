@@ -10,6 +10,10 @@ class Client(db.Model):
     name = db.Column(db.String(255), nullable=False)
     slug = db.Column(db.String(128), unique=True, nullable=False)
     logo_url = db.Column(db.String(512))
+    primary_color = db.Column(db.String(7))  # Hex color, e.g. #2B4C6F
+    accent_color = db.Column(db.String(7))   # Hex color, e.g. #C4956A
+    banner_url = db.Column(db.String(512))    # Optional hero/banner image
+    tagline = db.Column(db.String(255))       # Short welcome text
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     # Relationships

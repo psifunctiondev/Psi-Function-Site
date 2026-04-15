@@ -1,6 +1,7 @@
 README.md
 pyproject.toml
 app/__init__.py
+app/cli.py
 app/config.py
 app/extensions.py
 app/blueprints/admin/routes.py
@@ -10,6 +11,7 @@ app/blueprints/health/routes.py
 app/blueprints/portal/routes.py
 app/blueprints/public/routes.py
 app/models/__init__.py
+app/models/client.py
 app/models/user.py
 app/services/ai/client.py
 app/services/graph/__init__.py
