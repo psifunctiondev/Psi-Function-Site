@@ -8,6 +8,8 @@
 .portal-page {
   width: 100%;
   overflow: hidden;
+  flex: 1;         /* fill vertical space between header and footer */
+  min-height: 0;
 }
 
 /* Eyebrow */
