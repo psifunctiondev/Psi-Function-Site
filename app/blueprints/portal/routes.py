@@ -44,6 +44,19 @@ def serve_guide(slug, guide, path='index.html'):
         'client-content', slug, guide,
     )
     guide_dir = os.path.realpath(guide_dir)
+
+    # If path is a directory, redirect to add trailing slash
+    # so relative links resolve correctly.
+    full = os.path.join(guide_dir, path)
+    if os.path.isdir(full):
+        return redirect(request.path + '/', code=301)
+
+    # If file doesn't exist but path/index.html does, serve it.
+    if not os.path.isfile(full):
+        index_candidate = os.path.join(full + '/', 'index.html')
+        if os.path.isfile(index_candidate):
+            return redirect(request.path + '/', code=301)
+
     return send_from_directory(guide_dir, path)
 
 
