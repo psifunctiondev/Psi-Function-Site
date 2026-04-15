@@ -1,6 +1,17 @@
 """Client portal dashboard — authenticated, per-client resource view."""
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+import os
+
+from flask import (
+    Blueprint,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -16,10 +27,23 @@ portal_bp = Blueprint('portal', __name__)
 @portal_bp.get('/clients/ctai/trueview-guide')
 def legacy_truview_guide():
     """Redirect old Bluehost URL to portal-hosted guide."""
-    return redirect(
-        url_for('static', filename='client-content/ctai/truview-guide/index.html'),
-        code=301,
+    return redirect('/guides/ctai/truview/', code=301)
+
+
+# ---------- Client guide serving ---------- #
+
+@portal_bp.get('/guides/<slug>/<guide>/')
+@portal_bp.get('/guides/<slug>/<guide>/<path:path>')
+def serve_guide(slug, guide, path='index.html'):
+    """Serve static MkDocs guide content from client-content directory."""
+    if not path or path.endswith('/'):
+        path = path + 'index.html'
+    guide_dir = os.path.join(
+        portal_bp.root_path, os.pardir,
+        'static', 'client-content', slug, guide,
     )
+    guide_dir = os.path.realpath(guide_dir)
+    return send_from_directory(guide_dir, path)
 
 
 @portal_bp.get('/p/dashboard')
