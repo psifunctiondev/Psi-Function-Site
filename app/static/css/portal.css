@@ -325,7 +325,7 @@
 .portal-dashboard-col__title {
   font-family: var(--client-font-display, var(--font-family-display));
   font-size: var(--text-base);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--client-font-weight, var(--font-weight-semibold));
   letter-spacing: var(--letter-spacing-wide);
   color: var(--client-accent, var(--color-heading));
   text-transform: uppercase;

@@ -14,7 +14,8 @@
     --client-primary: {{ client.primary_color or '#6C7D94' }};
     --client-accent: {{ client.accent_color or '#F0643A' }};
     --client-radius: 0px;
-    {% if client.font_display %}--client-font-display: {{ client.font_display }};{% endif %}
+    {% if client.font_display %}--client-font-display: {{ client.font_display }};
+    --client-font-weight: 400;{% endif %}
   }
 
   /* Lock client portal area to light theme regardless of site theme */
