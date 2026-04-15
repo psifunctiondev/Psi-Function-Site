@@ -221,6 +221,7 @@
 .portal__eyebrow--client {
   padding: 0;
   color: var(--client-primary, var(--color-primary));
+  font-family: var(--client-font-display, var(--font-family-display));
 }
 
 .portal__tagline {
@@ -320,7 +321,7 @@
 }
 
 .portal-dashboard-col__title {
-  font-family: var(--font-family-display);
+  font-family: var(--client-font-display, var(--font-family-display));
   font-size: var(--text-base);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);

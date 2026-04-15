@@ -156,8 +156,10 @@ def client_cli():
 @click.option('--logo', default=None, help='Logo URL')
 @click.option('--banner', default=None, help='Banner image URL')
 @click.option('--tagline', default=None, help='Short welcome tagline')
+@click.option('--font-url', default=None, help='Google Fonts CSS URL')
+@click.option('--font-display', default=None, help='Display font-family (e.g. "Julius Sans One, sans-serif")')
 @with_appcontext
-def create_client(slug, name, primary, accent, logo, banner, tagline):
+def create_client(slug, name, primary, accent, logo, banner, tagline, font_url, font_display):
     """Create a new client organization."""
     existing = Client.query.filter_by(slug=slug).first()
     if existing:
@@ -172,6 +174,8 @@ def create_client(slug, name, primary, accent, logo, banner, tagline):
         logo_url=logo,
         banner_url=banner,
         tagline=tagline,
+        font_url=font_url,
+        font_display=font_display,
     )
     db.session.add(client)
     db.session.commit()
@@ -204,8 +208,10 @@ def list_clients():
 @click.option('--logo', default=None, help='Logo URL')
 @click.option('--banner', default=None, help='Banner image URL')
 @click.option('--tagline', default=None, help='Short welcome tagline')
+@click.option('--font-url', default=None, help='Google Fonts CSS URL')
+@click.option('--font-display', default=None, help='Display font-family')
 @with_appcontext
-def update_client(slug, name, primary, accent, logo, banner, tagline):
+def update_client(slug, name, primary, accent, logo, banner, tagline, font_url, font_display):
     """Update an existing client organization."""
     client = Client.query.filter_by(slug=slug).first()
     if not client:
@@ -224,6 +230,10 @@ def update_client(slug, name, primary, accent, logo, banner, tagline):
         client.banner_url = banner
     if tagline is not None:
         client.tagline = tagline
+    if font_url is not None:
+        client.font_url = font_url
+    if font_display is not None:
+        client.font_display = font_display
 
     db.session.commit()
     click.echo(f'Updated client: {client.name} ({client.slug})')

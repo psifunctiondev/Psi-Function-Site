@@ -4,10 +4,16 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+{% if client.font_url %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{{ client.font_url }}">
+{% endif %}
 <style>
   :root {
     --client-primary: {{ client.primary_color or '#6C7D94' }};
     --client-accent: {{ client.accent_color or '#F0643A' }};
+    {% if client.font_display %}--client-font-display: {{ client.font_display }};{% endif %}
   }
 </style>
 {% endblock %}
