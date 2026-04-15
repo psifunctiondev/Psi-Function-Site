@@ -15,7 +15,7 @@ class Client(db.Model):
     banner_url = db.Column(db.String(512))    # Optional hero/banner image
     tagline = db.Column(db.String(255))
     font_url = db.Column(db.String(512))  # e.g. Google Fonts CSS link
-    font_display = db.Column(db.String(128))  # e.g. 'Julius Sans One, sans-serif'       # Short welcome text
+    font_display = db.Column(db.String(128))  # e.g. 'Julius Sans One, sans-serif'
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     # Relationships

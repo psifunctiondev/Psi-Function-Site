@@ -5,9 +5,8 @@ Revises:
 Create Date: 2026-04-15 09:44:03.345933
 
 """
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'f077998165fc'
@@ -41,8 +40,14 @@ def upgrade():
     sa.Column('external_url', sa.String(length=512), nullable=True),
     sa.Column('sort_order', sa.Integer(), nullable=True),
     sa.Column('is_visible', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column(
+        'created_at', sa.DateTime(),
+        server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True,
+    ),
+    sa.Column(
+        'updated_at', sa.DateTime(),
+        server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True,
+    ),
     sa.ForeignKeyConstraint(['client_id'], ['client.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -54,7 +59,10 @@ def upgrade():
     sa.Column('is_admin', sa.Boolean(), nullable=False),
     sa.Column('is_active_user', sa.Boolean(), nullable=False),
     sa.Column('client_id', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column(
+        'created_at', sa.DateTime(),
+        server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True,
+    ),
     sa.Column('invite_token', sa.String(length=128), nullable=True),
     sa.Column('invite_expires', sa.DateTime(), nullable=True),
     sa.Column('reset_token', sa.String(length=128), nullable=True),

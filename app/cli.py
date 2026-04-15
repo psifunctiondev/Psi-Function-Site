@@ -157,7 +157,7 @@ def client_cli():
 @click.option('--banner', default=None, help='Banner image URL')
 @click.option('--tagline', default=None, help='Short welcome tagline')
 @click.option('--font-url', default=None, help='Google Fonts CSS URL')
-@click.option('--font-display', default=None, help='Display font-family (e.g. "Julius Sans One, sans-serif")')
+@click.option('--font-display', default=None, help='Display font-family')
 @with_appcontext
 def create_client(slug, name, primary, accent, logo, banner, tagline, font_url, font_display):
     """Create a new client organization."""

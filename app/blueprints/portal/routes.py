@@ -122,7 +122,7 @@ def invite_user_submit(slug):
 
     user = User(email=email, client_id=client.id)
     db.session.add(user)
-    token = user.generate_invite_token()
+    user.generate_invite_token()
     db.session.commit()
 
     flash(f'Invite sent to {email}.', 'success')
