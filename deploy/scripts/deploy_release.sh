@@ -209,12 +209,8 @@ ln -sfn "$SHARED_DIR/logs" "$NEW_RELEASE/logs"
 ln -sfn "$SHARED_DIR/tmp" "$NEW_RELEASE/tmp"
 
 if [ -d "migrations" ]; then
-  if [ -n "${DATABASE_URL:-}" ]; then
-    log "Running database migrations"
-    FLASK_APP=wsgi:app flask db upgrade
-  else
-    log "No DATABASE_URL configured; skipping database migrations"
-  fi
+  log "Running database migrations"
+  FLASK_APP=wsgi:app flask db upgrade
 else
   log "No migrations directory found; skipping database migrations"
 fi
