@@ -7,14 +7,26 @@ set -Eeuo pipefail
 # roles and scram-sha-256 auth.  Safe to run multiple times.
 #
 # Usage (as root or with sudo):
-#   bash infra/bootstrap/bootstrap_postgres.sh
+#   bash infra/bootstrap/bootstrap_postgres.sh [--rotate-passwords]
 #
 # Outputs DATABASE_URL values for each environment to stdout and writes them
 # to /opt/consulting-site/.db_credentials (mode 0600, root-only).
+#
+# By default, existing roles keep their current passwords. Pass
+# --rotate-passwords to regenerate all passwords (you'll need to update
+# each environment's app.env afterward).
 
 ENVIRONMENTS=("testing" "staging" "production")
 DB_PREFIX="psifunction"
 CREDENTIALS_FILE="/opt/consulting-site/.db_credentials"
+ROTATE_PASSWORDS=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --rotate-passwords) ROTATE_PASSWORDS=1 ;;
+    *) ;;
+  esac
+done
 
 log() {
   printf '[%s] [postgres] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
@@ -140,10 +152,28 @@ for env in "${ENVIRONMENTS[@]}"; do
   # Create role if it doesn't exist
   if pg_exec "SELECT 1 FROM pg_roles WHERE rolname='${ROLE}'" | grep -q 1; then
     log "Role '${ROLE}' already exists"
-    # Generate a fresh password anyway so credentials file is always populated
-    PASSWORD="$(generate_password)"
-    pg_exec "ALTER ROLE ${ROLE} WITH PASSWORD '${PASSWORD}'"
-    log "Password rotated for role '${ROLE}'"
+    if [ "$ROTATE_PASSWORDS" = "1" ]; then
+      PASSWORD="$(generate_password)"
+      pg_exec "ALTER ROLE ${ROLE} WITH PASSWORD '${PASSWORD}'"
+      log "Password rotated for role '${ROLE}'"
+    else
+      # Read existing password from credentials file if available
+      if [ -f "$CREDENTIALS_FILE" ]; then
+        EXISTING_URL="$(grep "^DATABASE_URL=postgresql://${ROLE}:" "$CREDENTIALS_FILE" | head -1 | sed 's/^DATABASE_URL=//')"
+        if [ -n "$EXISTING_URL" ]; then
+          PASSWORD="$(echo "$EXISTING_URL" | sed "s|postgresql://${ROLE}:\(.*\)@localhost/${DB}|\1|")"
+          log "Keeping existing password for role '${ROLE}'"
+        else
+          PASSWORD="$(generate_password)"
+          pg_exec "ALTER ROLE ${ROLE} WITH PASSWORD '${PASSWORD}'"
+          log "No existing password found — generated new one for role '${ROLE}'"
+        fi
+      else
+        PASSWORD="$(generate_password)"
+        pg_exec "ALTER ROLE ${ROLE} WITH PASSWORD '${PASSWORD}'"
+        log "No credentials file — generated new password for role '${ROLE}'"
+      fi
+    fi
   else
     PASSWORD="$(generate_password)"
     pg_exec "CREATE ROLE ${ROLE} WITH LOGIN PASSWORD '${PASSWORD}'"
