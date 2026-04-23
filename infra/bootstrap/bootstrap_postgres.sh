@@ -210,7 +210,7 @@ for env in "${ENVIRONMENTS[@]}"; do
   # Revoke public access (idempotent)
   pg_exec "REVOKE ALL ON DATABASE ${DB} FROM PUBLIC"
 
-  URL="postgresql://${ROLE}:${PASSWORD}@localhost/${DB}"
+  URL="postgresql+psycopg://${ROLE}:${PASSWORD}@localhost/${DB}"
   CRED_OUTPUT+="# ${env}
 DATABASE_URL=${URL}
 
