@@ -42,6 +42,11 @@ jobs:
         run: |
           rsync -az --delete \
             --exclude '.git' \
+            --exclude '.venv' \
+            --exclude '__pycache__' \
+            --exclude '.pytest_cache' \
+            --exclude '.mypy_cache' \
+            --exclude 'node_modules' \
             ./ \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/consulting-site/staging/source
 
