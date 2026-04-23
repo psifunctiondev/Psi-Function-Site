@@ -7,10 +7,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from app.extensions import db as _db
 from app.models.client import Client, ClientResource
 from app.models.user import User
-
 
 # ---------------------------------------------------------------------------
 # User model — password hashing
@@ -196,7 +194,7 @@ class TestClient:
 
         c2 = Client(name='Acme LLC', slug='acme-unique')
         db_session.add(c2)
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             db_session.commit()
         db_session.rollback()
 

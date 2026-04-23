@@ -3,9 +3,7 @@ tests/test_portal.py
 Tests for the client portal routes (dashboard, admin, legacy redirects).
 """
 
-from app.extensions import db as _db
-from app.models.client import Client, ClientResource
-from app.models.user import User
+from app.models.client import Client
 
 
 def _login(http_client, email, password):
