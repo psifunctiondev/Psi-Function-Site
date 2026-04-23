@@ -11,6 +11,9 @@ packages:
   - python3-pip
   - nodejs
   - npm
+  - postgresql
+  - postgresql-contrib
+  - openssl
 
 users:
   - name: deploy
@@ -43,5 +46,39 @@ runcmd:
   - mkdir -p /opt/consulting-site/shared/env
   - mkdir -p /opt/consulting-site/shared/logs
   - mkdir -p /opt/consulting-site/shared/uploads
+  - mkdir -p /opt/consulting-site/backups
   - chown -R deploy:deploy /opt/consulting-site
   - systemctl daemon-reload
+
+  # --- Swap setup (2GB safety net for low-memory droplets) ---
+  - |
+    if [ "$(free -m | awk '/^Swap:/ {print $2}')" -eq 0 ]; then
+      fallocate -l 2G /swapfile
+      chmod 0600 /swapfile
+      mkswap /swapfile
+      swapon /swapfile
+      echo '/swapfile   none   swap   sw   0   0' >> /etc/fstab
+      sysctl vm.swappiness=10
+      echo 'vm.swappiness=10' >> /etc/sysctl.conf
+    fi
+
+  # --- PostgreSQL: create databases and roles ---
+  # NOTE: These use placeholder passwords. Run bootstrap_postgres.sh after
+  # first boot to generate secure passwords and write credential files.
+  - systemctl enable --now postgresql
+  - |
+    sudo -u postgres psql -c "DO \$\$
+    BEGIN
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'psifunction_testing') THEN
+        CREATE ROLE psifunction_testing WITH LOGIN PASSWORD 'CHANGE_ME';
+      END IF;
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'psifunction_staging') THEN
+        CREATE ROLE psifunction_staging WITH LOGIN PASSWORD 'CHANGE_ME';
+      END IF;
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'psifunction_production') THEN
+        CREATE ROLE psifunction_production WITH LOGIN PASSWORD 'CHANGE_ME';
+      END IF;
+    END\$\$;"
+  - sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='psifunction_testing'"  | grep -q 1 || sudo -u postgres createdb -O psifunction_testing  psifunction_testing
+  - sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='psifunction_staging'"  | grep -q 1 || sudo -u postgres createdb -O psifunction_staging  psifunction_staging
+  - sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='psifunction_production'" | grep -q 1 || sudo -u postgres createdb -O psifunction_production psifunction_production
