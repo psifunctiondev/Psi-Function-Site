@@ -20,9 +20,11 @@ class DevelopmentConfig(BaseConfig):
     SESSION_COOKIE_SECURE = False
 
 class TestingConfig(BaseConfig):
-    TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
-    WTF_CSRF_ENABLED = False
+    """Deployed testing environment (testing.psifunction.com).
+
+    Uses DATABASE_URL from app.env — same as staging/production.
+    """
+    SESSION_COOKIE_SECURE = True
 
 class StagingConfig(BaseConfig):
     SESSION_COOKIE_SECURE = True
@@ -30,11 +32,18 @@ class StagingConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     SESSION_COOKIE_SECURE = True
 
+class PytestConfig(BaseConfig):
+    """In-process test runner config — no real database needed."""
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    WTF_CSRF_ENABLED = False
+
 CONFIG_MAP = {
     'development': DevelopmentConfig,
     'testing': TestingConfig,
     'staging': StagingConfig,
     'production': ProductionConfig,
+    'pytest': PytestConfig,
 }
 
 def get_config(name: str | None = None):
