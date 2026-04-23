@@ -108,13 +108,16 @@ ${HBA_MARKER}
 
   # Insert before the first uncommented "local" line so our rules take priority
   # over the catch-all "local all all peer" rule.
-  if grep -n '^local' "$PG_HBA" | head -1 | grep -q .; then
-    FIRST_LOCAL_LINE="$(grep -n '^local' "$PG_HBA" | head -1 | cut -d: -f1)"
-    # Insert our block just before that line
-    sed -i "${FIRST_LOCAL_LINE}i\\${HBA_BLOCK}" "$PG_HBA"
+  FIRST_LOCAL_LINE="$(grep -n '^local' "$PG_HBA" | head -1 | cut -d: -f1 || true)"
+  if [ -n "$FIRST_LOCAL_LINE" ]; then
+    # Write the block to a temp file, then use sed to read it in
+    HBA_TMP="$(mktemp)"
+    printf '%s\n' "$HBA_BLOCK" > "$HBA_TMP"
+    sed -i "${FIRST_LOCAL_LINE}r ${HBA_TMP}" "$PG_HBA"
+    rm -f "$HBA_TMP"
   else
     # No existing local lines — just append
-    echo "$HBA_BLOCK" >> "$PG_HBA"
+    printf '%s\n' "$HBA_BLOCK" >> "$PG_HBA"
   fi
 
   PG_NEEDS_RELOAD=1
@@ -137,7 +140,20 @@ generate_password() {
 
 # Helper: run SQL as the postgres system user
 pg_exec() {
-  sudo -u postgres psql -tAc "$1" 2>/dev/null
+  sudo -u postgres psql -tAc "$1"
+}
+
+# Helper: check if a role or database exists (returns 0 or 1, safe under set -e)
+role_exists() {
+  local result
+  result="$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$1'" 2>/dev/null || true)"
+  [[ "$result" == *"1"* ]]
+}
+
+db_exists() {
+  local result
+  result="$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='$1'" 2>/dev/null || true)"
+  [[ "$result" == *"1"* ]]
 }
 
 mkdir -p "$(dirname "$CREDENTIALS_FILE")"
@@ -150,7 +166,7 @@ for env in "${ENVIRONMENTS[@]}"; do
   DB="${DB_PREFIX}_${env}"
 
   # Create role if it doesn't exist
-  if pg_exec "SELECT 1 FROM pg_roles WHERE rolname='${ROLE}'" | grep -q 1; then
+  if role_exists "${ROLE}"; then
     log "Role '${ROLE}' already exists"
     if [ "$ROTATE_PASSWORDS" = "1" ]; then
       PASSWORD="$(generate_password)"
@@ -181,7 +197,7 @@ for env in "${ENVIRONMENTS[@]}"; do
   fi
 
   # Create database if it doesn't exist
-  if pg_exec "SELECT 1 FROM pg_database WHERE datname='${DB}'" | grep -q 1; then
+  if db_exists "${DB}"; then
     log "Database '${DB}' already exists"
   else
     pg_exec "CREATE DATABASE ${DB} OWNER ${ROLE}"
