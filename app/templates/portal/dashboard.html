@@ -78,16 +78,16 @@
 
     <div class="portal-dashboard-grid">
 
-      <!-- Column 1: Proposals -->
+      <!-- Column 1: Documents -->
       <div class="portal-dashboard-col">
-        <h2 class="portal-dashboard-col__title">Proposals</h2>
+        <h2 class="portal-dashboard-col__title">Documents</h2>
         <div class="portal-dashboard-col__items">
           {% for r in resources_by_cat.get('proposal', []) %}
             <a class="portal-dashboard-col__item" href="{{ r.external_url or url_for('static', filename=r.file_path) }}" {% if r.external_url %}target="_blank" rel="noopener noreferrer"{% endif %}>
               {{ r.title }}
             </a>
           {% else %}
-            <span class="portal-dashboard-col__empty">No proposals yet</span>
+            <span class="portal-dashboard-col__empty">No documents yet</span>
           {% endfor %}
         </div>
       </div>
