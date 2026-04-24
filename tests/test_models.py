@@ -258,7 +258,7 @@ class TestClientResource:
         db_session.add(r)
         db_session.commit()
 
-        assert r.category_label == 'Proposals & SOWs'
+        assert r.category_label == 'Documents'
 
     def test_category_label_unknown_fallback(self, db_session):
         c = Client(name='CF Corp', slug='cf-corp')
