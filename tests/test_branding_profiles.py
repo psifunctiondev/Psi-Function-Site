@@ -4,8 +4,6 @@ Covers `BRANDING_PROFILES` data shape and the `_apply_profile` helper
 that powers `flask client apply-branding`.
 """
 
-import pytest
-
 from app.cli import BRANDING_PROFILES, _apply_profile
 from app.models.client import Client
 
