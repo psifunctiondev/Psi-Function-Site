@@ -46,7 +46,7 @@ class ClientResource(db.Model):
     client = db.relationship('Client', back_populates='resources')
 
     CATEGORIES = {
-        'proposal': 'Proposals & SOWs',
+        'proposal': 'Documents',
         'backlog': 'Project Backlog',
         'guide': 'User Guides',
         'asset': 'Assets & Deliverables',
