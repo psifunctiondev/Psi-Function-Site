@@ -215,6 +215,12 @@ else
   log "No migrations directory found; skipping database migrations"
 fi
 
+# Re-apply known-good client branding profiles (idempotent).
+# Best-effort: a failure here must not block the release.
+log "Applying client branding profiles"
+FLASK_APP=wsgi:app flask client apply-branding --all || \
+  log "WARN: apply-branding failed; continuing deploy"
+
 log "Running pre-activation validation"
 
 if [ -f "wsgi.py" ]; then
