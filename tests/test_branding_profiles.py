@@ -7,7 +7,6 @@ that powers `flask client apply-branding`.
 from app.cli import BRANDING_PROFILES, _apply_profile
 from app.models.client import Client
 
-
 EXPECTED_FIELDS = {
     'name',
     'primary_color',
