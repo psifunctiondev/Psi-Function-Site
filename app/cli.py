@@ -1,5 +1,8 @@
 """Flask CLI commands for user and client management."""
 
+import os
+import secrets
+
 import click
 from flask import current_app
 from flask.cli import with_appcontext
@@ -338,6 +341,116 @@ def apply_branding(slug, apply_all):
         verb = 'Created' if created else ('Updated' if changed else 'Unchanged')
         detail = f' ({", ".join(changed)})' if changed and not created else ''
         click.echo(f'{verb}: {client.name} [{client.slug}]{detail}')
+
+
+# Demo user identity for the ACME showcase client.
+# Kept module-level so tests and seeders share the constant.
+ACME_DEMO_EMAIL = 'demo@acme.com'
+
+
+@client_cli.command('seed-acme-demo')
+@click.option(
+    '--password', default=None,
+    help=(
+        'Password for the demo user. If omitted, ACME_DEMO_PASSWORD env '
+        'var is used; if that is also unset, a random 16-char password '
+        'is generated and printed once.'
+    ),
+)
+@click.option(
+    '--display-name', default='ACME Demo',
+    help='Display name for the demo user (default: "ACME Demo").',
+)
+@with_appcontext
+def seed_acme_demo(password, display_name):
+    """Seed the ACME showcase demo user (idempotent).
+
+    Ensures the ACME client row exists (via the branding profile), then
+    creates or updates demo@acme.com as a regular, fully-registered user
+    tied to that client. Safe to re-run.
+
+    Password resolution order:
+      1. --password CLI flag
+      2. ACME_DEMO_PASSWORD env var
+      3. Randomly generated 16-char password (printed once)
+
+    Existing passwords are NOT overwritten unless --password is given
+    explicitly (so re-running on deploy doesn't rotate the demo creds).
+    """
+    # Make sure the ACME client row exists. Reuse the branding profile so
+    # we don't drift from BRANDING_PROFILES.
+    profile = BRANDING_PROFILES.get('acme')
+    if profile is None:
+        click.echo(
+            'No branding profile for "acme" — add one to BRANDING_PROFILES '
+            'before seeding the demo user.'
+        )
+        raise click.exceptions.Exit(code=1)
+
+    client_org, created_client, _ = _apply_profile('acme', profile)
+    if created_client:
+        click.echo(f'Created client: {client_org.name} [{client_org.slug}]')
+
+    user = User.query.filter_by(email=ACME_DEMO_EMAIL).first()
+    created_user = False
+    if user is None:
+        user = User(
+            email=ACME_DEMO_EMAIL,
+            display_name=display_name,
+            client_id=client_org.id,
+            is_active_user=True,
+            is_admin=False,
+        )
+        db.session.add(user)
+        created_user = True
+    else:
+        # Keep the demo user pointed at the right client + active state,
+        # but don't clobber a manually-edited display name unless the
+        # caller passed --display-name explicitly. Click can't easily
+        # tell us "was this flag explicit" without context; the default
+        # value is harmless to re-apply.
+        if user.client_id != client_org.id:
+            user.client_id = client_org.id
+        if not user.is_active_user:
+            user.is_active_user = True
+        if user.is_admin:
+            # The demo user must never be an admin.
+            user.is_admin = False
+        if not user.display_name:
+            user.display_name = display_name
+
+    # Password handling.
+    explicit_password = password
+    env_password = os.environ.get('ACME_DEMO_PASSWORD')
+    generated_password = None
+
+    if explicit_password:
+        user.set_password(explicit_password)
+        password_source = 'cli flag'
+    elif not user.is_registered and env_password:
+        user.set_password(env_password)
+        password_source = 'ACME_DEMO_PASSWORD env var'
+    elif not user.is_registered:
+        generated_password = secrets.token_urlsafe(12)[:16]
+        user.set_password(generated_password)
+        password_source = 'generated (printed below — store it now)'
+    else:
+        password_source = 'unchanged (user already registered)'
+
+    db.session.commit()
+
+    verb = 'Created' if created_user else 'Updated'
+    click.echo(f'{verb} demo user: {user.email} → {client_org.name}')
+    click.echo(f'Password source: {password_source}')
+    if generated_password is not None:
+        click.echo('')
+        click.echo('  Generated password (NOT logged anywhere else):')
+        click.echo(f'    {generated_password}')
+        click.echo('')
+        click.echo(
+            '  Save this in your secrets store now. Re-running this '
+            'command will not regenerate it.'
+        )
 
 
 @click.group('resource')
