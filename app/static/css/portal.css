@@ -250,8 +250,6 @@
   font-family: var(--client-font-display, var(--font-family-sans));
   font-size: var(--text-base);
   color: var(--client-accent, var(--color-text-muted));
-  letter-spacing: var(--letter-spacing-wide);
-  text-transform: uppercase;
   line-height: var(--line-height-relaxed);
 }
 
