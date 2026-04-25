@@ -16,7 +16,7 @@
     --client-radius: 0px;
     {% if client.font_display %}--client-font-display: {{ client.font_display|safe }};
     --client-font-weight: 400;{% endif %}
-    {% if client.logo_max_width %}--client-logo-max-width: {{ client.logo_max_width }};{% endif %}
+    {% if client.logo_max_height %}--client-logo-max-height: {{ client.logo_max_height }};{% endif %}
   }
 
   /* Lock client portal area to light theme regardless of site theme */

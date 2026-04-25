@@ -1,4 +1,4 @@
-"""add client logo_max_width
+"""add client logo_max_height
 
 Revision ID: a1b2c3d4e5f6
 Revises: 90c96eb9c0d6
@@ -15,8 +15,8 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('client', sa.Column('logo_max_width', sa.String(32), nullable=True))
+    op.add_column('client', sa.Column('logo_max_height', sa.String(32), nullable=True))
 
 
 def downgrade():
-    op.drop_column('client', 'logo_max_width')
+    op.drop_column('client', 'logo_max_height')

@@ -273,8 +273,8 @@ BRANDING_PROFILES = {
         'primary_color': '#D7282F',
         'accent_color': '#1A1A1A',
         'logo_url': '/static/images/acme-logo.webp',
-        # Badge logo is visually dense — keep it at 70% of the default max.
-        'logo_max_width': '25rem',
+        # Badge logo is visually dense — cap height so it doesn't loom.
+        'logo_max_height': '5rem',
         'tagline': (
             'Purveyors of fine products to the discerning predator since 1949.'
         ),
