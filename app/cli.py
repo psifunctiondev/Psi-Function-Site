@@ -453,6 +453,142 @@ def seed_acme_demo(password, display_name):
         )
 
 
+# Seed payload for the ACME showcase resources. Each entry is the full
+# kwargs dict for a ClientResource row. Idempotency is keyed on
+# (client_id, title) — re-running the seeder updates existing rows in
+# place rather than creating duplicates.
+ACME_DEMO_RESOURCES = [
+    # Engagement & Process — the Psi Function service arc.
+    {
+        'title': 'Engagement Charter',
+        'description': (
+            'Scope, roles, and the Discover → Blueprint → Construct → '
+            'Realize cadence for this engagement.'
+        ),
+        'category': 'engagement',
+        'external_url': 'https://psifunction.com/showcase/acme/charter',
+        'sort_order': 10,
+    },
+    {
+        'title': 'Discovery Notes',
+        'description': 'Stakeholder interviews and current-state findings.',
+        'category': 'engagement',
+        'external_url': 'https://psifunction.com/showcase/acme/discovery',
+        'sort_order': 20,
+    },
+    # Deliverables — example artifacts a real client would receive.
+    {
+        'title': 'Architecture Blueprint',
+        'description': (
+            'Target-state architecture diagram and decision log for the '
+            'ACME platform modernization.'
+        ),
+        'category': 'deliverables',
+        'external_url': 'https://psifunction.com/showcase/acme/blueprint',
+        'sort_order': 10,
+    },
+    {
+        'title': 'Implementation Roadmap',
+        'description': (
+            'Phased delivery plan with milestones, dependencies, and '
+            'risk callouts.'
+        ),
+        'category': 'deliverables',
+        'external_url': 'https://psifunction.com/showcase/acme/roadmap',
+        'sort_order': 20,
+    },
+    # Tools & Dashboards — the live systems clients work in with us.
+    {
+        'title': 'OpenProject Workspace',
+        'description': 'Live project board, backlog, and sprint reports.',
+        'category': 'tools',
+        'external_url': 'https://psifunction.com/showcase/acme/openproject',
+        'sort_order': 10,
+    },
+    {
+        'title': 'Status Dashboard',
+        'description': 'Weekly status, burn-up, and risk register.',
+        'category': 'tools',
+        'external_url': 'https://psifunction.com/showcase/acme/dashboard',
+        'sort_order': 20,
+    },
+]
+
+
+@client_cli.command('seed-acme-resources')
+@with_appcontext
+def seed_acme_resources():
+    """Seed the ACME showcase ClientResource rows (idempotent).
+
+    Ensures the ACME client row exists (via BRANDING_PROFILES), then
+    upserts each entry in ACME_DEMO_RESOURCES keyed on (client, title).
+    Existing rows have their description / category / url / sort_order
+    fields synced; titles are the stable identifier.
+    """
+    from app.models.client import ClientResource
+
+    profile = BRANDING_PROFILES.get('acme')
+    if profile is None:
+        click.echo(
+            'No branding profile for "acme" — add one to BRANDING_PROFILES '
+            'before seeding resources.'
+        )
+        raise click.exceptions.Exit(code=1)
+
+    client_org, created_client, _ = _apply_profile('acme', profile)
+    if created_client:
+        click.echo(f'Created client: {client_org.name} [{client_org.slug}]')
+
+    created_count = 0
+    updated_count = 0
+    unchanged_count = 0
+
+    for entry in ACME_DEMO_RESOURCES:
+        existing = ClientResource.query.filter_by(
+            client_id=client_org.id, title=entry['title'],
+        ).first()
+
+        if existing is None:
+            resource = ClientResource(
+                client_id=client_org.id,
+                title=entry['title'],
+                description=entry.get('description'),
+                category=entry['category'],
+                external_url=entry.get('external_url'),
+                file_path=entry.get('file_path'),
+                sort_order=entry.get('sort_order', 0),
+            )
+            db.session.add(resource)
+            created_count += 1
+            click.echo(f'  + {entry["title"]} ({entry["category"]})')
+            continue
+
+        changed_fields = []
+        for field in ('description', 'category', 'external_url',
+                      'file_path', 'sort_order'):
+            new_value = entry.get(field, 0 if field == 'sort_order' else None)
+            if getattr(existing, field) != new_value:
+                setattr(existing, field, new_value)
+                changed_fields.append(field)
+
+        if changed_fields:
+            updated_count += 1
+            click.echo(
+                f'  ~ {entry["title"]} '
+                f'({", ".join(changed_fields)})'
+            )
+        else:
+            unchanged_count += 1
+
+    db.session.commit()
+    click.echo('')
+    click.echo(
+        f'Seeded ACME resources: {created_count} created, '
+        f'{updated_count} updated, {unchanged_count} unchanged '
+        f'(total {len(ACME_DEMO_RESOURCES)}).'
+    )
+
+
 @click.group('resource')
 def resource_cli():
     """Manage client resources (guides, tools, links)."""
