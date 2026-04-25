@@ -263,6 +263,24 @@ BRANDING_PROFILES = {
         # "Sackers Gothic Std Heavy" display face.
         'font_display': "'Special Gothic', sans-serif",
     },
+    'acme': {
+        'name': 'ACME Corporation',
+        # Warm desert palette — ochre primary, muted sand accent.
+        # Quinn can tune hex values later.
+        'primary_color': '#B8651D',
+        'accent_color': '#C9A876',
+        'logo_url': '/static/images/acme-logo.svg',
+        'tagline': (
+            'Purveyors of fine products to the discerning predator since 1949.'
+        ),
+        'font_url': (
+            'https://fonts.googleapis.com/css2?'
+            'family=Bungee+Inline&family=Inter:wght@400;600&display=swap'
+        ),
+        # Bungee Inline gives the retro-mail-order-catalog feel for
+        # display headings; Inter handles body copy.
+        'font_display': "'Bungee Inline', 'Inter', sans-serif",
+    },
 }
 
 
