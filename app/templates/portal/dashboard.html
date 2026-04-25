@@ -31,6 +31,17 @@
     background: var(--color-bg);
     color: var(--color-text);
   }
+
+  /* Extend the client background through <main>'s padding so there is
+     no sharp edge where the portal section meets the site theme (most
+     visible in Night mode). Uses :has() which is supported in all
+     current evergreen browsers. */
+  body:has(.portal-page) main {
+    background: #f5f5f5;
+  }
+  body:has(.portal-page) {
+    background: #f5f5f5;
+  }
 </style>
 {% endblock %}
 
