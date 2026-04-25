@@ -120,3 +120,23 @@ class TestSeedAcmeDemo:
         assert result.exit_code == 0, result.output
         user = User.query.filter_by(email=ACME_DEMO_EMAIL).first()
         assert user.is_active_user is True
+
+    def test_reset_password_rotates_existing_user(self, app, db_session):
+        """`--reset-password` rotates the password on a registered user."""
+        _invoke(app, ['--password', 'pw-cccccccccccc1'])
+        db_session.expire_all()
+        user = User.query.filter_by(email=ACME_DEMO_EMAIL).first()
+        assert user.is_registered
+        original_hash = user.password_hash
+
+        result = _invoke(app, ['--reset-password'])
+
+        assert result.exit_code == 0, result.output
+        db_session.expire_all()
+        user = User.query.filter_by(email=ACME_DEMO_EMAIL).first()
+        assert user.password_hash != original_hash
+        assert user.is_registered  # still registered after reset
+        # The original password no longer works.
+        assert user.check_password('pw-cccccccccccc1') is False
+        # The new (random) password should appear in output.
+        assert 'Generated password' in result.output

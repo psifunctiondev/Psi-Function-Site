@@ -221,6 +221,19 @@ log "Applying client branding profiles"
 FLASK_APP=wsgi:app flask client apply-branding --all || \
   log "WARN: apply-branding failed; continuing deploy"
 
+# Optionally seed the ACME showcase client (demo user + showcase resources).
+# Gated on SEED_ACME_DEMO=1 so production deploys can opt in/out via env.
+# Both subcommands are idempotent; failures are logged but do not block the deploy.
+if [ "${SEED_ACME_DEMO:-0}" = "1" ]; then
+  log "Seeding ACME showcase demo (user + resources)"
+  FLASK_APP=wsgi:app flask client seed-acme-demo || \
+    log "WARN: seed-acme-demo failed; continuing deploy"
+  FLASK_APP=wsgi:app flask client seed-acme-resources || \
+    log "WARN: seed-acme-resources failed; continuing deploy"
+else
+  log "Skipping ACME showcase seed (set SEED_ACME_DEMO=1 to enable)"
+fi
+
 log "Running pre-activation validation"
 
 if [ -f "wsgi.py" ]; then

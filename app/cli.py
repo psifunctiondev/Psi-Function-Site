@@ -361,8 +361,17 @@ ACME_DEMO_EMAIL = 'demo@acme.com'
     '--display-name', default='ACME Demo',
     help='Display name for the demo user (default: "ACME Demo").',
 )
+@click.option(
+    '--reset-password', is_flag=True, default=False,
+    help=(
+        'Force regeneration of the demo user password even if the user '
+        'is already registered. The new password is printed once, exactly '
+        'like first-time seed. Has no effect when --password or '
+        'ACME_DEMO_PASSWORD is also provided (those win).'
+    ),
+)
 @with_appcontext
-def seed_acme_demo(password, display_name):
+def seed_acme_demo(password, display_name, reset_password):
     """Seed the ACME showcase demo user (idempotent).
 
     Ensures the ACME client row exists (via the branding profile), then
@@ -371,11 +380,14 @@ def seed_acme_demo(password, display_name):
 
     Password resolution order:
       1. --password CLI flag
-      2. ACME_DEMO_PASSWORD env var
-      3. Randomly generated 16-char password (printed once)
+      2. ACME_DEMO_PASSWORD env var (only used if user is unregistered
+         OR --reset-password is set)
+      3. Randomly generated 16-char password (printed once) when the
+         user is unregistered OR --reset-password is set
 
-    Existing passwords are NOT overwritten unless --password is given
-    explicitly (so re-running on deploy doesn't rotate the demo creds).
+    Existing passwords are NOT overwritten on re-run unless --password
+    or --reset-password is given (so deploy-time re-seeds don't rotate
+    the demo creds).
     """
     # Make sure the ACME client row exists. Reuse the branding profile so
     # we don't drift from BRANDING_PROFILES.
@@ -424,16 +436,24 @@ def seed_acme_demo(password, display_name):
     env_password = os.environ.get('ACME_DEMO_PASSWORD')
     generated_password = None
 
+    needs_new_password = (not user.is_registered) or reset_password
+
     if explicit_password:
         user.set_password(explicit_password)
         password_source = 'cli flag'
-    elif not user.is_registered and env_password:
+    elif needs_new_password and env_password:
         user.set_password(env_password)
-        password_source = 'ACME_DEMO_PASSWORD env var'
-    elif not user.is_registered:
+        password_source = (
+            'ACME_DEMO_PASSWORD env var (reset)' if reset_password
+            else 'ACME_DEMO_PASSWORD env var'
+        )
+    elif needs_new_password:
         generated_password = secrets.token_urlsafe(12)[:16]
         user.set_password(generated_password)
-        password_source = 'generated (printed below — store it now)'
+        password_source = (
+            'generated (printed below — store it now; reset)' if reset_password
+            else 'generated (printed below — store it now)'
+        )
     else:
         password_source = 'unchanged (user already registered)'
 
