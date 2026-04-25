@@ -257,11 +257,12 @@ BRANDING_PROFILES = {
         'tagline': 'Modernizing New England Home Design',
         'font_url': (
             'https://fonts.googleapis.com/css2?'
-            'family=Big+Shoulders+Display:wght@700&display=swap'
+            'family=Krona+One&display=swap'
         ),
         # Closest free Google Fonts match for the site's proprietary
-        # "Sackers Gothic Std Heavy" display face.
-        'font_display': "'Big Shoulders Display', sans-serif",
+        # "Sackers Gothic Std Heavy" display face: wide, geometric,
+        # uniform-weight sans with display proportions.
+        'font_display': "'Krona One', sans-serif",
     },
 }
 
