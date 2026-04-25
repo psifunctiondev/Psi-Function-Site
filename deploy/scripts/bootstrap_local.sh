@@ -8,6 +8,9 @@ cd "$REPO_ROOT"
 
 echo "==> Repository root: $REPO_ROOT"
 
+echo "==> Ensuring Flask instance directory exists"
+mkdir -p "$REPO_ROOT/instance"
+
 echo "==> Setting up Python virtual environment"
 if [ ! -d ".venv" ]; then
   python3 -m venv .venv
