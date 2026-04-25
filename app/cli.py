@@ -239,6 +239,89 @@ def update_client(slug, name, primary, accent, logo, banner, tagline, font_url, 
     click.echo(f'Updated client: {client.name} ({client.slug})')
 
 
+# Known-good branding profiles applied idempotently on deploy.
+#
+# This dict is the source of truth for each client's portal branding.
+# Edit a value here -> it reapplies on the next deploy via
+# `flask client apply-branding --all` (called from deploy_release.sh).
+#
+# Adding a new client: append an entry with the same shape. If the matching
+# Client row does not exist yet it will be created (only `name` + `slug` are
+# required alongside the branding fields).
+BRANDING_PROFILES = {
+    'ctai': {
+        'name': 'Catherine Truman Architects',
+        'primary_color': '#FA6202',
+        'accent_color': '#878787',
+        'logo_url': '/static/images/ctai-logo.svg',
+        'tagline': 'Modernizing New England Home Design',
+        'font_url': (
+            'https://fonts.googleapis.com/css2?'
+            'family=Big+Shoulders+Display:wght@700&display=swap'
+        ),
+        # Closest free Google Fonts match for the site's proprietary
+        # "Sackers Gothic Std Heavy" display face.
+        'font_display': "'Big Shoulders Display', sans-serif",
+    },
+}
+
+
+def _apply_profile(slug, profile):
+    """Idempotently create/update a Client row from a BRANDING_PROFILES entry.
+
+    Returns a tuple (client, created, changed_fields).
+    """
+    client = Client.query.filter_by(slug=slug).first()
+    created = False
+    if client is None:
+        client = Client(slug=slug, name=profile.get('name') or slug.upper())
+        db.session.add(client)
+        created = True
+
+    changed = []
+    for field, value in profile.items():
+        if getattr(client, field, None) != value:
+            setattr(client, field, value)
+            changed.append(field)
+
+    if changed or created:
+        db.session.commit()
+    return client, created, changed
+
+
+@client_cli.command('apply-branding')
+@click.option('--slug', default=None, help='Client slug (omit with --all)')
+@click.option('--all', 'apply_all', is_flag=True,
+              help='Apply every profile in BRANDING_PROFILES')
+@with_appcontext
+def apply_branding(slug, apply_all):
+    """Apply known-good branding to one or all clients (idempotent).
+
+    Safe to run on every deploy. Creates the Client row if missing,
+    then upserts branding fields from BRANDING_PROFILES.
+    """
+    if not apply_all and not slug:
+        click.echo('Pass --slug <slug> or --all.')
+        raise click.exceptions.Exit(code=2)
+
+    if apply_all:
+        targets = list(BRANDING_PROFILES.items())
+    else:
+        if slug not in BRANDING_PROFILES:
+            click.echo(
+                f'No branding profile defined for "{slug}". '
+                f'Known: {", ".join(sorted(BRANDING_PROFILES)) or "(none)"}'
+            )
+            raise click.exceptions.Exit(code=1)
+        targets = [(slug, BRANDING_PROFILES[slug])]
+
+    for s, profile in targets:
+        client, created, changed = _apply_profile(s, profile)
+        verb = 'Created' if created else ('Updated' if changed else 'Unchanged')
+        detail = f' ({", ".join(changed)})' if changed and not created else ''
+        click.echo(f'{verb}: {client.name} [{client.slug}]{detail}')
+
+
 @click.group('resource')
 def resource_cli():
     """Manage client resources (guides, tools, links)."""
