@@ -270,9 +270,9 @@ BRANDING_PROFILES = {
         'name': 'ACME Corporation',
         # Warm desert palette — ochre primary, muted sand accent.
         # Quinn can tune hex values later.
-        'primary_color': '#B8651D',
-        'accent_color': '#C9A876',
-        'logo_url': '/static/images/acme-logo.svg',
+        'primary_color': '#D7282F',
+        'accent_color': '#1A1A1A',
+        'logo_url': '/static/images/acme-logo.webp',
         'tagline': (
             'Purveyors of fine products to the discerning predator since 1949.'
         ),
