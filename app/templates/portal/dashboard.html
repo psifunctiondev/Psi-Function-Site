@@ -32,15 +32,23 @@
     color: var(--color-text);
   }
 
-  /* Extend the client background through <main>'s padding so there is
-     no sharp edge where the portal section meets the site theme (most
-     visible in Night mode). Uses :has() which is supported in all
-     current evergreen browsers. */
+  /* Paint <main> cream for almost its full height, then fade to
+     transparent over the last stretch so the client section dissolves
+     into the Psi Function site background before the footer. This
+     mirrors the soft transition the sticky site header already provides
+     at the top (which fades from its elevated surface down to the
+     body bg — here body stays dark and shows through the fade). */
   body:has(.portal-page) main {
-    background: #f5f5f5;
-  }
-  body:has(.portal-page) {
-    background: #f5f5f5;
+    --portal-fade-height: calc(var(--header-height) * 1.5);
+    background:
+      linear-gradient(
+        to bottom,
+        #f5f5f5 0,
+        #f5f5f5 calc(100% - var(--portal-fade-height)),
+        transparent 100%
+      )
+      no-repeat;
+    background-color: transparent;
   }
 </style>
 {% endblock %}
