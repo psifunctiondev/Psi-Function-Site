@@ -1,5 +1,8 @@
 """Flask CLI commands for user and client management."""
 
+import os
+import secrets
+
 import click
 from flask import current_app
 from flask.cli import with_appcontext
@@ -263,6 +266,26 @@ BRANDING_PROFILES = {
         # "Sackers Gothic Std Heavy" display face.
         'font_display': "'Special Gothic', sans-serif",
     },
+    'acme': {
+        'name': 'ACME Corporation',
+        # Warm desert palette — ochre primary, muted sand accent.
+        # Quinn can tune hex values later.
+        'primary_color': '#D7282F',
+        'accent_color': '#1A1A1A',
+        'logo_url': '/static/images/acme-logo.webp',
+        # Badge logo is visually dense — cap height so it doesn't loom.
+        'logo_max_height': '10rem',
+        'tagline': (
+            'Purveyors of fine products to the discerning predator since 1949.'
+        ),
+        'font_url': (
+            'https://fonts.googleapis.com/css2?'
+            'family=Bungee+Inline&family=Inter:wght@400;600&display=swap'
+        ),
+        # Bungee Inline gives the retro-mail-order-catalog feel for
+        # display headings; Inter handles body copy.
+        'font_display': "'Bungee Inline', 'Inter', sans-serif",
+    },
 }
 
 
@@ -320,6 +343,272 @@ def apply_branding(slug, apply_all):
         verb = 'Created' if created else ('Updated' if changed else 'Unchanged')
         detail = f' ({", ".join(changed)})' if changed and not created else ''
         click.echo(f'{verb}: {client.name} [{client.slug}]{detail}')
+
+
+# Demo user identity for the ACME showcase client.
+# Kept module-level so tests and seeders share the constant.
+ACME_DEMO_EMAIL = 'demo@acme.com'
+
+
+@client_cli.command('seed-acme-demo')
+@click.option(
+    '--password', default=None,
+    help=(
+        'Password for the demo user. If omitted, ACME_DEMO_PASSWORD env '
+        'var is used; if that is also unset, a random 16-char password '
+        'is generated and printed once.'
+    ),
+)
+@click.option(
+    '--display-name', default='ACME Demo',
+    help='Display name for the demo user (default: "ACME Demo").',
+)
+@click.option(
+    '--reset-password', is_flag=True, default=False,
+    help=(
+        'Force regeneration of the demo user password even if the user '
+        'is already registered. The new password is printed once, exactly '
+        'like first-time seed. Has no effect when --password or '
+        'ACME_DEMO_PASSWORD is also provided (those win).'
+    ),
+)
+@with_appcontext
+def seed_acme_demo(password, display_name, reset_password):
+    """Seed the ACME showcase demo user (idempotent).
+
+    Ensures the ACME client row exists (via the branding profile), then
+    creates or updates demo@acme.com as a regular, fully-registered user
+    tied to that client. Safe to re-run.
+
+    Password resolution order:
+      1. --password CLI flag
+      2. ACME_DEMO_PASSWORD env var (only used if user is unregistered
+         OR --reset-password is set)
+      3. Randomly generated 16-char password (printed once) when the
+         user is unregistered OR --reset-password is set
+
+    Existing passwords are NOT overwritten on re-run unless --password
+    or --reset-password is given (so deploy-time re-seeds don't rotate
+    the demo creds).
+    """
+    # Make sure the ACME client row exists. Reuse the branding profile so
+    # we don't drift from BRANDING_PROFILES.
+    profile = BRANDING_PROFILES.get('acme')
+    if profile is None:
+        click.echo(
+            'No branding profile for "acme" — add one to BRANDING_PROFILES '
+            'before seeding the demo user.'
+        )
+        raise click.exceptions.Exit(code=1)
+
+    client_org, created_client, _ = _apply_profile('acme', profile)
+    if created_client:
+        click.echo(f'Created client: {client_org.name} [{client_org.slug}]')
+
+    user = User.query.filter_by(email=ACME_DEMO_EMAIL).first()
+    created_user = False
+    if user is None:
+        user = User(
+            email=ACME_DEMO_EMAIL,
+            display_name=display_name,
+            client_id=client_org.id,
+            is_active_user=True,
+            is_admin=False,
+        )
+        db.session.add(user)
+        created_user = True
+    else:
+        # Keep the demo user pointed at the right client + active state,
+        # but don't clobber a manually-edited display name unless the
+        # caller passed --display-name explicitly. Click can't easily
+        # tell us "was this flag explicit" without context; the default
+        # value is harmless to re-apply.
+        if user.client_id != client_org.id:
+            user.client_id = client_org.id
+        if not user.is_active_user:
+            user.is_active_user = True
+        if user.is_admin:
+            # The demo user must never be an admin.
+            user.is_admin = False
+        if not user.display_name:
+            user.display_name = display_name
+
+    # Password handling.
+    explicit_password = password
+    env_password = os.environ.get('ACME_DEMO_PASSWORD')
+    generated_password = None
+
+    needs_new_password = (not user.is_registered) or reset_password
+
+    if explicit_password:
+        user.set_password(explicit_password)
+        password_source = 'cli flag'
+    elif needs_new_password and env_password:
+        user.set_password(env_password)
+        password_source = (
+            'ACME_DEMO_PASSWORD env var (reset)' if reset_password
+            else 'ACME_DEMO_PASSWORD env var'
+        )
+    elif needs_new_password:
+        generated_password = secrets.token_urlsafe(12)[:16]
+        user.set_password(generated_password)
+        password_source = (
+            'generated (printed below — store it now; reset)' if reset_password
+            else 'generated (printed below — store it now)'
+        )
+    else:
+        password_source = 'unchanged (user already registered)'
+
+    db.session.commit()
+
+    verb = 'Created' if created_user else 'Updated'
+    click.echo(f'{verb} demo user: {user.email} → {client_org.name}')
+    click.echo(f'Password source: {password_source}')
+    if generated_password is not None:
+        click.echo('')
+        click.echo('  Generated password (NOT logged anywhere else):')
+        click.echo(f'    {generated_password}')
+        click.echo('')
+        click.echo(
+            '  Save this in your secrets store now. Re-running this '
+            'command will not regenerate it.'
+        )
+
+
+# Seed payload for the ACME showcase resources. Each entry is the full
+# kwargs dict for a ClientResource row. Idempotency is keyed on
+# (client_id, title) — re-running the seeder updates existing rows in
+# place rather than creating duplicates.
+ACME_DEMO_RESOURCES = [
+    # Engagement & Process — the Psi Function service arc.
+    {
+        'title': 'Engagement Charter',
+        'description': (
+            'Scope, roles, and the Discover → Blueprint → Construct → '
+            'Realize cadence for this engagement.'
+        ),
+        'category': 'engagement',
+        'external_url': 'https://psifunction.com/showcase/acme/charter',
+        'sort_order': 10,
+    },
+    {
+        'title': 'Discovery Notes',
+        'description': 'Stakeholder interviews and current-state findings.',
+        'category': 'engagement',
+        'external_url': 'https://psifunction.com/showcase/acme/discovery',
+        'sort_order': 20,
+    },
+    # Deliverables — example artifacts a real client would receive.
+    {
+        'title': 'Architecture Blueprint',
+        'description': (
+            'Target-state architecture diagram and decision log for the '
+            'ACME platform modernization.'
+        ),
+        'category': 'deliverables',
+        'external_url': 'https://psifunction.com/showcase/acme/blueprint',
+        'sort_order': 10,
+    },
+    {
+        'title': 'Implementation Roadmap',
+        'description': (
+            'Phased delivery plan with milestones, dependencies, and '
+            'risk callouts.'
+        ),
+        'category': 'deliverables',
+        'external_url': 'https://psifunction.com/showcase/acme/roadmap',
+        'sort_order': 20,
+    },
+    # Tools & Dashboards — the live systems clients work in with us.
+    {
+        'title': 'OpenProject Workspace',
+        'description': 'Live project board, backlog, and sprint reports.',
+        'category': 'tools',
+        'external_url': 'https://psifunction.com/showcase/acme/openproject',
+        'sort_order': 10,
+    },
+    {
+        'title': 'Status Dashboard',
+        'description': 'Weekly status, burn-up, and risk register.',
+        'category': 'tools',
+        'external_url': 'https://psifunction.com/showcase/acme/dashboard',
+        'sort_order': 20,
+    },
+]
+
+
+@client_cli.command('seed-acme-resources')
+@with_appcontext
+def seed_acme_resources():
+    """Seed the ACME showcase ClientResource rows (idempotent).
+
+    Ensures the ACME client row exists (via BRANDING_PROFILES), then
+    upserts each entry in ACME_DEMO_RESOURCES keyed on (client, title).
+    Existing rows have their description / category / url / sort_order
+    fields synced; titles are the stable identifier.
+    """
+    from app.models.client import ClientResource
+
+    profile = BRANDING_PROFILES.get('acme')
+    if profile is None:
+        click.echo(
+            'No branding profile for "acme" — add one to BRANDING_PROFILES '
+            'before seeding resources.'
+        )
+        raise click.exceptions.Exit(code=1)
+
+    client_org, created_client, _ = _apply_profile('acme', profile)
+    if created_client:
+        click.echo(f'Created client: {client_org.name} [{client_org.slug}]')
+
+    created_count = 0
+    updated_count = 0
+    unchanged_count = 0
+
+    for entry in ACME_DEMO_RESOURCES:
+        existing = ClientResource.query.filter_by(
+            client_id=client_org.id, title=entry['title'],
+        ).first()
+
+        if existing is None:
+            resource = ClientResource(
+                client_id=client_org.id,
+                title=entry['title'],
+                description=entry.get('description'),
+                category=entry['category'],
+                external_url=entry.get('external_url'),
+                file_path=entry.get('file_path'),
+                sort_order=entry.get('sort_order', 0),
+            )
+            db.session.add(resource)
+            created_count += 1
+            click.echo(f'  + {entry["title"]} ({entry["category"]})')
+            continue
+
+        changed_fields = []
+        for field in ('description', 'category', 'external_url',
+                      'file_path', 'sort_order'):
+            new_value = entry.get(field, 0 if field == 'sort_order' else None)
+            if getattr(existing, field) != new_value:
+                setattr(existing, field, new_value)
+                changed_fields.append(field)
+
+        if changed_fields:
+            updated_count += 1
+            click.echo(
+                f'  ~ {entry["title"]} '
+                f'({", ".join(changed_fields)})'
+            )
+        else:
+            unchanged_count += 1
+
+    db.session.commit()
+    click.echo('')
+    click.echo(
+        f'Seeded ACME resources: {created_count} created, '
+        f'{updated_count} updated, {unchanged_count} unchanged '
+        f'(total {len(ACME_DEMO_RESOURCES)}).'
+    )
 
 
 @click.group('resource')

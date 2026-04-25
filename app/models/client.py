@@ -16,6 +16,7 @@ class Client(db.Model):
     tagline = db.Column(db.String(255))
     font_url = db.Column(db.String(512))  # e.g. Google Fonts CSS link
     font_display = db.Column(db.String(128))  # e.g. 'Julius Sans One, sans-serif'
+    logo_max_height = db.Column(db.String(32))  # CSS value, e.g. '5rem'. None = use default.
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     # Relationships
@@ -34,7 +35,7 @@ class ClientResource(db.Model):
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
     category = db.Column(db.String(64), nullable=False, default='general')
-    # Categories: proposal, backlog, guide, asset, invoice, custom
+    # See the CATEGORIES dict below for the canonical list of labels.
     file_path = db.Column(db.String(512))  # For uploaded files
     external_url = db.Column(db.String(512))  # For links (e.g., OpenProject)
     sort_order = db.Column(db.Integer, default=0)
@@ -53,6 +54,12 @@ class ClientResource(db.Model):
         'invoice': 'Invoices',
         'custom': 'Custom Tools',
         'general': 'General',
+        # Showcase / engagement-narrative categories. Used by the ACME
+        # demo client to surface the Psi Function service arc; available
+        # for any client portal that wants the same framing.
+        'engagement': 'Engagement & Process',
+        'deliverables': 'Deliverables',
+        'tools': 'Tools & Dashboards',
     }
 
     @property

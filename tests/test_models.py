@@ -272,8 +272,14 @@ class TestClientResource:
         assert r.category_label == 'Weird Stuff'
 
     def test_categories_dict_keys(self):
-        expected_keys = {'proposal', 'backlog', 'guide', 'asset', 'invoice', 'custom', 'general'}
-        assert set(ClientResource.CATEGORIES.keys()) == expected_keys
+        # Legacy keys must remain present for backward compatibility with
+        # existing seeded data and CLI workflows.
+        legacy_keys = {'proposal', 'backlog', 'guide', 'asset',
+                       'invoice', 'custom', 'general'}
+        # Showcase keys added for the ACME demo / engagement narrative.
+        showcase_keys = {'engagement', 'deliverables', 'tools'}
+        assert legacy_keys.issubset(ClientResource.CATEGORIES.keys())
+        assert showcase_keys.issubset(ClientResource.CATEGORIES.keys())
 
     def test_repr(self, db_session):
         c = Client(name='RR Corp', slug='rr-corp')
