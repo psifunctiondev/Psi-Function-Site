@@ -16,6 +16,7 @@ class Client(db.Model):
     tagline = db.Column(db.String(255))
     font_url = db.Column(db.String(512))  # e.g. Google Fonts CSS link
     font_display = db.Column(db.String(128))  # e.g. 'Julius Sans One, sans-serif'
+    logo_max_width = db.Column(db.String(32))   # CSS value, e.g. '25rem'. None = use default.
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     # Relationships
