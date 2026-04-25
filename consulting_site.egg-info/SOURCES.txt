@@ -21,6 +21,7 @@ consulting_site.egg-info/dependency_links.txt
 consulting_site.egg-info/requires.txt
 consulting_site.egg-info/top_level.txt
 tests/test_auth.py
+tests/test_branding_profiles.py
 tests/test_health.py
 tests/test_models.py
 tests/test_portal.py

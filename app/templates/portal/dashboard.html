@@ -129,7 +129,7 @@
 
       <!-- Column 3: Tools -->
       <div class="portal-dashboard-col">
-        <h2 class="portal-dashboard-col__title">Tools</h2>
+        <h2 class="portal-dashboard-col__title">Applications</h2>
         <div class="portal-dashboard-col__items">
           {% for r in resources_by_cat.get('custom', []) %}
             <a class="portal-dashboard-col__item" href="{{ r.external_url or url_for('static', filename=r.file_path) }}" {% if r.external_url %}target="_blank" rel="noopener noreferrer"{% endif %}>
