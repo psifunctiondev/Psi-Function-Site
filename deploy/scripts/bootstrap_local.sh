@@ -19,7 +19,10 @@ fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
 
-python -m pip install --upgrade pip setuptools wheel
+# Upgrade pip first (pip 24.x has a known issue with large JSON index responses
+# that causes JSONDecodeError at ~40KB; upgrading resolves it)
+echo "==> Upgrading pip"
+python -m pip install --quiet --upgrade pip setuptools wheel
 
 echo "==> Installing Python dependencies"
 python -m pip install -e .[dev] || python -m pip install -e .
@@ -29,7 +32,7 @@ echo "==> Verifying Node and npm"
 if ! command -v node >/dev/null 2>&1; then
   echo "ERROR: node is not available in PATH"
   echo "Open a shell where nvm is loaded, or run:"
-  echo "  export NVM_DIR=\"\$HOME/.nvm\""
+  echo "  export NVM_DIR=\"\$HOME/.config/nvm\"  # or ~/.nvm for older nvm installs"
   echo "  source \"\$NVM_DIR/nvm.sh\""
   echo "  nvm use 20"
   exit 1
