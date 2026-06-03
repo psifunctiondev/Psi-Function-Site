@@ -122,7 +122,7 @@
   /* Match the hero text family (.home__hero-lede uses --font-family-sans). */
   font-family: var(--font-family-sans, sans-serif);
   font-size: var(--text-md, 1.125rem);
-  line-height: var(--line-height-relaxed, 1.7);
+  line-height: var(--line-height-snug, 1.35);
   color: var(--color-text, #F4F6F8);
 }
 
