@@ -45,7 +45,10 @@
 
 .work-chyron__card {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
   opacity: 0;
   visibility: hidden;
   transform: translateX(100%);
@@ -61,9 +64,14 @@
   text-align: center;
 }
 
-/* Active card rests at translateX(0), fully visible and in flow. */
+/* Active card rests at translateX(0), fully visible and in flow.
+   Reset the absolute offsets and keep full width so the card matches
+   the viewport width (and resizes with it) and stays centered. */
 .work-chyron__card.is-active {
   position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
   opacity: 1;
   visibility: visible;
   transform: translateX(0);
@@ -81,7 +89,9 @@
    positioned (overlaps the incoming card) until the glide finishes. */
 .work-chyron__card.is-leaving {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
   opacity: 0;
   visibility: visible;
   transform: translateX(-100%);
