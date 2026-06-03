@@ -85,9 +85,11 @@
 .home__hero-inner {
   display: grid;
   grid-template-columns: 2fr 3fr;
-  /* Rows stretch by default; the content column drives the height.
-     The media panel (and its canvas) therefore clips to the bottom
-     of the text column rather than flooring at a fixed min-height. */
+  /* Rows stretch by default. On mobile the content column drives the
+     height; on desktop (Option B) the media column's natural real estate
+     (medallion + canvas) establishes the row height via a min-height set
+     in the >=768px block below, so the hero text can vertically center
+     against the full left-column artwork. */
   align-items: stretch;
 }
 
@@ -214,6 +216,22 @@
     width: 100%;
     height: auto;
   }
+
+  /* Option B: establish the hero row height from the media column's
+     natural real estate so the text can vertically center against the
+     full medallion + canvas artwork instead of the text driving height.
+     Geometry:
+       --section-space-sm   breathing room above the medallion
+       --medallion-size     the full medallion circle
+       7rem                 canvas presence below the medallion
+     The absolutely-positioned canvas (top offset + bottom:0 above) then
+     fills from its top offset down to the bottom of this taller box,
+     reclaiming the natural canvas height. */
+  .home__hero-inner {
+    min-height: calc(
+      var(--section-space-sm) + var(--medallion-size) + 9rem
+    );
+  }
 }
 
 
@@ -228,6 +246,9 @@
 .home__hero-content {
   display: flex;
   flex-direction: column;
+  /* Mobile default: text hugs the top of its stacked block. Desktop
+     (Option B) overrides to center vertically against the taller media
+     column — see the >=768px block below. */
   justify-content: flex-start;
 
   padding-block-start: var(--section-space-sm);
@@ -240,6 +261,14 @@
 
 @media (min-width: 768px) {
   .home__hero-content {
+    /* Option B: center the hero text vertically within the taller
+       media-driven row height set on .home__hero-inner. Equalize the
+       block padding so centering is truly optical (the asymmetric
+       top/bottom pad below is a mobile-oriented default that would bias
+       the centered text upward on desktop). */
+    justify-content: center;
+    padding-block-start: var(--section-space-sm);
+    padding-block-end:   var(--section-space-sm);
     padding-inline-start: var(--space-12);
     padding-inline-end:   var(--page-padding-inline-desktop);
   }

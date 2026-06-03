@@ -153,7 +153,12 @@
   padding: 0.3rem 0.7rem;
   border-radius: var(--radius-pill, 9999px);
   border: var(--border-width-thin, 1px) solid transparent;
-  white-space: nowrap;
+  /* Allow long taxonomy labels (e.g. "Manufacturing, Logistics &
+     Supply Chain") to wrap instead of forcing a minimum content width
+     that prevents the card / pill-row from shrinking on narrow screens.
+     Keep text centered so wrapped pills still read cleanly. */
+  white-space: normal;
+  text-align: center;
 }
 
 /* Axis tints: solid brand bg, light text — high contrast, on-brand. */
@@ -209,6 +214,11 @@
 }
 
 @media (max-width: 40rem) {
+  /* Reduce the chyron's horizontal padding on phones so cards reclaim
+     width (was unconditionally the desktop padding token). */
+  .work-chyron {
+    padding-inline: var(--page-padding-inline-mobile, 1rem);
+  }
   .work-chyron__card {
     padding: var(--space-6, 1.5rem);
   }
