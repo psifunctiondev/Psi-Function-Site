@@ -18,7 +18,9 @@
 
 .work-chyron__inner {
   width: 100%;
-  max-width: var(--container-lg, 64rem);
+  /* 3/5 of the page content width (--container-max = 75rem) to align
+     geometrically with the site's 5-column layout: 75rem * 3/5 = 45rem. */
+  max-width: calc(var(--container-max, 75rem) * 3 / 5);
 }
 
 .work-chyron__eyebrow {

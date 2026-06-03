@@ -271,6 +271,11 @@
     padding-block-end:   var(--section-space-sm);
     padding-inline-start: var(--space-12);
     padding-inline-end:   var(--page-padding-inline-desktop);
+    /* Optical nudge: the media column's visual mass (medallion + canvas)
+       sits lower than the row's geometric center because of the
+       breathing room above the medallion. Push the text down ~40px so
+       its optical center lines up with the canvas center of mass. */
+    transform: translateY(2.5rem);
   }
 }
 
