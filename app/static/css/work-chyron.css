@@ -10,8 +10,13 @@
 
 .work-chyron {
   width: 100%;
+  max-width: 100%;
+  /* Contain the off-screen (translateX(100%)) inactive cards so they
+     never extend the page's scrollable width and shove content right. */
+  overflow-x: clip;
   padding-block: var(--section-space-md, 4rem);
   padding-inline: var(--page-padding-inline-desktop, 2rem);
+  box-sizing: border-box;
   display: flex;
   justify-content: center;
 }
