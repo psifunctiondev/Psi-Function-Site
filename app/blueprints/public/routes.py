@@ -1,11 +1,19 @@
 from flask import Blueprint, Response, render_template
 
+from app.models.taxonomy import WorkItem
+
 public_bp = Blueprint('public', __name__)
 
 @public_bp.get('/')
 @public_bp.get('/home')
 def home():
-    return render_template('public/home.html')
+    work_items = (
+        WorkItem.query
+        .filter_by(is_visible=True)
+        .order_by(WorkItem.sort_order, WorkItem.id)
+        .all()
+    )
+    return render_template('public/home.html', work_items=work_items)
 
 @public_bp.get('/about')
 def about():

@@ -1,0 +1,186 @@
+/* =============================================================
+   work-chyron.css
+   Auto-advancing "selected work" showcase below the home hero.
+   Consumes design tokens (palette, space, radius, shadow, motion).
+   Pills are axis-tinted with the Psi Function brand palette:
+     vertical   -> Steel  (#6C7D94)
+     function   -> Navy   (#1A2433)
+     technology -> Coral  (#F0643A)
+   ============================================================= */
+
+.work-chyron {
+  width: 100%;
+  padding-block: var(--section-space-md, 4rem);
+  padding-inline: var(--page-padding-inline-desktop, 2rem);
+  display: flex;
+  justify-content: center;
+}
+
+.work-chyron__inner {
+  width: 100%;
+  max-width: var(--container-lg, 64rem);
+}
+
+.work-chyron__eyebrow {
+  margin: 0 0 var(--space-4, 1rem);
+  font-family: var(--font-family-display, sans-serif);
+  font-size: var(--text-sm, 0.875rem);
+  letter-spacing: var(--letter-spacing-xwide, 0.1em);
+  text-transform: uppercase;
+  color: var(--color-text-muted, #6C7D94);
+}
+
+/* --- Viewport: cards stack; only .is-active is shown --- */
+.work-chyron__viewport {
+  position: relative;
+  /* Reserve height so crossfading absolutely-positioned cards don't
+     collapse the layout. min-height keeps short cards from jumping. */
+  min-height: 16rem;
+}
+
+.work-chyron__card {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--work-chyron-fade, 600ms) var(--ease-standard, ease);
+  background: var(--color-surface, #2E2F36);
+  border: var(--border-width-thin, 1px) solid var(--color-border, rgba(183,193,207,0.22));
+  border-radius: var(--radius-lg, 0.75rem);
+  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0,0,0,0.16));
+  padding: var(--space-8, 2rem);
+}
+
+.work-chyron__card.is-active {
+  position: relative;
+  opacity: 1;
+  visibility: visible;
+}
+
+/* No-JS / reduced-motion fallback: first card always visible in flow. */
+.work-chyron__viewport:not(.is-enhanced) .work-chyron__card:first-child {
+  position: relative;
+  opacity: 1;
+  visibility: visible;
+}
+
+.work-chyron__title {
+  margin: 0 0 var(--space-3, 0.75rem);
+  font-family: var(--font-family-display, sans-serif);
+  font-size: var(--text-xl, 1.5rem);
+  line-height: var(--line-height-snug, 1.25);
+  color: var(--color-heading, #F0643A);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3, 0.75rem);
+}
+
+.work-chyron__badge {
+  font-family: var(--font-family-sans, sans-serif);
+  font-size: var(--text-xs, 0.75rem);
+  letter-spacing: var(--letter-spacing-wide, 0.04em);
+  text-transform: uppercase;
+  color: var(--color-on-accent, #1A2433);
+  background: var(--glow-300, #FFB48F);
+  border-radius: var(--radius-pill, 9999px);
+  padding: 0.1rem 0.6rem;
+}
+
+.work-chyron__desc {
+  margin: 0 0 var(--space-6, 1.5rem);
+  font-size: var(--text-md, 1.125rem);
+  line-height: var(--line-height-relaxed, 1.7);
+  color: var(--color-text, #F4F6F8);
+}
+
+/* --- Pills --- */
+.work-chyron__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+}
+
+.work-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-family-sans, sans-serif);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-weight-medium, 500);
+  letter-spacing: var(--letter-spacing-wide, 0.04em);
+  line-height: 1.2;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-pill, 9999px);
+  border: var(--border-width-thin, 1px) solid transparent;
+  white-space: nowrap;
+}
+
+/* Axis tints: solid brand bg, light text — high contrast, on-brand. */
+.work-pill--vertical {
+  background: var(--steel-500, #6C7D94);
+  color: var(--white-50, #F4F6F8);
+}
+
+.work-pill--function {
+  background: var(--navy-900, #1A2433);
+  color: var(--white-50, #F4F6F8);
+  border-color: rgba(183, 193, 207, 0.28);
+}
+
+.work-pill--technology {
+  background: var(--coral-500, #F0643A);
+  color: var(--white-100, #ffffff);
+}
+
+/* --- Dot navigation --- */
+.work-chyron__dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3, 0.75rem);
+  margin-top: var(--space-6, 1.5rem);
+}
+
+.work-chyron__dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  padding: 0;
+  border-radius: var(--radius-pill, 9999px);
+  border: var(--border-width-thin, 1px) solid var(--color-border-strong, rgba(183,193,207,0.38));
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--duration-base, 180ms) var(--ease-standard, ease),
+              transform var(--duration-base, 180ms) var(--ease-standard, ease);
+}
+
+.work-chyron__dot:hover {
+  background: var(--color-text-subtle, #9aa7b9);
+}
+
+.work-chyron__dot.is-active {
+  background: var(--color-primary, #F0643A);
+  border-color: var(--color-primary, #F0643A);
+  transform: scale(1.1);
+}
+
+.work-chyron__dot:focus-visible {
+  outline: 2px solid var(--color-focus-ring, rgba(255,180,143,0.45));
+  outline-offset: 2px;
+}
+
+@media (max-width: 40rem) {
+  .work-chyron__card {
+    padding: var(--space-6, 1.5rem);
+  }
+  .work-chyron__title {
+    font-size: var(--text-lg, 1.25rem);
+  }
+  .work-chyron__desc {
+    font-size: var(--text-base, 1rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .work-chyron__card {
+    transition: none;
+  }
+}

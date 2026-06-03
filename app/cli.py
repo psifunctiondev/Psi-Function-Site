@@ -720,8 +720,247 @@ def list_resources(client):
         click.echo(f'{r.title:<40} {r.category:<12} {client_slug:<12} {target}')
 
 
+# ---------------------------------------------------------------------------
+# Taxonomy + work-showcase seeders
+# ---------------------------------------------------------------------------
+
+# Canonical taxonomy axes. Sourced from the shared Obsidian vault
+# ("Psi Function Taxonomy") -- these labels are authoritative. Order within
+# each axis becomes the tag sort_order.
+TAXONOMY_AXES = {
+    'vertical': [
+        'Architecture & Design',
+        'Creative & Media',
+        'Financial & Insurance Services',
+        'Health & Wellness',
+        'Hospitality & Entertainment',
+        'Manufacturing, Logistics & Supply Chain',
+        'Professional Services',
+        'Construction & Trades',
+        'Retail & E-commerce',
+        'Nonprofit & Education',
+    ],
+    'function': [
+        'Compliance, Risk & Legal',
+        'Customer Experience & Service',
+        'Finance & Administration',
+        'Marketing & Brand Management',
+        'Metrics & Reporting',
+        'Operations & Workflow',
+        'Organization & Culture',
+        'Product & Service Delivery',
+        'Sales & Revenue',
+    ],
+    'technology': [
+        'Applications & Integrations',
+        'Artificial Intelligence & Process Automation',
+        'Cloud Computing',
+        'Data & Analytics',
+        'Security & Identity',
+        'Immersive & Visualization',
+        'Infrastructure & Networking',
+        'Web & Digital Presence',
+    ],
+}
+
+
+def taxonomy_slug(label: str) -> str:
+    """Deterministic slug: lowercase, '&' -> 'and', commas dropped,
+    spaces -> hyphens.
+
+    Examples:
+        'Architecture & Design'      -> 'architecture-and-design'
+        'Compliance, Risk & Legal'   -> 'compliance-risk-and-legal'
+        'Retail & E-commerce'        -> 'retail-and-e-commerce'
+    """
+    text = label.lower().replace('&', 'and').replace(',', '')
+    # Collapse any run of whitespace into a single hyphen.
+    return '-'.join(text.split())
+
+
+@click.command('seed-taxonomy')
+@with_appcontext
+def seed_taxonomy():
+    """Idempotently upsert the canonical taxonomy tags (match on slug)."""
+    from app.models.taxonomy import TaxonomyTag
+
+    created = 0
+    updated = 0
+    unchanged = 0
+
+    for axis, labels in TAXONOMY_AXES.items():
+        for sort_order, label in enumerate(labels):
+            slug = taxonomy_slug(label)
+            tag = TaxonomyTag.query.filter_by(slug=slug).first()
+
+            if tag is None:
+                db.session.add(TaxonomyTag(
+                    axis=axis,
+                    label=label,
+                    slug=slug,
+                    sort_order=sort_order,
+                ))
+                created += 1
+                click.echo(f'  + [{axis}] {label} ({slug})')
+                continue
+
+            changed = []
+            for field, value in (
+                ('axis', axis), ('label', label), ('sort_order', sort_order),
+            ):
+                if getattr(tag, field) != value:
+                    setattr(tag, field, value)
+                    changed.append(field)
+            if changed:
+                updated += 1
+                click.echo(f'  ~ [{axis}] {label} ({", ".join(changed)})')
+            else:
+                unchanged += 1
+
+    db.session.commit()
+    total = sum(len(v) for v in TAXONOMY_AXES.values())
+    click.echo('')
+    click.echo(
+        f'Seeded taxonomy: {created} created, {updated} updated, '
+        f'{unchanged} unchanged (total {total} tags).'
+    )
+
+
+# Real engagements for the home-page showcase. Public-safe descriptions.
+# Tags are referenced by exact canonical label and resolved to slugs.
+WORK_DEMO_ITEMS = [
+    {
+        'title': 'CTAI / TruRender -- Render-to-Photo Pipeline',
+        'description': (
+            'We built a GPU-backed pipeline that turns raw architectural '
+            'renders into photorealistic images on demand. Using diffusion '
+            'models with depth- and edge-guided controls, the system '
+            'preserves a design\u2019s exact geometry while adding '
+            'lifelike lighting, materials, and atmosphere. The result lets '
+            'the studio produce client-ready marketing imagery in minutes '
+            'rather than commissioning costly manual photo-retouching.'
+        ),
+        'is_projected': False,
+        'sort_order': 0,
+        'tags': [
+            'Architecture & Design',
+            'Product & Service Delivery',
+            'Marketing & Brand Management',
+            'Immersive & Visualization',
+            'Artificial Intelligence & Process Automation',
+        ],
+    },
+    {
+        'title': 'Global Arts Live -- Infrastructure & SharePoint Sync',
+        'description': (
+            'For a nonprofit performing-arts presenter, we modernized the '
+            'back-office foundation that keeps programming and operations '
+            'running. We stood up reliable networking and a SharePoint '
+            'synchronization layer so staff across functions work from a '
+            'single, always-current source of files and event data. The '
+            'buildout replaced brittle manual hand-offs with dependable, '
+            'automated infrastructure the team can trust.'
+        ),
+        'is_projected': False,
+        'sort_order': 1,
+        'tags': [
+            'Nonprofit & Education',
+            'Hospitality & Entertainment',
+            'Operations & Workflow',
+            'Infrastructure & Networking',
+            'Applications & Integrations',
+        ],
+    },
+    {
+        'title': 'Havarti Risk -- Reserves Analysis & Reporting',
+        'description': (
+            'We partnered with an insurance-sector client to sharpen how '
+            'loss reserves are analyzed and reported. By consolidating the '
+            'underlying data and building repeatable analytical reporting, '
+            'we gave the team clearer, faster visibility into reserve '
+            'adequacy. The work strengthens both regulatory confidence and '
+            'day-to-day decision-making around risk.'
+        ),
+        'is_projected': False,
+        'sort_order': 2,
+        'tags': [
+            'Financial & Insurance Services',
+            'Compliance, Risk & Legal',
+            'Metrics & Reporting',
+            'Data & Analytics',
+        ],
+    },
+]
+
+
+@click.command('seed-work-demo')
+@with_appcontext
+def seed_work_demo():
+    """Idempotently seed real WorkItems (match on title) with tags."""
+    from app.models.taxonomy import TaxonomyTag, WorkItem
+
+    created = 0
+    updated = 0
+    unchanged = 0
+
+    for entry in WORK_DEMO_ITEMS:
+        # Resolve tag labels -> TaxonomyTag rows (must be seeded first).
+        wanted_tags = []
+        missing = []
+        for label in entry['tags']:
+            slug = taxonomy_slug(label)
+            tag = TaxonomyTag.query.filter_by(slug=slug).first()
+            if tag is None:
+                missing.append(label)
+            else:
+                wanted_tags.append(tag)
+        if missing:
+            click.echo(
+                f'  ! "{entry["title"]}" skipped -- missing tags '
+                f'(run seed-taxonomy first): {", ".join(missing)}'
+            )
+            continue
+
+        item = WorkItem.query.filter_by(title=entry['title']).first()
+        if item is None:
+            item = WorkItem(
+                title=entry['title'],
+                description=entry['description'],
+                is_projected=entry['is_projected'],
+                sort_order=entry['sort_order'],
+            )
+            item.tags = wanted_tags
+            db.session.add(item)
+            created += 1
+            click.echo(f'  + {entry["title"]} ({len(wanted_tags)} tags)')
+            continue
+
+        changed = []
+        for field in ('description', 'is_projected', 'sort_order'):
+            if getattr(item, field) != entry[field]:
+                setattr(item, field, entry[field])
+                changed.append(field)
+        if set(item.tags) != set(wanted_tags):
+            item.tags = wanted_tags
+            changed.append('tags')
+        if changed:
+            updated += 1
+            click.echo(f'  ~ {entry["title"]} ({", ".join(changed)})')
+        else:
+            unchanged += 1
+
+    db.session.commit()
+    click.echo('')
+    click.echo(
+        f'Seeded work items: {created} created, {updated} updated, '
+        f'{unchanged} unchanged (total {len(WORK_DEMO_ITEMS)}).'
+    )
+
+
 def register_cli(app):
     """Register CLI commands with the Flask app."""
     app.cli.add_command(user_cli)
     app.cli.add_command(client_cli)
     app.cli.add_command(resource_cli)
+    app.cli.add_command(seed_taxonomy)
+    app.cli.add_command(seed_work_demo)

@@ -13,10 +13,11 @@ Coverage:
 # Route availability
 # ---------------------------------------------------------------------------
 
-def test_home(client):
+def test_home(client, db_session):
+    # db_session creates tables; the home route queries WorkItem.
     assert client.get("/").status_code == 200
 
-def test_home_also_accessible_at_slash_home(client):
+def test_home_also_accessible_at_slash_home(client, db_session):
     assert client.get("/home").status_code == 200
 
 def test_about(client):
@@ -33,7 +34,7 @@ def test_contact(client):
 # Home page content
 # ---------------------------------------------------------------------------
 
-def test_home_renders_key_content(client):
+def test_home_renders_key_content(client, db_session):
     html = client.get("/").data.decode()
     assert "Psi Function" in html
     assert "Strategic technology" in html

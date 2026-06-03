@@ -4,10 +4,12 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/work-chyron.css') }}">
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/hero-carousel.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/work-chyron.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -61,5 +63,7 @@
   </div><!-- /home__hero-inner -->
 
 </section>
+
+{% include 'partials/work_chyron.html' %}
 
 {% endblock %}
