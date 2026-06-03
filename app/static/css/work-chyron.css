@@ -30,10 +30,13 @@
   color: var(--color-text-muted, #6C7D94);
 }
 
-/* --- Viewport: cards stack; only .is-active is shown --- */
+/* --- Viewport: cards stack; only .is-active is shown.
+   overflow:hidden clips the horizontal glide so sliding cards never
+   spill outside the viewport box. --- */
 .work-chyron__viewport {
   position: relative;
-  /* Reserve height so crossfading absolutely-positioned cards don't
+  overflow: hidden;
+  /* Reserve height so absolutely-positioned gliding cards don't
      collapse the layout. min-height keeps short cards from jumping. */
   min-height: 16rem;
 }
@@ -43,18 +46,43 @@
   inset: 0;
   opacity: 0;
   visibility: hidden;
-  transition: opacity var(--work-chyron-fade, 600ms) var(--ease-standard, ease);
+  transform: translateX(100%);
+  transition:
+    opacity var(--work-chyron-fade, 600ms) var(--ease-standard, ease),
+    transform var(--work-chyron-fade, 600ms) var(--ease-standard, ease);
   background: var(--color-surface, #2E2F36);
   border: var(--border-width-thin, 1px) solid var(--color-border, rgba(183,193,207,0.22));
   border-radius: var(--radius-lg, 0.75rem);
   box-shadow: var(--shadow-sm, 0 4px 12px rgba(0,0,0,0.16));
   padding: var(--space-8, 2rem);
+  /* Center-justify all card text (title, desc, badge, pills). */
+  text-align: center;
 }
 
+/* Active card rests at translateX(0), fully visible and in flow. */
 .work-chyron__card.is-active {
   position: relative;
   opacity: 1;
   visibility: visible;
+  transform: translateX(0);
+}
+
+/* Incoming card: pre-positioned off-screen right with no transition,
+   so the subsequent removal of this class glides it to translateX(0). */
+.work-chyron__card.is-entering {
+  transition: none;
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+/* Outgoing card: glides out to the left while fading. Kept absolutely
+   positioned (overlaps the incoming card) until the glide finishes. */
+.work-chyron__card.is-leaving {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: visible;
+  transform: translateX(-100%);
 }
 
 /* No-JS / reduced-motion fallback: first card always visible in flow. */
@@ -62,6 +90,7 @@
   position: relative;
   opacity: 1;
   visibility: visible;
+  transform: translateX(0);
 }
 
 .work-chyron__title {
@@ -73,6 +102,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
+  justify-content: center;
   gap: var(--space-3, 0.75rem);
 }
 
@@ -89,15 +119,26 @@
 
 .work-chyron__desc {
   margin: 0 0 var(--space-6, 1.5rem);
+  /* Match the hero text family (.home__hero-lede uses --font-family-sans). */
+  font-family: var(--font-family-sans, sans-serif);
   font-size: var(--text-md, 1.125rem);
   line-height: var(--line-height-relaxed, 1.7);
   color: var(--color-text, #F4F6F8);
 }
 
-/* --- Pills --- */
+/* --- Pills: three stacked rows, one per axis (vertical, function,
+   technology), each row a centered flex-wrap of its pills. --- */
 .work-chyron__pills {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+}
+
+.work-chyron__pill-row {
+  display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-2, 0.5rem);
 }
 
@@ -180,7 +221,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Instant swap: no glide. Active card visible at rest, all others
+     hidden. JS also short-circuits the transform animation. */
   .work-chyron__card {
     transition: none;
+    transform: none;
+  }
+  .work-chyron__card.is-active {
+    transform: none;
+  }
+  .work-chyron__card:not(.is-active) {
+    opacity: 0;
+    visibility: hidden;
   }
 }

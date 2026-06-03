@@ -10,12 +10,12 @@
 {% if work_items %}
 <section
   class="work-chyron"
-  aria-label="Selected work"
+  aria-label="Prior Transformations"
   aria-roledescription="carousel"
 >
   <div class="work-chyron__inner">
 
-    <p class="work-chyron__eyebrow">Selected work</p>
+    <p class="work-chyron__eyebrow">Prior Transformations</p>
 
     <div class="work-chyron__viewport">
       {% for item in work_items %}
@@ -42,12 +42,16 @@
         } %}
         <div class="work-chyron__pills">
           {% for axis, tags in item.tags_by_axis() %}
-          {% for tag in tags %}
-          <span
-            class="work-pill work-pill--{{ axis }}"
-            title="{{ axis_labels.get(axis, axis)|title }}"
-          >{{ tag.label }}</span>
-          {% endfor %}
+          {% if tags %}
+          <div class="work-chyron__pill-row work-chyron__pill-row--{{ axis }}">
+            {% for tag in tags %}
+            <span
+              class="work-pill work-pill--{{ axis }}"
+              title="{{ axis_labels.get(axis, axis)|title }}"
+            >{{ tag.label }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
           {% endfor %}
         </div>
       </article>

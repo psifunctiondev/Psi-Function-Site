@@ -85,12 +85,10 @@
 .home__hero-inner {
   display: grid;
   grid-template-columns: 2fr 3fr;
-  min-height: calc(
-    40rem
-    - var(--header-height)
-    - var(--space-5) * 2
-    - var(--header-height) * 0.25
-  );
+  /* Rows stretch by default; the content column drives the height.
+     The media panel (and its canvas) therefore clips to the bottom
+     of the text column rather than flooring at a fixed min-height. */
+  align-items: stretch;
 }
 
 
@@ -111,9 +109,17 @@
 .home__hero-media {
   position: relative;
   overflow: hidden;
-  min-height: 100%;
+  /* Match the content column height exactly: the grid stretches this
+     panel to the row height (driven by .home__hero-content), and the
+     absolutely-laid-out canvas below fills only this box. This keeps
+     the background from extending past the bottom of the hero text. */
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
 
-  padding-top: calc(var(--section-space-sm) + var(--medallion-size) / 3);
+  /* No padding-top here: the canvas is absolutely positioned with its
+     own `top` offset (below the medallion), so the media border-box
+     equals the grid row height and clips at the hero text bottom. */
 
   -webkit-mask-image: linear-gradient(
     to right,
@@ -190,6 +196,26 @@
   object-position: center center;
 }
 
+/* Desktop only: take the canvas (and the JS-inserted .hero-carousel-wrap
+   that replaces its flow position) OUT of track-height calculation. The
+   media panel's height is then driven solely by the content column via
+   grid stretch, so the background clips at the bottom of the hero text
+   instead of forcing the row taller by the image's intrinsic height. The
+   canvas fills the area below the medallion's breathing-room offset.
+   Mobile keeps its own stacked layout (see the max-width block below). */
+@media (min-width: 768px) {
+  .home__hero-media > .home__hero-canvas,
+  .home__hero-media > .hero-carousel-wrap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: calc(var(--section-space-sm) + var(--medallion-size) / 3);
+    width: 100%;
+    height: auto;
+  }
+}
+
 
 /* ----------------------------------------------------------
    RIGHT: content panel
@@ -205,7 +231,11 @@
   justify-content: flex-start;
 
   padding-block-start: var(--section-space-sm);
-  padding-block-end:   var(--section-space-md);
+  /* Hug the text bottom: the stretched media panel matches this box's
+     height, so a large bottom pad here is what made the canvas hang
+     ~110px below the last line of text. A small pad keeps breathing
+     room while aligning the canvas bottom with the text bottom. */
+  padding-block-end:   var(--space-6);
 }
 
 @media (min-width: 768px) {
@@ -246,6 +276,19 @@
   align-items: center;
   gap: var(--space-4);
   flex-wrap: wrap;
+}
+
+/* Centered CTA row — sits below the work chyron */
+.home__hero-actions--centered {
+  justify-content: center;
+  padding-inline: var(--page-padding-inline-desktop);
+  padding-block-end: var(--section-space-md);
+}
+
+@media (max-width: 767px) {
+  .home__hero-actions--centered {
+    padding-inline: var(--page-padding-inline-mobile);
+  }
 }
 
 /* Button base */
