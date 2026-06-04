@@ -1,0 +1,175 @@
+{# WorkItem create/edit form — admin authoring. #}
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Edit' if is_edit else 'New' }} Work Item — Admin{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/work-chyron.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-work-items.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="portal-page admin-work-items">
+
+  <div class="admin-work-items__header">
+    <p class="portal__eyebrow admin-work-items__eyebrow">
+      {{ 'Edit Work Item' if is_edit else 'New Work Item' }}
+    </p>
+    <p class="admin-work-items__subtitle">
+      {% if is_edit %}
+        Update the fields below. Tags are grouped by axis and are
+        managed centrally via <code>flask seed-taxonomy</code>.
+      {% else %}
+        Fill in the fields below to add a new project to the home-page
+        showcase.
+      {% endif %}
+    </p>
+  </div>
+
+  <div class="container section-stack">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <p class="portal-flash portal-flash--{{ category }}">{{ message }}</p>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post" class="admin-work-items__form card" novalidate>
+
+      <div class="admin-work-items__field">
+        <label class="admin-work-items__label" for="title">Title</label>
+        <input
+          class="admin-work-items__input"
+          type="text"
+          id="title"
+          name="title"
+          required
+          maxlength="255"
+          value="{{ item.title if is_edit else '' }}"
+        >
+      </div>
+
+      <div class="admin-work-items__field">
+        <label class="admin-work-items__label" for="description">
+          Description
+          <span class="admin-work-items__hint">2–4 sentences.</span>
+        </label>
+        <textarea
+          class="admin-work-items__textarea"
+          id="description"
+          name="description"
+          required
+          rows="4"
+          maxlength="2000"
+        >{{- item.description if is_edit else '' -}}</textarea>
+      </div>
+
+      <div class="admin-work-items__row">
+        <div class="admin-work-items__field">
+          <label class="admin-work-items__label" for="client_id">Client</label>
+          <select class="admin-work-items__input" id="client_id" name="client_id">
+            <option value="">— (none / anonymized) —</option>
+            {% for c in clients %}
+            <option value="{{ c.id }}"
+                    {% if is_edit and item.client_id == c.id %}selected{% endif %}>
+              {{ c.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="admin-work-items__field admin-work-items__field--narrow">
+          <label class="admin-work-items__label" for="sort_order">Sort order</label>
+          <input
+            class="admin-work-items__input"
+            type="number"
+            id="sort_order"
+            name="sort_order"
+            value="{{ item.sort_order if is_edit else 0 }}"
+          >
+        </div>
+      </div>
+
+      <div class="admin-work-items__row">
+        <label class="admin-work-items__checkbox">
+          <input
+            type="checkbox"
+            name="is_projected"
+            value="1"
+            {% if is_edit and item.is_projected %}checked{% endif %}
+          >
+          <span>
+            <strong>Projected possibility</strong>
+            <span class="admin-work-items__hint">
+              Check if this work hasn't been delivered yet — projects a
+              potential engagement.
+            </span>
+          </span>
+        </label>
+        <label class="admin-work-items__checkbox">
+          <input
+            type="checkbox"
+            name="is_visible"
+            value="1"
+            {% if (is_edit and item.is_visible) or not is_edit %}checked{% endif %}
+          >
+          <span>
+            <strong>Visible on the home page</strong>
+            <span class="admin-work-items__hint">
+              Uncheck to hide without deleting.
+            </span>
+          </span>
+        </label>
+      </div>
+
+      <fieldset class="admin-work-items__tags">
+        <legend class="admin-work-items__legend">Taxonomy tags</legend>
+        <p class="admin-work-items__hint">
+          Tag assignment uses the canonical Psi Function taxonomy. Add or
+          edit tags via <code>flask seed-taxonomy</code>.
+        </p>
+
+        {% for axis in axes %}
+        <div class="admin-work-items__tag-group">
+          <h3 class="admin-work-items__tag-group-title work-pill-row-label work-pill-row-label--{{ axis }}">
+            {{ axis_labels[axis] }}
+          </h3>
+          {% set tags = grouped_tags.get(axis, []) %}
+          {% if not tags %}
+            <p class="admin-work-items__hint">No tags seeded for this axis yet.</p>
+          {% else %}
+          <div class="admin-work-items__tag-chips">
+            {% set current_ids = item.tags|map(attribute='id')|list if is_edit else [] %}
+            {% for tag in tags %}
+            <label class="work-pill work-pill--{{ axis }} admin-work-items__chip {% if tag.id in current_ids %}is-checked{% endif %}">
+              <input
+                type="checkbox"
+                name="tag_ids"
+                value="{{ tag.id }}"
+                {% if tag.id in current_ids %}checked{% endif %}
+              >
+              <span>{{ tag.label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </fieldset>
+
+      <div class="admin-work-items__actions">
+        <a class="admin-work-items__btn"
+           href="{{ url_for('admin.work_items_list') }}">
+          Cancel
+        </a>
+        <button type="submit" class="admin-work-items__btn admin-work-items__btn--primary">
+          {{ 'Save changes' if is_edit else 'Create work item' }}
+        </button>
+      </div>
+
+    </form>
+
+  </div>
+</section>
+{% endblock %}

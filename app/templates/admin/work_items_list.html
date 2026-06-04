@@ -1,0 +1,133 @@
+{# WorkItems list — admin authoring index. #}
+{% extends 'base.html' %}
+
+{% block title %}Work Items — Admin{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-work-items.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="portal-page admin-work-items">
+
+  <div class="admin-work-items__header">
+    <p class="portal__eyebrow admin-work-items__eyebrow">Work Items</p>
+    <p class="admin-work-items__subtitle">
+      Author and curate the projects featured in the home-page showcase chyron.
+    </p>
+  </div>
+
+  <div class="container section-stack">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <p class="portal-flash portal-flash--{{ category }}">{{ message }}</p>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="admin-work-items__toolbar">
+      <span class="admin-work-items__count">
+        {{ item_count }} item{{ '' if item_count == 1 else 's' }}
+      </span>
+      <a class="admin-work-items__btn admin-work-items__btn--primary"
+         href="{{ url_for('admin.work_item_new') }}">
+        + New Work Item
+      </a>
+    </div>
+
+    {% if not rows %}
+      <div class="card portal-empty">
+        <p class="card__text">
+          No work items yet. Click <strong>New Work Item</strong> to add
+          the first one, or seed sample data with
+          <code>flask seed-work-demo</code>.
+        </p>
+      </div>
+    {% else %}
+      <div class="admin-work-items__table-wrap">
+        <table class="admin-work-items__table">
+          <thead>
+            <tr>
+              <th class="col-sort">#</th>
+              <th class="col-title">Title</th>
+              <th class="col-status">Status</th>
+              <th class="col-visible">Visible</th>
+              <th class="col-tags">Tags</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              <td class="col-sort">{{ row.sort_order }}</td>
+              <td class="col-title">
+                <span class="admin-work-items__title">{{ row.title }}</span>
+                {% if row.description %}
+                <span class="admin-work-items__desc">{{ row.description }}</span>
+                {% endif %}
+              </td>
+              <td class="col-status">
+                {% if row.is_projected %}
+                  <span class="admin-work-items__badge admin-work-items__badge--projected">Projected</span>
+                {% else %}
+                  <span class="admin-work-items__badge admin-work-items__badge--delivered">Delivered</span>
+                {% endif %}
+              </td>
+              <td class="col-visible">
+                <form method="post"
+                      action="{{ url_for('admin.work_item_toggle_visible', item_id=row.id) }}"
+                      class="admin-work-items__inline-form">
+                  <button type="submit"
+                          class="admin-work-items__visibility admin-work-items__visibility--{{ 'on' if row.is_visible else 'off' }}">
+                    {{ 'Visible' if row.is_visible else 'Hidden' }}
+                  </button>
+                </form>
+              </td>
+              <td class="col-tags">
+                <span class="admin-work-items__tag-count">
+                  {{ row.tag_count }} tag{{ '' if row.tag_count == 1 else 's' }}
+                </span>
+              </td>
+              <td class="col-actions">
+                <a class="admin-work-items__btn"
+                   href="{{ url_for('admin.work_item_edit', item_id=row.id) }}">
+                  Edit
+                </a>
+                <form method="post"
+                      action="{{ url_for('admin.work_item_delete', item_id=row.id) }}"
+                      class="admin-work-items__inline-form"
+                      data-confirm="Delete &quot;{{ row.title|e }}&quot;? This cannot be undone.">
+                  <button type="submit" class="admin-work-items__btn admin-work-items__btn--danger">
+                    Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+
+    <p class="admin-work-items__back">
+      <a href="{{ url_for('portal.admin_overview') }}">← Back to admin overview</a>
+    </p>
+
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Lightweight confirm-on-delete guard for inline delete forms.
+  // Avoids a confirm() chain for the visibility toggle.
+  document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      if (!window.confirm(form.getAttribute('data-confirm'))) {
+        e.preventDefault();
+      }
+    });
+  });
+</script>
+{% endblock %}
