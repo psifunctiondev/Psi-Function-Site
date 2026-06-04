@@ -1,0 +1,76 @@
+{#
+  work_chyron.html — auto-advancing showcase of WorkItems.
+
+  Expects `work_items`: a list of WorkItem rows (with .title, .description,
+  .is_projected, and .tags_by_axis()). Rendered server-side; work-chyron.js
+  handles the crossfade auto-advance and dot navigation. All cards are in
+  the DOM; JS toggles the `is-active` class. Degrades gracefully without JS
+  (first card visible, others hidden via CSS until JS marks them).
+#}
+{% if work_items %}
+<section
+  class="work-chyron"
+  aria-label="Prior transformations"
+  aria-roledescription="carousel"
+>
+  <div class="work-chyron__inner">
+
+    <div class="work-chyron__viewport">
+      {% for item in work_items %}
+      <article
+        class="work-chyron__card{% if loop.first %} is-active{% endif %}"
+        data-index="{{ loop.index0 }}"
+        aria-roledescription="slide"
+        aria-label="{{ loop.index }} of {{ work_items|length }}"
+        {% if not loop.first %}aria-hidden="true"{% endif %}
+      >
+        <h3 class="work-chyron__title">
+          {{ item.title }}
+          {% if item.is_projected %}
+          <span class="work-chyron__badge">Projected</span>
+          {% endif %}
+        </h3>
+
+        <p class="work-chyron__desc">{{ item.description }}</p>
+
+        {% set axis_labels = {
+          'vertical': 'Industry',
+          'function': 'Function',
+          'technology': 'Technology'
+        } %}
+        <div class="work-chyron__pills">
+          {% for axis, tags in item.tags_by_axis() %}
+          {% if tags %}
+          <div class="work-chyron__pill-row work-chyron__pill-row--{{ axis }}">
+            {% for tag in tags %}
+            <span
+              class="work-pill work-pill--{{ axis }}"
+              title="{{ axis_labels.get(axis, axis)|title }}"
+            >{{ tag.label }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+
+    {% if work_items|length > 1 %}
+    <div class="work-chyron__dots" role="tablist" aria-label="Choose work item">
+      {% for item in work_items %}
+      <button
+        type="button"
+        class="work-chyron__dot{% if loop.first %} is-active{% endif %}"
+        data-index="{{ loop.index0 }}"
+        role="tab"
+        aria-label="Show work item {{ loop.index }}"
+        {% if loop.first %}aria-selected="true"{% else %}aria-selected="false"{% endif %}
+      ></button>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endif %}

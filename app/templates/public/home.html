@@ -4,10 +4,12 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/work-chyron.css') }}">
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/hero-carousel.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/work-chyron.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -52,14 +54,17 @@
         Small to mid-size companies can now access digital business capabilities that once required enterprise-scale resources and internal expertise. Modern independent businesses are limited only by imagination and inspiration. The tools to radically improve your small business exist - the challenge now is understanding how they can serve you and how to implement them.
       </p>
 
-      <div class="home__hero-actions">
-        <a href="/services"   class="home__hero-btn home__hero-btn--primary">Learn more</a>
-        <a href="/contact" class="home__hero-btn home__hero-btn--ghost">Start a conversation</a>
-      </div>
     </div>
 
   </div><!-- /home__hero-inner -->
 
 </section>
+
+{% include 'partials/work_chyron.html' %}
+
+<div class="home__hero-actions home__hero-actions--centered">
+  <a href="/services" class="home__hero-btn home__hero-btn--primary">Learn more</a>
+  <a href="/contact" class="home__hero-btn home__hero-btn--ghost">Start a conversation</a>
+</div>
 
 {% endblock %}

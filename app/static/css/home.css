@@ -85,12 +85,12 @@
 .home__hero-inner {
   display: grid;
   grid-template-columns: 2fr 3fr;
-  min-height: calc(
-    40rem
-    - var(--header-height)
-    - var(--space-5) * 2
-    - var(--header-height) * 0.25
-  );
+  /* Rows stretch by default. On mobile the content column drives the
+     height; on desktop (Option B) the media column's natural real estate
+     (medallion + canvas) establishes the row height via a min-height set
+     in the >=768px block below, so the hero text can vertically center
+     against the full left-column artwork. */
+  align-items: stretch;
 }
 
 
@@ -111,9 +111,17 @@
 .home__hero-media {
   position: relative;
   overflow: hidden;
-  min-height: 100%;
+  /* Match the content column height exactly: the grid stretches this
+     panel to the row height (driven by .home__hero-content), and the
+     absolutely-laid-out canvas below fills only this box. This keeps
+     the background from extending past the bottom of the hero text. */
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
 
-  padding-top: calc(var(--section-space-sm) + var(--medallion-size) / 3);
+  /* No padding-top here: the canvas is absolutely positioned with its
+     own `top` offset (below the medallion), so the media border-box
+     equals the grid row height and clips at the hero text bottom. */
 
   -webkit-mask-image: linear-gradient(
     to right,
@@ -190,6 +198,42 @@
   object-position: center center;
 }
 
+/* Desktop only: take the canvas (and the JS-inserted .hero-carousel-wrap
+   that replaces its flow position) OUT of track-height calculation. The
+   media panel's height is then driven solely by the content column via
+   grid stretch, so the background clips at the bottom of the hero text
+   instead of forcing the row taller by the image's intrinsic height. The
+   canvas fills the area below the medallion's breathing-room offset.
+   Mobile keeps its own stacked layout (see the max-width block below). */
+@media (min-width: 768px) {
+  .home__hero-media > .home__hero-canvas,
+  .home__hero-media > .hero-carousel-wrap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: calc(var(--section-space-sm) + var(--medallion-size) / 3);
+    width: 100%;
+    height: auto;
+  }
+
+  /* Option B: establish the hero row height from the media column's
+     natural real estate so the text can vertically center against the
+     full medallion + canvas artwork instead of the text driving height.
+     Geometry:
+       --section-space-sm   breathing room above the medallion
+       --medallion-size     the full medallion circle
+       7rem                 canvas presence below the medallion
+     The absolutely-positioned canvas (top offset + bottom:0 above) then
+     fills from its top offset down to the bottom of this taller box,
+     reclaiming the natural canvas height. */
+  .home__hero-inner {
+    min-height: calc(
+      var(--section-space-sm) + var(--medallion-size) + 9rem
+    );
+  }
+}
+
 
 /* ----------------------------------------------------------
    RIGHT: content panel
@@ -202,16 +246,36 @@
 .home__hero-content {
   display: flex;
   flex-direction: column;
+  /* Mobile default: text hugs the top of its stacked block. Desktop
+     (Option B) overrides to center vertically against the taller media
+     column — see the >=768px block below. */
   justify-content: flex-start;
 
   padding-block-start: var(--section-space-sm);
-  padding-block-end:   var(--section-space-md);
+  /* Hug the text bottom: the stretched media panel matches this box's
+     height, so a large bottom pad here is what made the canvas hang
+     ~110px below the last line of text. A small pad keeps breathing
+     room while aligning the canvas bottom with the text bottom. */
+  padding-block-end:   var(--space-6);
 }
 
 @media (min-width: 768px) {
   .home__hero-content {
+    /* Option B: center the hero text vertically within the taller
+       media-driven row height set on .home__hero-inner. Equalize the
+       block padding so centering is truly optical (the asymmetric
+       top/bottom pad below is a mobile-oriented default that would bias
+       the centered text upward on desktop). */
+    justify-content: center;
+    padding-block-start: var(--section-space-sm);
+    padding-block-end:   var(--section-space-sm);
     padding-inline-start: var(--space-12);
     padding-inline-end:   var(--page-padding-inline-desktop);
+    /* Optical nudge: the media column's visual mass (medallion + canvas)
+       sits lower than the row's geometric center because of the
+       breathing room above the medallion. Push the text down ~40px so
+       its optical center lines up with the canvas center of mass. */
+    transform: translateY(2.5rem);
   }
 }
 
@@ -246,6 +310,19 @@
   align-items: center;
   gap: var(--space-4);
   flex-wrap: wrap;
+}
+
+/* Centered CTA row — sits below the work chyron */
+.home__hero-actions--centered {
+  justify-content: center;
+  padding-inline: var(--page-padding-inline-desktop);
+  padding-block-end: var(--section-space-md);
+}
+
+@media (max-width: 767px) {
+  .home__hero-actions--centered {
+    padding-inline: var(--page-padding-inline-mobile);
+  }
 }
 
 /* Button base */
