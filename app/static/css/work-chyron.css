@@ -22,10 +22,11 @@
 }
 
 .work-chyron__inner {
-  width: 100%;
-  /* 3/5 of the page content width (--container-max = 75rem) to align
-     geometrically with the site's 5-column layout: 75rem * 3/5 = 45rem. */
-  max-width: calc(var(--container-max, 75rem) * 3 / 5);
+  /* 85% of available width, centered. The .work-chyron parent is a
+     flex container with justify-content:center, so width:85% on the
+     inner places it at 85% of the chyron's content box (page width
+     minus --page-padding-inline). */
+  width: 85%;
 }
 
 .work-chyron__eyebrow {
@@ -143,11 +144,15 @@
   color: var(--color-text, #F4F6F8);
 }
 
-/* --- Pills: three stacked rows, one per axis (vertical, function,
-   technology), each row a centered flex-wrap of its pills. --- */
+/* --- Pills: all three axis rows (vertical, function, technology) sit
+   in a single flex row; they wrap onto separate lines only when the
+   card is too narrow to fit them side by side. Pills within each axis
+   row still wrap independently. --- */
 .work-chyron__pills {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: var(--space-3, 0.75rem);
 }
