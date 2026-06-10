@@ -1,0 +1,560 @@
+/* =============================================================
+   admin-work-items.css
+   Styles for the WorkItem authoring pages under /admin/work-items.
+
+   Reuses the active theme's design tokens (day/night/twilight) so
+   the admin pages follow the visitor's site color theme. Border-
+   based cards and work-pill tag picker match the home chyron.
+   ============================================================= */
+
+.admin-work-items {
+  /* No token overrides here — let the active theme's :root vars
+     (--color-bg, --color-surface, --color-text, --color-border,
+     --color-link, --color-heading, …) flow through naturally. */
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* ----- Header ----- */
+.admin-work-items__header {
+  padding-inline: var(--page-padding-inline-desktop, 2rem);
+  padding-top: calc(var(--space-1, 0.5rem) + var(--header-height, 4rem) * 0.25);
+}
+
+.admin-work-items__eyebrow {
+  margin: 0;
+  width: 100%;
+  padding-block: var(--space-1, 0.5rem);
+
+  font-family: var(--font-family-display, sans-serif);
+  font-size: var(--text-4xl, 2.25rem);
+  font-weight: var(--font-weight-semibold, 600);
+  letter-spacing: var(--letter-spacing-logo, 0.04em);
+  line-height: var(--line-height-tight, 1.15);
+  text-align: center;
+  color: var(--color-primary, #2B4C6F);
+}
+
+.admin-work-items__subtitle {
+  margin: 0 auto;
+  max-width: 48rem;
+  text-align: center;
+  font-family: var(--font-family-sans, sans-serif);
+  font-size: var(--text-base, 1rem);
+  color: var(--color-text-muted);
+  padding-inline: var(--space-4, 1rem);
+}
+
+.admin-work-items__subtitle code {
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.9em;
+  background: var(--color-surface);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-sm, 0.25rem);
+  border: 1px solid var(--color-border);
+}
+
+/* ----- Toolbar ----- */
+.admin-work-items__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4, 1rem);
+  margin-bottom: var(--space-4, 1rem);
+  flex-wrap: wrap;
+}
+
+/* Flash messages inside the admin section need a gap to the
+   toolbar that follows, otherwise the success bar sits flush
+   against the "+ New Work Item" button (and the form's actions
+   row above gets the same treatment). */
+.admin-work-items .portal-flash {
+  margin-bottom: var(--space-4, 1rem);
+}
+
+.admin-work-items__count {
+  font-family: var(--font-family-sans, sans-serif);
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-wide, 0.04em);
+  text-transform: uppercase;
+}
+
+/* ----- Buttons ----- */
+.admin-work-items__btn {
+  display: inline-block;
+  font-family: var(--font-family-sans, sans-serif);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 500;
+  letter-spacing: var(--letter-spacing-wide, 0.04em);
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast, 150ms) var(--ease-standard, ease),
+    color var(--duration-fast, 150ms) var(--ease-standard, ease),
+    border-color var(--duration-fast, 150ms) var(--ease-standard, ease);
+}
+
+.admin-work-items__btn:hover {
+  background: var(--color-bg);
+  color: var(--color-link);
+  border-color: var(--color-link);
+}
+
+.admin-work-items__btn--primary {
+  background: var(--color-link, #2B4C6F);
+  color: #ffffff;
+  border-color: var(--color-link, #2B4C6F);
+}
+
+.admin-work-items__btn--primary:hover {
+  background: var(--color-link-hover, #C4956A);
+  border-color: var(--color-link-hover, #C4956A);
+  color: #ffffff;
+}
+
+.admin-work-items__btn--danger {
+  color: #b00020;
+  border-color: #e0a8a8;
+}
+
+.admin-work-items__btn--danger:hover {
+  background: #fdecec;
+  color: #800000;
+  border-color: #b00020;
+}
+
+.admin-work-items__inline-form {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+/* ----- List table ----- */
+.admin-work-items__table-wrap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 0.75rem);
+  overflow-x: auto;
+}
+
+.admin-work-items__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-family-sans, sans-serif);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.admin-work-items__table thead {
+  background: var(--color-bg);
+}
+
+.admin-work-items__table th,
+.admin-work-items__table td {
+  text-align: left;
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.admin-work-items__table th {
+  font-family: var(--font-family-display, sans-serif);
+  font-size: var(--text-xs, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide, 0.04em);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.admin-work-items__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-work-items__table tbody tr:hover {
+  background: var(--color-bg);
+}
+
+.admin-work-items__table .col-sort {
+  width: 3rem;
+  font-family: var(--font-family-mono, monospace);
+  color: var(--color-text-muted);
+}
+
+.admin-work-items__table .col-status {
+  width: 8rem;
+}
+
+.admin-work-items__table .col-visible {
+  width: 7rem;
+}
+
+.admin-work-items__table .col-tags {
+  width: 5rem;
+  color: var(--color-text-muted);
+}
+
+.admin-work-items__table .col-actions {
+  width: 12rem;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.admin-work-items__table .col-actions .admin-work-items__btn {
+  margin-left: var(--space-1, 0.25rem);
+}
+
+.admin-work-items__title {
+  display: block;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.admin-work-items__desc {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.825rem;
+  margin-top: 0.25rem;
+  /* Clamp to 2 lines so list rows stay compact. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.admin-work-items__tag-count {
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.8rem;
+}
+
+/* ----- Status badges ----- */
+.admin-work-items__badge {
+  display: inline-block;
+  font-family: var(--font-family-sans, sans-serif);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-wide, 0.04em);
+  text-transform: uppercase;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.admin-work-items__badge--delivered {
+  background: #e6efe7;
+  color: #2f6a3a;
+  border-color: #c5d8c8;
+}
+
+.admin-work-items__badge--projected {
+  background: #fff1ec;
+  color: #8a3a1a;
+  border-color: #f3c8b8;
+}
+
+/* ----- Visibility toggle button ----- */
+.admin-work-items__visibility {
+  font-family: var(--font-family-sans, sans-serif);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-wide, 0.04em);
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid;
+  cursor: pointer;
+  background: var(--color-surface);
+}
+
+.admin-work-items__visibility--on {
+  color: #2f6a3a;
+  border-color: #c5d8c8;
+  background: #e6efe7;
+}
+
+.admin-work-items__visibility--off {
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  background: var(--color-bg);
+}
+
+.admin-work-items__visibility:hover {
+  opacity: 0.75;
+}
+
+/* ----- Back link ----- */
+.admin-work-items__back {
+  margin-top: var(--space-6, 1.5rem);
+  text-align: center;
+}
+
+.admin-work-items__back a {
+  color: var(--color-link);
+  text-decoration: none;
+  font-family: var(--font-family-sans, sans-serif);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.admin-work-items__back a:hover {
+  color: var(--color-link-hover);
+  text-decoration: underline;
+}
+
+/* ============================================================
+   Form (work_item_form.html)
+   ============================================================ */
+.admin-work-items__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5, 1.25rem);
+  padding: var(--space-6, 1.5rem);
+  max-width: 56rem;
+  margin: 0 auto;
+  /* Defensive: ensure form descendants are interactive even if a
+     future parent rule (e.g. an inherited user-select: none) is
+     introduced. .card's hover transform doesn't block input, but
+     we make it explicit. */
+  pointer-events: auto;
+  user-select: text;
+}
+
+.admin-work-items__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 0.25rem);
+  flex: 1 1 auto;
+  min-width: 0;
+  pointer-events: auto;
+  user-select: text;
+}
+
+.admin-work-items__field--narrow {
+  max-width: 12rem;
+}
+
+.admin-work-items__row {
+  display: flex;
+  gap: var(--space-4, 1rem);
+  flex-wrap: wrap;
+}
+
+.admin-work-items__row > .admin-work-items__field {
+  min-width: 12rem;
+}
+
+.admin-work-items__label {
+  font-family: var(--font-family-display, sans-serif);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-wide, 0.04em);
+  color: var(--color-heading);
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.admin-work-items__hint {
+  font-family: var(--font-family-sans, sans-serif);
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.admin-work-items__input,
+.admin-work-items__textarea {
+  font-family: var(--font-family-sans, sans-serif);
+  font-size: var(--text-base, 1rem);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+  /* Ensure caret placement and standard browser text-selection
+     (triple-click select line, Cmd/Ctrl+A select contents) work
+     on the Title / Description / Sort fields. Defensive against
+     an inherited user-select: none or pointer-events: none on a
+     parent. */
+  user-select: text;
+  pointer-events: auto;
+}
+
+.admin-work-items__input:focus,
+.admin-work-items__textarea:focus {
+  outline: none;
+  border-color: var(--color-link);
+  box-shadow: 0 0 0 3px rgba(43, 76, 111, 0.15);
+}
+
+.admin-work-items__textarea {
+  font-family: var(--font-family-sans, sans-serif);
+  line-height: var(--line-height-normal, 1.5);
+  resize: vertical;
+  min-height: 6rem;
+}
+
+/* ----- Checkboxes ----- */
+.admin-work-items__checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: var(--space-3, 0.75rem);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 0.5rem);
+  cursor: pointer;
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.admin-work-items__checkbox input[type="checkbox"] {
+  margin-top: 0.2rem;
+  flex: 0 0 auto;
+}
+
+.admin-work-items__checkbox strong {
+  display: block;
+  font-family: var(--font-family-display, sans-serif);
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-heading);
+  font-weight: 600;
+}
+
+/* ----- Tags fieldset ----- */
+.admin-work-items__tags {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: var(--space-4, 1rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1rem);
+  background: var(--color-bg);
+}
+
+.admin-work-items__legend {
+  font-family: var(--font-family-display, sans-serif);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-wide, 0.04em);
+  color: var(--color-heading);
+  text-transform: uppercase;
+  padding: 0 0.5rem;
+}
+
+.admin-work-items__tag-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.admin-work-items__tag-group-title {
+  margin: 0;
+  font-family: var(--font-family-display, sans-serif);
+  font-size: var(--text-sm, 0.875rem);
+  letter-spacing: var(--letter-spacing-wide, 0.04em);
+  text-transform: uppercase;
+}
+
+/* Axis-tinted label dots, mirroring work-chyron's pill palette.
+   Use the palette / theme tokens so each label stays legible
+   regardless of the active color theme (the original function
+   hex was --navy-900, which would be invisible on a dark
+   surface). The hue family is preserved: vertical=grey
+   (neutral), function=neutral text-color (contrasts with the
+   background of any theme), technology=brand coral (already
+   theme-resilient). */
+.work-pill-row-label--vertical   { color: var(--steel-500, #6C7D94); }
+.work-pill-row-label--function   { color: var(--color-text, #1A2433); }
+.work-pill-row-label--technology { color: var(--coral-500, #F0643A); }
+
+.admin-work-items__tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+}
+
+/* Reuse .work-pill visual; the input is hidden but the label stays
+   clickable. When checked we boost the border. */
+.admin-work-items__chip {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 2px solid transparent;
+  transition:
+    box-shadow var(--duration-fast, 150ms) var(--ease-standard, ease),
+    border-color var(--duration-fast, 150ms) var(--ease-standard, ease);
+  padding-inline: 0.7rem;
+}
+
+.admin-work-items__chip input[type="checkbox"] {
+  /* Visually hidden but still focusable + form-submittable. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.admin-work-items__chip:hover {
+  filter: brightness(1.05);
+}
+
+.admin-work-items__chip:focus-within {
+  outline: 3px solid rgba(43, 76, 111, 0.4);
+  outline-offset: 2px;
+}
+
+/* Drive the checked visuals from the actual checkbox state, not
+   from a server-rendered class — that way clicking the pill
+   toggles the ✓ indicator live (and on Tab/space keyboard nav)
+   without needing JS to mirror the state. :has() is supported
+   in current Safari, Chrome, and Firefox. */
+.admin-work-items__chip:has(input[type="checkbox"]:checked) {
+  border-color: var(--color-heading, #313131);
+  box-shadow: 0 0 0 2px var(--color-surface, #fff) inset;
+}
+
+.admin-work-items__chip:has(input[type="checkbox"]:checked)::after {
+  content: '✓';
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-left: 0.1rem;
+}
+
+/* ----- Actions row ----- */
+.admin-work-items__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3, 0.75rem);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-4, 1rem);
+}
+
+/* ----- Responsive ----- */
+@media (max-width: 768px) {
+  .admin-work-items__table th,
+  .admin-work-items__table td {
+    padding: var(--space-2, 0.5rem);
+  }
+  .admin-work-items__table .col-actions {
+    width: auto;
+  }
+  .admin-work-items__row {
+    flex-direction: column;
+  }
+}
