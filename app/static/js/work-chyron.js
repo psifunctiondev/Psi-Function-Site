@@ -15,8 +15,8 @@
 ;(function () {
   'use strict'
 
-  const ADVANCE_MS = 18000  // hold per card
-  const FADE_MS = 1400      // glide duration (mirrors CSS var)
+  const ADVANCE_MS = 25000  // hold per card
+  const FADE_MS = 2000      // glide duration (mirrors CSS var)
 
   function init() {
     const root = document.querySelector('.work-chyron')
