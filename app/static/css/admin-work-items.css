@@ -2,21 +2,15 @@
    admin-work-items.css
    Styles for the WorkItem authoring pages under /admin/work-items.
 
-   Follows portal.css conventions (light theme, cream surfaces,
-   border-based cards) and reuses work-pill styling for the tag
-   picker so what the admin sees in the form matches what visitors
-   see on the home page.
+   Reuses the active theme's design tokens (day/night/twilight) so
+   the admin pages follow the visitor's site color theme. Border-
+   based cards and work-pill tag picker match the home chyron.
    ============================================================= */
 
 .admin-work-items {
-  --color-bg: #f5f5f5;
-  --color-surface: #ffffff;
-  --color-text: #313131;
-  --color-text-muted: #878787;
-  --color-heading: #313131;
-  --color-border: #e0e0e0;
-  --color-link: #2B4C6F;
-  --color-link-hover: #C4956A;
+  /* No token overrides here — let the active theme's :root vars
+     (--color-bg, --color-surface, --color-text, --color-border,
+     --color-link, --color-heading, …) flow through naturally. */
   background: var(--color-bg);
   color: var(--color-text);
 }
@@ -68,6 +62,14 @@
   gap: var(--space-4, 1rem);
   margin-bottom: var(--space-4, 1rem);
   flex-wrap: wrap;
+}
+
+/* Flash messages inside the admin section need a gap to the
+   toolbar that follows, otherwise the success bar sits flush
+   against the "+ New Work Item" button (and the form's actions
+   row above gets the same treatment). */
+.admin-work-items .portal-flash {
+  margin-bottom: var(--space-4, 1rem);
 }
 
 .admin-work-items__count {
@@ -313,6 +315,12 @@
   padding: var(--space-6, 1.5rem);
   max-width: 56rem;
   margin: 0 auto;
+  /* Defensive: ensure form descendants are interactive even if a
+     future parent rule (e.g. an inherited user-select: none) is
+     introduced. .card's hover transform doesn't block input, but
+     we make it explicit. */
+  pointer-events: auto;
+  user-select: text;
 }
 
 .admin-work-items__field {
@@ -321,6 +329,8 @@
   gap: var(--space-1, 0.25rem);
   flex: 1 1 auto;
   min-width: 0;
+  pointer-events: auto;
+  user-select: text;
 }
 
 .admin-work-items__field--narrow {
@@ -368,6 +378,13 @@
   padding: 0.5rem 0.75rem;
   width: 100%;
   box-sizing: border-box;
+  /* Ensure caret placement and standard browser text-selection
+     (triple-click select line, Cmd/Ctrl+A select contents) work
+     on the Title / Description / Sort fields. Defensive against
+     an inherited user-select: none or pointer-events: none on a
+     parent. */
+  user-select: text;
+  pointer-events: auto;
 }
 
 .admin-work-items__input:focus,
@@ -446,10 +463,17 @@
   text-transform: uppercase;
 }
 
-/* Axis-tinted label dots, mirroring work-chyron's pill palette. */
-.work-pill-row-label--vertical   { color: #6C7D94; }
-.work-pill-row-label--function   { color: #1A2433; }
-.work-pill-row-label--technology { color: #F0643A; }
+/* Axis-tinted label dots, mirroring work-chyron's pill palette.
+   Use the palette / theme tokens so each label stays legible
+   regardless of the active color theme (the original function
+   hex was --navy-900, which would be invisible on a dark
+   surface). The hue family is preserved: vertical=grey
+   (neutral), function=neutral text-color (contrasts with the
+   background of any theme), technology=brand coral (already
+   theme-resilient). */
+.work-pill-row-label--vertical   { color: var(--steel-500, #6C7D94); }
+.work-pill-row-label--function   { color: var(--color-text, #1A2433); }
+.work-pill-row-label--technology { color: var(--coral-500, #F0643A); }
 
 .admin-work-items__tag-chips {
   display: flex;
@@ -495,12 +519,17 @@
   outline-offset: 2px;
 }
 
-.admin-work-items__chip.is-checked {
+/* Drive the checked visuals from the actual checkbox state, not
+   from a server-rendered class — that way clicking the pill
+   toggles the ✓ indicator live (and on Tab/space keyboard nav)
+   without needing JS to mirror the state. :has() is supported
+   in current Safari, Chrome, and Firefox. */
+.admin-work-items__chip:has(input[type="checkbox"]:checked) {
   border-color: var(--color-heading, #313131);
   box-shadow: 0 0 0 2px var(--color-surface, #fff) inset;
 }
 
-.admin-work-items__chip.is-checked::after {
+.admin-work-items__chip:has(input[type="checkbox"]:checked)::after {
   content: '✓';
   font-size: 0.8rem;
   font-weight: 700;
