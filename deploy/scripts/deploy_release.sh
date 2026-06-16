@@ -101,7 +101,8 @@ mkdir -p \
   "$SHARED_DIR/logs" \
   "$SHARED_DIR/uploads" \
   "$SHARED_DIR/run" \
-  "$SHARED_DIR/tmp"
+  "$SHARED_DIR/tmp" \
+  "$SHARED_DIR/client-content"
 
 [ -d "$SOURCE_DIR" ] || fail "Source directory missing: $SOURCE_DIR"
 
@@ -207,6 +208,16 @@ rm -rf "$NEW_RELEASE/uploads" "$NEW_RELEASE/logs" "$NEW_RELEASE/tmp"
 ln -sfn "$SHARED_DIR/uploads" "$NEW_RELEASE/uploads"
 ln -sfn "$SHARED_DIR/logs" "$NEW_RELEASE/logs"
 ln -sfn "$SHARED_DIR/tmp" "$NEW_RELEASE/tmp"
+
+# Link shared client guide content (MkDocs sites) so the portal's
+# `/guides/<slug>/<guide>/` blueprint can serve it via send_from_directory.
+# Content lives in $SHARED_DIR/client-content/ (managed out-of-band; not in
+# this repo) and is symlinked into each release's app/static/ so the
+# blueprint can resolve current_app.static_folder + 'client-content/...'.
+# This re-link is the durable form of the Apr 23 TODO: a symlink inside the
+# active release would otherwise be orphaned on the next deploy.
+mkdir -p "$NEW_RELEASE/app/static"
+ln -sfn "$SHARED_DIR/client-content" "$NEW_RELEASE/app/static/client-content"
 
 if [ -d "migrations" ]; then
   log "Running database migrations"
