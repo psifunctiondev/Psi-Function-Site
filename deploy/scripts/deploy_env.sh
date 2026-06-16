@@ -115,6 +115,7 @@ check_app_layout() {
   check_path_dir "${SHARED_DIR}/logs" "Shared logs directory"
   check_path_dir "${SHARED_DIR}/uploads" "Shared uploads directory"
   check_path_dir "${SHARED_DIR}/run" "Shared run directory"
+  check_path_dir "${SHARED_DIR}/client-content" "Shared client-content directory"
 
   check_path_executable "$RELEASE_SCRIPT" "Release script"
 
