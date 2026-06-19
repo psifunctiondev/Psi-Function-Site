@@ -623,7 +623,7 @@ def resource_cli():
 @click.option(
     '--category', required=True,
     type=click.Choice(
-        ['proposal', 'backlog', 'custom', 'guide'],
+        ['document', 'backlog', 'application', 'guide'],
         case_sensitive=False,
     ),
     help='Dashboard category',
