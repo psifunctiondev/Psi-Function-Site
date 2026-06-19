@@ -241,20 +241,20 @@ class TestClientResource:
         db_session.add(c)
         db_session.flush()
 
-        r = ClientResource(client_id=c.id, title='Test Resource', category='proposal')
+        r = ClientResource(client_id=c.id, title='Test Resource', category='document')
         db_session.add(r)
         db_session.commit()
 
         assert r.id is not None
         assert r.title == 'Test Resource'
-        assert r.category == 'proposal'
+        assert r.category == 'document'
 
     def test_category_label_known(self, db_session):
         c = Client(name='CL Corp', slug='cl-corp')
         db_session.add(c)
         db_session.flush()
 
-        r = ClientResource(client_id=c.id, title='Prop', category='proposal')
+        r = ClientResource(client_id=c.id, title='Prop', category='document')
         db_session.add(r)
         db_session.commit()
 
@@ -272,14 +272,15 @@ class TestClientResource:
         assert r.category_label == 'Weird Stuff'
 
     def test_categories_dict_keys(self):
-        # Legacy keys must remain present for backward compatibility with
-        # existing seeded data and CLI workflows.
-        legacy_keys = {'proposal', 'backlog', 'guide', 'asset',
-                       'invoice', 'custom', 'general'}
-        # Showcase keys added for the ACME demo / engagement narrative.
-        showcase_keys = {'engagement', 'deliverables', 'tools'}
-        assert legacy_keys.issubset(ClientResource.CATEGORIES.keys())
-        assert showcase_keys.issubset(ClientResource.CATEGORIES.keys())
+        # CLI-exposed categories: must be present in the dict so the
+        # dashboard template can render them and the category_label works.
+        cli_keys = {'document', 'backlog', 'application', 'guide'}
+        # Additional categories supported by the model (used by ACME seed
+        # and other clients via direct DB writes).
+        extended_keys = {'asset', 'invoice', 'general',
+                         'engagement', 'deliverables', 'tools'}
+        assert cli_keys.issubset(ClientResource.CATEGORIES.keys())
+        assert extended_keys.issubset(ClientResource.CATEGORIES.keys())
 
     def test_repr(self, db_session):
         c = Client(name='RR Corp', slug='rr-corp')
