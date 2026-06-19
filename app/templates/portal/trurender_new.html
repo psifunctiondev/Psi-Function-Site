@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}New TruRender Project — {{ client.name }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+{% if client.font_url %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{{ client.font_url }}">
+{% endif %}
+<style>
+  :root {
+    --client-primary: {{ client.primary_color or '#6C7D94' }};
+    --client-accent: {{ client.accent_color or '#F0643A' }};
+    --client-radius: 0px;
+    {% if client.font_display %}--client-font-display: {{ client.font_display|safe }};
+    --client-font-weight: 400;{% endif %}
+    {% if client.logo_max_height %}--client-logo-max-height: {{ client.logo_max_height }};{% endif %}
+  }
+
+  /* Same light-locked block the overview uses — keeps CTAI palette
+     consistent across sub-pages. */
+  .portal-page {
+    --color-bg: #f5f5f5;
+    --color-surface: #ffffff;
+    --color-text: #313131;
+    --color-text-muted: #878787;
+    --color-heading: #313131;
+    --color-border: #e0e0e0;
+    --color-link: var(--client-primary);
+    --color-link-hover: var(--client-accent);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  body:has(.portal-page) main {
+    --portal-fade-height: calc(var(--header-height) * 0.25);
+    background:
+      linear-gradient(
+        to bottom,
+        #f5f5f5 0,
+        #f5f5f5 calc(100% - var(--portal-fade-height)),
+        transparent 100%
+      )
+      no-repeat;
+    background-color: transparent;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="portal-page">
+
+  <div class="portal__eyebrow-row">
+    {% if client.logo_url %}
+      <img class="portal__eyebrow-logo" src="{{ client.logo_url }}" alt="{{ client.name }}">
+    {% else %}
+      <p class="portal__eyebrow portal__eyebrow--client">{{ client.name }}</p>
+    {% endif %}
+  </div>
+
+  {% if client.tagline %}
+    <p class="portal__tagline">{{ client.tagline }}</p>
+  {% endif %}
+
+  <div class="container section-stack">
+
+    <div class="portal-welcome">
+      <span class="portal-welcome__greeting">New TruRender Project</span>
+      <a class="portal-welcome__logout" href="{{ url_for('portal.trurender_overview', slug=client.slug) }}">← Back to TruRender</a>
+    </div>
+
+    <div class="card portal-trurender-placeholder">
+      <h1 class="portal-section__title portal-section__title--client">Coming in R2</h1>
+      <p class="card__text">
+        This page will host the new-project form: source upload, preset
+        selector (Round 2 Config C is the proven winner), parameter sliders
+        for <code>denoise</code>, <code>canny_strength</code>,
+        <code>controlnet_strength</code>, <code>cfg</code>, <code>steps</code>,
+        and <code>max_dim</code>, plus a submit button.
+      </p>
+      <p class="card__text">
+        R1 only ships the route stub so the CTA box has somewhere to land.
+        File management, parameter exposure, and submission wire-up are all
+        deferred to R2 per the scaffold brief.
+      </p>
+    </div>
+
+  </div>
+
+</section>
+
+{% endblock %}

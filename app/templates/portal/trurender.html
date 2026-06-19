@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}TruRender — {{ client.name }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+{% if client.font_url %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{{ client.font_url }}">
+{% endif %}
+<style>
+  :root {
+    --client-primary: {{ client.primary_color or '#6C7D94' }};
+    --client-accent: {{ client.accent_color or '#F0643A' }};
+    --client-radius: 0px;
+    {% if client.font_display %}--client-font-display: {{ client.font_display|safe }};
+    --client-font-weight: 400;{% endif %}
+    {% if client.logo_max_height %}--client-logo-max-height: {{ client.logo_max_height }};{% endif %}
+  }
+
+  /* Lock TruRender portal area to light theme regardless of site theme.
+     Mirrors the dashboard's light-locked block so visual continuity holds
+     when the user navigates between sub-pages. */
+  .portal-page {
+    --color-bg: #f5f5f5;
+    --color-surface: #ffffff;
+    --color-text: #313131;
+    --color-text-muted: #878787;
+    --color-heading: #313131;
+    --color-border: #e0e0e0;
+    --color-link: var(--client-primary);
+    --color-link-hover: var(--client-accent);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  /* Fade <main> cream into transparent at the bottom so the page dissolves
+     into the Psi Function site background before the footer — same trick
+     the dashboard uses. */
+  body:has(.portal-page) main {
+    --portal-fade-height: calc(var(--header-height) * 0.25);
+    background:
+      linear-gradient(
+        to bottom,
+        #f5f5f5 0,
+        #f5f5f5 calc(100% - var(--portal-fade-height)),
+        transparent 100%
+      )
+      no-repeat;
+    background-color: transparent;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="portal-page">
+
+  <div class="portal__eyebrow-row">
+    {% if client.logo_url %}
+      <img class="portal__eyebrow-logo" src="{{ client.logo_url }}" alt="{{ client.name }}">
+    {% else %}
+      <p class="portal__eyebrow portal__eyebrow--client">{{ client.name }}</p>
+    {% endif %}
+  </div>
+
+  {% if client.tagline %}
+    <p class="portal__tagline">{{ client.tagline }}</p>
+  {% endif %}
+
+  <div class="container section-stack">
+
+    <!-- Welcome + back-to-dashboard -->
+    <div class="portal-welcome">
+      <span class="portal-welcome__greeting">
+        TruRender — Welcome, {{ user.display_name or user.email }}
+      </span>
+      <a class="portal-welcome__logout" href="{{ url_for('portal.client_dashboard', slug=client.slug) }}">← Back to portal</a>
+    </div>
+
+    <!-- Overview card — R1 stub content. R2 will replace this with the
+         process-flow shape, history list, and parameter exposure. -->
+    <div class="card portal-trurender-overview">
+      <h1 class="portal-section__title portal-section__title--client">TruRender Overview</h1>
+      <p class="card__text">
+        TruRender converts Enscape / architectural renders into photorealistic
+        images using a ComfyUI + Flux.1-dev pipeline on Modal (A100 80GB).
+        Each project takes an architectural render as input and returns a
+        photorealistic photograph that preserves geometry, colours, and
+        materials while replacing materials and lighting with photographic
+        detail.
+      </p>
+      <p class="card__text">
+        Process summary (full UI lands in R2): you upload a render, choose a
+        preset, and TruRender produces a photograph. Each render is recorded
+        with its parameters and result so you can compare presets side-by-side.
+      </p>
+    </div>
+
+    <!-- CTA — opens the "new project" placeholder. R2 turns this into the
+         parameter form. -->
+    <div class="card portal-trurender-cta">
+      <a class="portal-trurender-cta__link"
+         href="{{ url_for('portal.trurender_new', slug=client.slug) }}">
+        + New Rendering to Photograph Transform Project
+      </a>
+      <p class="portal-trurender-cta__hint">
+        Starts a new TruRender project. Parameter form lands in R2 — for now
+        this is a placeholder route.
+      </p>
+    </div>
+
+  </div>
+
+</section>
+
+{% endblock %}

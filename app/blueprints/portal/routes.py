@@ -142,6 +142,66 @@ def client_dashboard(slug: str):
     )
 
 
+# ---------- TruRender (CTAI-only) ----------
+
+def _require_ctai_access(slug: str) -> 'Client':
+    """Look up the client and gate TruRender routes to CTAI + admins.
+
+    TruRender is a CTAI-specific product, so we tighten the access rule
+    beyond the dashboard's "your own client" rule: only users whose
+    ``client.slug == 'ctai'`` (or site admins) may enter.
+
+    Raises 404 for an unknown / inactive slug (so we don't leak existence
+    of clients via 403 vs 404 side channels).
+    Raises 403 when a logged-in user is on a different client OR on CTAI but
+    trying to enter TruRender under a non-CTAI slug.
+    """
+    client: Client | None = Client.query.filter_by(slug=slug, is_active=True).first()
+    if client is None:
+        abort(404)
+    if not current_user.is_admin:
+        if not current_user.client_id or current_user.client_id != client.id:
+            abort(403)
+        if client.slug != 'ctai':
+            abort(403)
+    return client
+
+
+@portal_bp.get('/p/<slug>/trurender/')
+@login_required
+def trurender_overview(slug):
+    """TruRender overview — header/footer/overview + CTA box.
+
+    CTAI-only (and admins). R2 will replace the overview body with the
+    process-flow shape and history list; R1 ships the scaffold only.
+    """
+    client = _require_ctai_access(slug)
+
+    return render_template(
+        'portal/trurender.html',
+        client=client,
+        user=current_user,
+    )
+
+
+@portal_bp.get('/p/<slug>/trurender/new')
+@login_required
+def trurender_new(slug):
+    """Placeholder for the new-TruRender-project form.
+
+    CTAI-only (and admins). R2 will turn this into the parameter form
+    wired to :mod:`app.services.trurender`. R1 ships the route + template
+    so the CTA box has somewhere to land.
+    """
+    client = _require_ctai_access(slug)
+
+    return render_template(
+        'portal/trurender_new.html',
+        client=client,
+        user=current_user,
+    )
+
+
 @portal_bp.get('/p/<slug>/invite')
 @login_required
 def invite_user(slug):

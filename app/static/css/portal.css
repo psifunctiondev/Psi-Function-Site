@@ -509,3 +509,54 @@ a.portal-dashboard-col__item:hover {
     gap: var(--space-2);
   }
 }
+
+/* -------------------------------------------------------
+   TRURENDER OVERVIEW + NEW-PROJECT PLACEHOLDER (R1 scaffold)
+   ------------------------------------------------------- */
+
+.portal-trurender-overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.portal-trurender-cta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.portal-trurender-cta__link {
+  font-family: var(--client-font-display, var(--font-family-display));
+  font-size: var(--text-lg);
+  font-weight: var(--client-font-weight, var(--font-weight-semibold));
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--client-primary, var(--color-primary));
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.portal-trurender-cta__link:hover {
+  color: var(--client-accent, var(--color-link-hover));
+}
+
+.portal-trurender-cta__hint {
+  margin: 0;
+  font-family: var(--font-family-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.portal-trurender-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.portal-trurender-placeholder code {
+  font-family: var(--font-family-mono);
+  background: var(--color-bg);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+}
