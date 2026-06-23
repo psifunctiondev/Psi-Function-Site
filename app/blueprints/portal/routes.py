@@ -142,6 +142,62 @@ def client_dashboard(slug: str):
     )
 
 
+# ---------- Drift & Anchor (per-client landing page) ----------
+
+@portal_bp.get('/p/drift-and-anchor/')
+@login_required
+def drift_and_anchor_overview():
+    """Drift & Anchor landing — brand banner + tagline + engagement hub.
+
+    Sister route to ``client_dashboard`` but richer: the dashboard is
+    the eyebrow-row / 5-column resource grid; this landing adds a
+    brand-story banner (storm/seascape from drift-and-anchor.com) and
+    a single hero tagline above the same 5-card engagement hub that
+    ACME and CTAI use.
+
+    Access mirrors ``client_dashboard``: the user must belong to the
+    Drift & Anchor client OR be a site admin. The slug is hard-coded
+    to ``drift-and-anchor`` by the route literal (matches the
+    BRANDING_PROFILES key) — so an inactive or missing client row
+    404s cleanly via ``first_or_404``.
+    """
+    client = Client.query.filter_by(
+        slug='drift-and-anchor', is_active=True,
+    ).first_or_404()
+
+    if not current_user.is_admin and (
+        not current_user.client or current_user.client.id != client.id
+    ):
+        abort(403)
+
+    resources = (
+        ClientResource.query
+        .filter_by(client_id=client.id, is_visible=True)
+        .order_by(ClientResource.category, ClientResource.sort_order)
+        .all()
+    )
+    grouped = {}
+    for r in resources:
+        grouped.setdefault(r.category, []).append(r)
+
+    client_users = (
+        User.query
+        .filter_by(client_id=client.id, is_active_user=True)
+        .filter(User.password_hash.isnot(None))
+        .all()
+    )
+
+    return render_template(
+        'portal/drift_and_anchor.html',
+        client=client,
+        user=current_user,
+        grouped_resources=grouped,
+        resources_by_cat=grouped,
+        categories=ClientResource.CATEGORIES,
+        client_users=client_users,
+    )
+
+
 @portal_bp.get('/p/<slug>/invite')
 @login_required
 def invite_user(slug):

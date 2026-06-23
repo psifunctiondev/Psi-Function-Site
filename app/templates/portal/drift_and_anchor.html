@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ client.name }} — Portal{% endblock %}
+{% block title %}Drift & Anchor — {{ client.name }}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
@@ -11,15 +11,22 @@
 {% endif %}
 <style>
   :root {
-    --client-primary: {{ client.primary_color or '#6C7D94' }};
-    --client-accent: {{ client.accent_color or '#F0643A' }};
-    --client-radius: 0px;
+    --client-primary: {{ client.primary_color or '#160E33' }};
+    --client-accent: {{ client.accent_color or '#C9A66B' }};
+    /* Drift & Anchor's Squarespace site leans rounded on its cards &
+       buttons. 8px is a soft-but-editorial middle ground — softer
+       than the default `--radius-lg` (typical 0.5rem), but not the
+       12-16px chunky softness of Squarespace's defaults. Quinn can
+       tune via BRANDING_PROFILES if a stronger read is wanted. */
+    --client-radius: 8px;
     {% if client.font_display %}--client-font-display: {{ client.font_display|safe }};
     --client-font-weight: 400;{% endif %}
     {% if client.logo_max_height %}--client-logo-max-height: {{ client.logo_max_height }};{% endif %}
   }
 
-  /* Lock client portal area to light theme regardless of site theme */
+  /* Lock Drift & Anchor portal area to light theme regardless of site
+     theme. Mirrors the dashboard's light-locked block so visual
+     continuity holds across sub-pages. */
   .portal-page {
     --color-bg: #f5f5f5;
     --color-surface: #ffffff;
@@ -33,15 +40,10 @@
     color: var(--color-text);
   }
 
-  /* Paint <main> cream for almost its full height, then fade to
-     transparent over the last stretch so the client section dissolves
-     into the Psi Function site background before the footer. This
-     mirrors the soft transition the sticky site header already provides
-     at the top (which fades from its elevated surface down to the
-     body bg — here body stays dark and shows through the fade). */
+  /* Fade <main> cream into transparent at the bottom so the page
+     dissolves into the Psi Function site background before the footer
+     — same trick the dashboard uses. */
   body:has(.portal-page) main {
-    /* Match the site header's ::after fade height so the top and
-       bottom transitions feel symmetric. */
     --portal-fade-height: calc(var(--header-height) * 0.25);
     background:
       linear-gradient(
@@ -58,26 +60,22 @@
 
 {% block content %}
 
-<section class="portal-page">
-
-  <div class="portal__eyebrow-row">
-    {% if client.logo_url %}
-      <img class="portal__eyebrow-logo" src="{{ client.logo_url }}" alt="{{ client.name }}">
-    {% else %}
-      <p class="portal__eyebrow portal__eyebrow--client">{{ client.name }}</p>
-    {% endif %}
-  </div>
-
-  {% if client.tagline %}
-    <p class="portal__tagline">{{ client.tagline }}</p>
-  {% endif %}
+<section class="portal-page drift-and-anchor">
 
   <div class="container section-stack">
 
+    {# Banner hero — the storm/seascape image pulled from drift-and-anchor.com #}
     {% if client.banner_url %}
       <div class="portal-banner">
         <img class="portal-banner__img" src="{{ client.banner_url }}" alt="{{ client.name }} banner">
       </div>
+    {% endif %}
+
+    {# Hero tagline — single line, set under the banner. Quinn's
+       revision: "only" this line; the longer Brand Strategy tagline
+       lives only as the DB column for future reuse. #}
+    {% if client.tagline %}
+      <p class="portal__tagline portal__tagline--hero">{{ client.tagline }}</p>
     {% endif %}
 
     <!-- Welcome + logout -->
@@ -88,7 +86,9 @@
       <a class="portal-welcome__logout" href="{{ url_for('auth.logout') }}">Log out</a>
     </div>
 
-    {# 5-column engagement hub — shared with per-client landing pages. #}
+    {# 5-column engagement hub — same five cards as ACME and CTAI.
+       Pulled out into a shared partial so dashboard.html and any
+       future per-client landing stay in lockstep. #}
     {% include 'portal/_dashboard_grid.html' %}
 
   </div>

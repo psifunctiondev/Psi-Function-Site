@@ -65,6 +65,11 @@ Authenticated client-specific sitelets accessible via direct URL or hidden login
 
 **Existing scaffolding:** Auth blueprint (`/auth`), portal blueprint (`/portal`), user model, login template, Flask-Login already wired up.
 
+**Active client tenants:**
+- **CTAI** (`/p/ctai`) — Catherine Truman Architects, internal tooling hub (TruRender in progress)
+- **ACME** (`/p/acme`) — fictional public-safe showcase tenant for demos
+- **Drift & Anchor** (`/p/drift-and-anchor`) — brand-strategy consultancy; R1 ships the brand-story landing + initial resources (see `docs/clients/drift-and-anchor.md`)
+
 **Next steps:** Design the per-client dashboard layout, decide on OpenProject API integration approach, set up file storage for static assets.
 
 ---
