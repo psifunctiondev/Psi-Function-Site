@@ -286,6 +286,34 @@ BRANDING_PROFILES = {
         # display headings; Inter handles body copy.
         'font_display': "'Bungee Inline', 'Inter', sans-serif",
     },
+    'drift-and-anchor': {
+        'name': 'Drift & Anchor',
+        'slug': 'drift-and-anchor',
+        # Deep navy/purple is the only true color on their Squarespace
+        # site; warm gold pairs editorially. Quinn may shift the accent
+        # to monochromatic later — kept gold for the initial brand read.
+        'primary_color': '#160E33',
+        'accent_color': '#C9A66B',
+        'logo_url': (
+            'https://images.squarespace-cdn.com/content/v1/'
+            '67dec82c885d36503ddeb44e/'
+            'fc808a70-5a42-415d-b23b-0809be2b0f58/DA_logo2.png?format=1500w'
+        ),
+        # Horizontal wordmark with the anchor mark — needs more height
+        # than the default CTAI square logo.
+        'logo_max_height': '5rem',
+        'banner_url': (
+            'http://static1.squarespace.com/static/'
+            '67dec82c885d36503ddeb44e/t/68483d1e11a80855d83d3ffc/'
+            '1749564702103/D%26A_social-share.jpg?format=1500w'
+        ),
+        'tagline': 'Brand Strategy and Storytelling Consultancy',
+        'font_url': (
+            'https://fonts.googleapis.com/css2?'
+            'family=DM+Serif+Display:ital,wght@0,400;1,400'
+        ),
+        'font_display': '"DM Serif Display", serif',
+    },
 }
 
 
@@ -609,6 +637,241 @@ def seed_acme_resources():
         f'{updated_count} updated, {unchanged_count} unchanged '
         f'(total {len(ACME_DEMO_RESOURCES)}).'
     )
+
+
+# Drift & Anchor — initial resource rows for the landing portal.
+# Same idempotency / (client_id, title) upsert shape as ACME_DEMO_RESOURCES.
+# external_url uses '#' as a placeholder so the dashboard renders the link
+# without 404ing; real destinations land in follow-up commits.
+DRIFT_AND_ANCHOR_RESOURCES = [
+    {
+        'title': 'Engagement Overview',
+        'description': 'High-level summary of our work together.',
+        'category': 'engagement',
+        'external_url': '#',
+        'sort_order': 10,
+    },
+    {
+        'title': 'Services & Approach',
+        'description': 'Strategy and creative capabilities in detail.',
+        'category': 'engagement',
+        'external_url': '#',
+        'sort_order': 20,
+    },
+    {
+        'title': 'Featured Case Studies',
+        'description': (
+            'Progressive, Toast, Hallmark Health — case write-ups and reels.'
+        ),
+        'category': 'asset',
+        'external_url': '#',
+        'sort_order': 30,
+    },
+    {
+        'title': 'Project Workspace',
+        'description': (
+            'Coming soon — interactive backlog view (OpenProject integration).'
+        ),
+        'category': 'backlog',
+        'external_url': '#',
+        'sort_order': 40,
+    },
+    {
+        'title': 'User Guides',
+        'description': 'MkDocs-hosted strategy frameworks and playbooks.',
+        'category': 'guide',
+        'external_url': '#',
+        'sort_order': 50,
+    },
+    {
+        'title': 'Contact',
+        'description': 'Reach the Psi Function team — quinn@psifunction.com.',
+        'category': 'general',
+        'external_url': '#',
+        'sort_order': 90,
+    },
+]
+
+
+@client_cli.command('seed-drift-and-anchor-resources')
+@with_appcontext
+def seed_drift_and_anchor_resources():
+    """Seed the Drift & Anchor ClientResource rows (idempotent).
+
+    Ensures the Drift & Anchor client row exists (via BRANDING_PROFILES),
+    then upserts each entry in DRIFT_AND_ANCHOR_RESOURCES keyed on
+    (client, title). Mirrors ``seed-acme-resources``; titles are the
+    stable identifier.
+    """
+    from app.models.client import ClientResource
+
+    profile = BRANDING_PROFILES.get('drift-and-anchor')
+    if profile is None:
+        click.echo(
+            'No branding profile for "drift-and-anchor" — add one to '
+            'BRANDING_PROFILES before seeding resources.'
+        )
+        raise click.exceptions.Exit(code=1)
+
+    client_org, created_client, _ = _apply_profile('drift-and-anchor', profile)
+    if created_client:
+        click.echo(
+            f'Created client: {client_org.name} [{client_org.slug}]'
+        )
+
+    created_count = 0
+    updated_count = 0
+    unchanged_count = 0
+
+    for entry in DRIFT_AND_ANCHOR_RESOURCES:
+        existing = ClientResource.query.filter_by(
+            client_id=client_org.id, title=entry['title'],
+        ).first()
+
+        if existing is None:
+            resource = ClientResource(
+                client_id=client_org.id,
+                title=entry['title'],
+                description=entry.get('description'),
+                category=entry['category'],
+                external_url=entry.get('external_url'),
+                file_path=entry.get('file_path'),
+                sort_order=entry.get('sort_order', 0),
+            )
+            db.session.add(resource)
+            created_count += 1
+            click.echo(f'  + {entry["title"]} ({entry["category"]})')
+            continue
+
+        changed_fields = []
+        for field in ('description', 'category', 'external_url',
+                      'file_path', 'sort_order'):
+            new_value = entry.get(
+                field, 0 if field == 'sort_order' else None,
+            )
+            if getattr(existing, field) != new_value:
+                setattr(existing, field, new_value)
+                changed_fields.append(field)
+
+        if changed_fields:
+            updated_count += 1
+            click.echo(
+                f'  ~ {entry["title"]} '
+                f'({", ".join(changed_fields)})'
+            )
+        else:
+            unchanged_count += 1
+
+    db.session.commit()
+    click.echo('')
+    click.echo(
+        f'Seeded Drift & Anchor resources: {created_count} created, '
+        f'{updated_count} updated, {unchanged_count} unchanged '
+        f'(total {len(DRIFT_AND_ANCHOR_RESOURCES)}).'
+    )
+
+
+# Drift & Anchor — invite provisioning for Catherine (Sheehan).
+# Distinct from the ACME demo user: this account is *invited* (not
+# registered). The seeder generates a fresh invite token + prints the
+# full invite URL so Quinn can hand it off manually until AgentMail
+# integration lands.
+DRIFT_AND_ANCHOR_INVITE_EMAIL = 'catherine@drift-and-anchor.com'
+DRIFT_AND_ANCHOR_INVITE_NAME = 'Catherine Sheehan'
+
+
+@client_cli.command('seed-drift-and-anchor-invite')
+@click.option(
+    '--rotate', is_flag=True, default=False,
+    help='Force regeneration of the invite token even if one already exists.',
+)
+@with_appcontext
+def seed_drift_and_anchor_invite(rotate):
+    """Provision Catherine's invite on the Drift & Anchor portal.
+
+    Ensures the Drift & Anchor client row exists (via BRANDING_PROFILES),
+    then creates or refreshes catherine@drift-and-anchor.com as a
+    non-admin, active, *unregistered* user tied to that client. A fresh
+    invite token is generated and the full invite URL is printed so it
+    can be handed off manually (AgentMail is the next-step automation).
+
+    Idempotent: re-running on an existing user keeps the same email /
+    client_id / display_name but does NOT rotate the invite token
+    unless ``--rotate`` is passed (so deploy-time re-seeds don't burn
+    the token out from under Catherine mid-acceptance).
+    """
+    profile = BRANDING_PROFILES.get('drift-and-anchor')
+    if profile is None:
+        click.echo(
+            'No branding profile for "drift-and-anchor" — add one to '
+            'BRANDING_PROFILES before seeding the invite.'
+        )
+        raise click.exceptions.Exit(code=1)
+
+    client_org, created_client, _ = _apply_profile(
+        'drift-and-anchor', profile,
+    )
+    if created_client:
+        click.echo(
+            f'Created client: {client_org.name} [{client_org.slug}]'
+        )
+
+    email = DRIFT_AND_ANCHOR_INVITE_EMAIL
+    user = User.query.filter_by(email=email).first()
+    created_user = False
+    if user is None:
+        user = User(
+            email=email,
+            display_name=DRIFT_AND_ANCHOR_INVITE_NAME,
+            client_id=client_org.id,
+            is_active_user=True,
+            is_admin=False,
+        )
+        db.session.add(user)
+        created_user = True
+    else:
+        if user.client_id != client_org.id:
+            user.client_id = client_org.id
+        if not user.is_active_user:
+            user.is_active_user = True
+        if user.is_admin:
+            # Catherine must never be an admin on her own portal.
+            user.is_admin = False
+        if not user.display_name:
+            user.display_name = DRIFT_AND_ANCHOR_INVITE_NAME
+
+    verb = 'Created' if created_user else 'Updated'
+
+    # Only mint a new token if there's no current one, or --rotate was
+    # asked for. Without this guard, re-running the seeder on deploy
+    # would silently invalidate the invite link Catherine is about to
+    # click.
+    if user.invite_token is None or rotate or not user.is_invite_valid:
+        token = user.generate_invite_token(expires_hours=72)
+        token_action = (
+            'rotated' if (rotate and not created_user) else 'generated'
+        )
+    else:
+        token = user.invite_token
+        token_action = 'unchanged (existing valid token)'
+
+    db.session.commit()
+
+    base_url = current_app.config.get('SERVER_NAME', 'psifunction.com')
+    scheme = 'https' if not current_app.debug else 'http'
+    invite_url = (
+        f'{scheme}://{base_url}/p/login?mode=register&token={token}'
+    )
+
+    click.echo(f'{verb} invite user: {user.email} → {client_org.name}')
+    click.echo(f'Invite token: {token_action}')
+    click.echo(f'Token value: {token}')
+    click.echo(f'Invite URL: {invite_url}')
+    if not rotate and not created_user and user.is_invite_valid:
+        click.echo(
+            '\nRe-run with --rotate to mint a new token '
+            '(existing token is still valid).'
+        )
 
 
 @click.group('resource')

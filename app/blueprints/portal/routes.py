@@ -142,6 +142,42 @@ def client_dashboard(slug: str):
     )
 
 
+# ---------- Drift & Anchor (per-client landing page) ----------
+
+@portal_bp.get('/p/drift-and-anchor/')
+@login_required
+def drift_and_anchor_overview():
+    """Drift & Anchor landing — brand story + services split + engagement hub.
+
+    Sister route to ``client_dashboard`` but richer: the dashboard is
+    the standard 5-column resource grid; this landing is the
+    brand-story-driven entry pad that the rest of the portal hangs off.
+    R1 ships the route + template + theming; R2 layers in the live
+    engagement timeline and the OpenProject embed (see the engagement
+    card in ``portal/drift_and_anchor.html`` for the R2/R3 plan).
+
+    Access mirrors ``client_dashboard``: the user must belong to the
+    Drift & Anchor client OR be a site admin. The slug is hard-coded
+    to ``drift-and-anchor`` by the route literal (matches the
+    BRANDING_PROFILES key) — so an inactive or missing client row
+    404s cleanly via ``first_or_404``.
+    """
+    client = Client.query.filter_by(
+        slug='drift-and-anchor', is_active=True,
+    ).first_or_404()
+
+    if not current_user.is_admin and (
+        not current_user.client or current_user.client.id != client.id
+    ):
+        abort(403)
+
+    return render_template(
+        'portal/drift_and_anchor.html',
+        client=client,
+        user=current_user,
+    )
+
+
 @portal_bp.get('/p/<slug>/invite')
 @login_required
 def invite_user(slug):
