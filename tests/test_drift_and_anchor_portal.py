@@ -48,7 +48,7 @@ EXPECTED_BRANDING = {
     'primary_color': '#160E33',
     'accent_color': '#C9A66B',
     'logo_max_height': '5rem',
-    'tagline': 'Brand Strategy and Storytelling Consultancy',
+    'tagline': 'Your brand is everything. And nothing without the right story.',
     'font_display': '"DM Serif Display", serif',
 }
 
@@ -129,7 +129,7 @@ class TestDriftAndAnchorClientRow:
         assert client.is_active is True
         assert client.primary_color == '#160E33'
         assert client.accent_color == '#C9A66B'
-        assert client.tagline == 'Brand Strategy and Storytelling Consultancy'
+        assert client.tagline == 'Your brand is everything. And nothing without the right story.'
         assert client.font_display == '"DM Serif Display", serif'
         assert client.logo_max_height == '5rem'
 
@@ -183,7 +183,7 @@ def drift_and_anchor_client(db_session):
         name='Drift & Anchor',
         primary_color='#160E33',
         accent_color='#C9A66B',
-        tagline='Brand Strategy and Storytelling Consultancy',
+        tagline='Your brand is everything. And nothing without the right story.',
         logo_url='https://example.com/da-logo.png',
         banner_url='https://example.com/da-banner.jpg',
         font_url=(
@@ -286,38 +286,53 @@ class TestDriftAndAnchorTemplate:
         html = self._get_landing_html(client, drift_and_anchor_user)
         assert html  # non-empty body
 
-    def test_hero_copy_present(
+    def test_hero_tagline_under_banner(
         self, app, client, drift_and_anchor_user,
     ):
         html = self._get_landing_html(client, drift_and_anchor_user)
-        # Hero line, verbatim from the brief.
+        # The single hero tagline, verbatim from the brief.
         assert 'Your brand is everything. And nothing without the right story.' in html
-        # Brand story body — first 80 chars as a fingerprint.
-        assert 'Stories do what facts and logic cannot' in html
-        assert 'Drift &amp; Anchor' in html or 'Drift & Anchor' in html
+        # Tagline sits *after* the banner in the rendered HTML.
+        banner_pos = html.find('portal-banner')
+        tagline_pos = html.find('Your brand is everything.')
+        assert banner_pos >= 0 and tagline_pos >= 0
+        assert banner_pos < tagline_pos, 'tagline should appear under the banner'
+        # Hero variant class scopes the larger italic styling.
+        assert 'portal__tagline--hero' in html
 
-    def test_services_split_present(
+    def test_no_eyebrow_logo_or_services_card(
         self, app, client, drift_and_anchor_user,
     ):
         html = self._get_landing_html(client, drift_and_anchor_user)
-        assert 'Our Services' in html
-        # Strategy column
-        assert 'Strategy' in html
-        assert 'Brand Strategy' in html
-        assert 'Research' in html
-        assert 'Messaging Strategy' in html
-        # Creative column
-        assert 'Creative' in html
-        assert 'Campaign Development' in html
-        assert 'Brand Design' in html
+        # Eyebrow row removed per Quinn's revision.
+        assert 'portal__eyebrow-row' not in html
+        assert 'portal__eyebrow-logo' not in html
+        # "Our Services" split card removed per Quinn's revision.
+        assert 'Our Services' not in html
+        assert 'da-services' not in html
+        # Engagement placeholder stub also removed (R1 ships the
+        # engagement-hub grid directly).
+        assert 'Engagement hub' not in html
+        assert 'coming soon' not in html
 
-    def test_engagement_placeholder_present(
+    def test_engagement_hub_cards_present(
         self, app, client, drift_and_anchor_user,
     ):
+        # Same five cards as ACME and CTAI: Documents, Projects,
+        # Applications, User Guides, Registered Users.
         html = self._get_landing_html(client, drift_and_anchor_user)
-        # Mirrors the CTAI "Coming in R2" pattern.
-        assert 'Engagement hub' in html
-        assert 'coming soon' in html
+        for heading in (
+            'Documents',
+            'Projects',
+            'Applications',
+            'User Guides',
+            'Registered Users',
+        ):
+            assert f'portal-dashboard-col__title">{heading}<' in html, (
+                f'engagement-hub card missing: {heading!r}'
+            )
+        # The grid wrapper is the shared partial.
+        assert 'portal-dashboard-grid' in html
 
     def test_themed_palette_in_css(
         self, app, client, drift_and_anchor_user,
@@ -328,31 +343,25 @@ class TestDriftAndAnchorTemplate:
         assert '--client-accent: #C9A66B' in html
         # 8px radius chosen for the brand's editorial-rounded feel.
         assert '--client-radius: 8px' in html
-        # Display font from Google Fonts.
+        # Display font from Google Fonts — should appear in both the
+        # <link> href and the --client-font-display CSS var.
         assert 'DM Serif Display' in html
         # portal.css is linked.
         assert 'portal.css' in html
 
-    def test_logo_and_banner_render(
+    def test_banner_renders_and_welcome_link_present(
         self, app, client, drift_and_anchor_user,
     ):
         html = self._get_landing_html(client, drift_and_anchor_user)
-        # Eyebrow logo from the BRANDING_PROFILES logo_url.
-        assert 'https://example.com/da-logo.png' in html
         # Banner from the BRANDING_PROFILES banner_url.
         assert 'https://example.com/da-banner.jpg' in html
         # portal-page class wraps the body (light-locked block).
         assert 'portal-page' in html
         # Scope class so Drift & Anchor-specific CSS can't bleed.
         assert 'drift-and-anchor' in html
-
-    def test_back_to_portal_link(
-        self, app, client, drift_and_anchor_user,
-    ):
-        html = self._get_landing_html(client, drift_and_anchor_user)
-        # The welcome row links back to the standard dashboard.
-        assert '/p/drift-and-anchor' in html
-        assert 'Back to portal' in html
+        # Welcome row logs out (no separate "back to portal" — the
+        # landing IS the engagement hub).
+        assert 'Log out' in html
 
 
 # ---------------------------------------------------------------------------

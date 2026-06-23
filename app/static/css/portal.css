@@ -254,6 +254,19 @@
   line-height: var(--line-height-relaxed);
 }
 
+/* Hero variant — used as the single-line tagline under per-client
+   landing banners (e.g. Drift & Anchor). Larger, primary-coloured,
+   italic so it reads as a brand line rather than a muted label. */
+.portal__tagline--hero {
+  font-family: var(--client-font-display, var(--font-family-display));
+  font-style: italic;
+  font-weight: var(--client-font-weight, 400);
+  font-size: var(--text-xl);
+  color: var(--client-primary, var(--color-heading));
+  letter-spacing: var(--letter-spacing-tight);
+  margin-block: var(--space-2) var(--space-4);
+}
+
 /* Banner hero */
 .portal-banner {
   border-radius: var(--client-radius, var(--radius-lg));
@@ -434,7 +447,7 @@ a.portal-dashboard-col__item:hover {
 }
 
 .portal-section__title {
-  font-family: var(--font-family-display);
+  font-family: var(--client-font-display, var(--font-family-display));
   font-size: var(--text-xl);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);

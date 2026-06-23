@@ -147,14 +147,13 @@ def client_dashboard(slug: str):
 @portal_bp.get('/p/drift-and-anchor/')
 @login_required
 def drift_and_anchor_overview():
-    """Drift & Anchor landing — brand story + services split + engagement hub.
+    """Drift & Anchor landing — brand banner + tagline + engagement hub.
 
     Sister route to ``client_dashboard`` but richer: the dashboard is
-    the standard 5-column resource grid; this landing is the
-    brand-story-driven entry pad that the rest of the portal hangs off.
-    R1 ships the route + template + theming; R2 layers in the live
-    engagement timeline and the OpenProject embed (see the engagement
-    card in ``portal/drift_and_anchor.html`` for the R2/R3 plan).
+    the eyebrow-row / 5-column resource grid; this landing adds a
+    brand-story banner (storm/seascape from drift-and-anchor.com) and
+    a single hero tagline above the same 5-card engagement hub that
+    ACME and CTAI use.
 
     Access mirrors ``client_dashboard``: the user must belong to the
     Drift & Anchor client OR be a site admin. The slug is hard-coded
@@ -171,10 +170,31 @@ def drift_and_anchor_overview():
     ):
         abort(403)
 
+    resources = (
+        ClientResource.query
+        .filter_by(client_id=client.id, is_visible=True)
+        .order_by(ClientResource.category, ClientResource.sort_order)
+        .all()
+    )
+    grouped = {}
+    for r in resources:
+        grouped.setdefault(r.category, []).append(r)
+
+    client_users = (
+        User.query
+        .filter_by(client_id=client.id, is_active_user=True)
+        .filter(User.password_hash.isnot(None))
+        .all()
+    )
+
     return render_template(
         'portal/drift_and_anchor.html',
         client=client,
         user=current_user,
+        grouped_resources=grouped,
+        resources_by_cat=grouped,
+        categories=ClientResource.CATEGORIES,
+        client_users=client_users,
     )
 
 

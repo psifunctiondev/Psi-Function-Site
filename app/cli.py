@@ -307,7 +307,7 @@ BRANDING_PROFILES = {
             '67dec82c885d36503ddeb44e/t/68483d1e11a80855d83d3ffc/'
             '1749564702103/D%26A_social-share.jpg?format=1500w'
         ),
-        'tagline': 'Brand Strategy and Storytelling Consultancy',
+        'tagline': 'Your brand is everything. And nothing without the right story.',
         'font_url': (
             'https://fonts.googleapis.com/css2?'
             'family=DM+Serif+Display:ital,wght@0,400;1,400'

@@ -55,46 +55,6 @@
       no-repeat;
     background-color: transparent;
   }
-
-  /* Drift & Anchor-specific layout — the landing page has a two-col
-     "Our Services" split that mirrors the rhythm of their Squarespace
-     site's services section. Scoped under `.portal-page.drift-and-anchor`
-     so it can't bleed into other clients. */
-  .portal-page.drift-and-anchor .da-services {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-4);
-  }
-
-  @media (max-width: 40rem) {
-    .portal-page.drift-and-anchor .da-services {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .portal-page.drift-and-anchor .da-services__col {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .portal-page.drift-and-anchor .da-services__eyebrow {
-    margin: 0;
-    font-family: var(--client-font-display, var(--font-family-display));
-    font-size: var(--text-sm);
-    letter-spacing: var(--letter-spacing-wide);
-    text-transform: uppercase;
-    color: var(--client-accent);
-  }
-
-  .portal-page.drift-and-anchor .da-services__list {
-    margin: 0;
-    padding-left: 1.1rem;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    color: var(--color-text);
-  }
 </style>
 {% endblock %}
 
@@ -102,94 +62,34 @@
 
 <section class="portal-page drift-and-anchor">
 
-  <div class="portal__eyebrow-row">
-    {% if client.logo_url %}
-      <img class="portal__eyebrow-logo" src="{{ client.logo_url }}" alt="{{ client.name }}">
-    {% else %}
-      <p class="portal__eyebrow portal__eyebrow--client">{{ client.name }}</p>
-    {% endif %}
-  </div>
-
-  {% if client.tagline %}
-    <p class="portal__tagline">{{ client.tagline }}</p>
-  {% endif %}
-
   <div class="container section-stack">
 
+    {# Banner hero — the storm/seascape image pulled from drift-and-anchor.com #}
     {% if client.banner_url %}
       <div class="portal-banner">
         <img class="portal-banner__img" src="{{ client.banner_url }}" alt="{{ client.name }} banner">
       </div>
     {% endif %}
 
-    <!-- Welcome + back-to-dashboard -->
+    {# Hero tagline — single line, set under the banner. Quinn's
+       revision: "only" this line; the longer Brand Strategy tagline
+       lives only as the DB column for future reuse. #}
+    {% if client.tagline %}
+      <p class="portal__tagline portal__tagline--hero">{{ client.tagline }}</p>
+    {% endif %}
+
+    <!-- Welcome + logout -->
     <div class="portal-welcome">
       <span class="portal-welcome__greeting">
         Welcome, {{ user.display_name or user.email }}
       </span>
-      <a class="portal-welcome__logout" href="{{ url_for('portal.client_dashboard', slug=client.slug) }}">← Back to portal</a>
+      <a class="portal-welcome__logout" href="{{ url_for('auth.logout') }}">Log out</a>
     </div>
 
-    <!-- Hero card — the brand story. R1 ships the body copy from
-         drift-and-anchor.com; the dynamic engagement timeline lands
-         in R2 once the OpenProject mirror is wired. -->
-    <div class="card">
-      <h1 class="portal-section__title portal-section__title--client">
-        Your brand is everything. And nothing without the right story.
-      </h1>
-      <p class="card__text">
-        Stories do what facts and logic cannot. The strongest brands are
-        built where creativity meets commerce. That's why our brand
-        strategies are crafted to both captivate and convert. At Drift
-        &amp; Anchor, we bridge brand and sales from the start. Shaping
-        strategies and stories that spark demand and build momentum.
-      </p>
-    </div>
-
-    <!-- Services split — mirrors the rhythm of the Squarespace site's
-         "Our Services" section. Two columns (Strategy / Creative) with
-         the same display-font eyebrow + body list treatment. -->
-    <div class="card">
-      <h2 class="portal-section__title portal-section__title--client">Our Services</h2>
-      <div class="da-services">
-        <div class="da-services__col">
-          <p class="da-services__eyebrow">Strategy</p>
-          <ul class="da-services__list">
-            <li>Brand Strategy &amp; Positioning</li>
-            <li>Research</li>
-            <li>Messaging Strategy</li>
-          </ul>
-        </div>
-        <div class="da-services__col">
-          <p class="da-services__eyebrow">Creative</p>
-          <ul class="da-services__list">
-            <li>Campaign Development</li>
-            <li>Activation &amp; Content Development</li>
-            <li>Brand Identity &amp; Messaging</li>
-            <li>Brand Design</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- Engagement hub — R1 stub. R2 will replace the body with the
-         engagement-timeline card, OpenProject workspace embed, and
-         Catherine-specific contact handoff. Mirrors the CTAI
-         TruRender "Coming in R2" pattern. -->
-    <div class="card">
-      <h2 class="portal-section__title portal-section__title--client">Engagement hub — coming soon</h2>
-      <p class="card__text">
-        This page is the landing pad for the Drift &amp; Anchor
-        engagement. R1 ships the route, the brand theming, and the
-        initial dashboard resources so the portal isn't empty when
-        Catherine first signs in.
-      </p>
-      <p class="card__text">
-        R2 will replace this card with the engagement timeline, the
-        OpenProject workspace embed, and the contact handoff. R3
-        layers in the MkDocs guide index and case-study reels.
-      </p>
-    </div>
+    {# 5-column engagement hub — same five cards as ACME and CTAI.
+       Pulled out into a shared partial so dashboard.html and any
+       future per-client landing stay in lockstep. #}
+    {% include 'portal/_dashboard_grid.html' %}
 
   </div>
 
