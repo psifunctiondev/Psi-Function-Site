@@ -377,11 +377,35 @@ class TestSeedDriftAndAnchorResources:
         client = Client.query.filter_by(slug='drift-and-anchor').first()
         assert client is not None
         rows = ClientResource.query.filter_by(client_id=client.id).all()
-        assert len(rows) == len(DRIFT_AND_ANCHOR_RESOURCES)
 
+        # The seeder creates every row in DRIFT_AND_ANCHOR_RESOURCES
+        # *and* removes the two stale placeholders (Project Workspace,
+        # User Guides) that previously hooked the Projects and User
+        # Guides cards to dead `#` links. Net result: rows in DB are
+        # the four source-list entries minus the two stale removals.
         seeded_titles = {r.title for r in rows}
         expected_titles = {e['title'] for e in DRIFT_AND_ANCHOR_RESOURCES}
         assert seeded_titles == expected_titles
+
+    def test_removes_stale_placeholders(self, app, db_session):
+        # Quinn's R1 review: Projects and User Guides cards should
+        # show the empty-state copy (matching Documents/Applications),
+        # not hook to a placeholder row. The seeder actively removes
+        # the two stale rows on every run (idempotent: no error if
+        # already gone).
+        for stale_title in ('Project Workspace', 'User Guides'):
+            pre = ClientResource.query.filter_by(title=stale_title).first()
+            assert pre is None, (
+                f'test fixture should not pre-seed {stale_title!r}'
+            )
+
+        _invoke(app, ['seed-drift-and-anchor-resources'])
+
+        for stale_title in ('Project Workspace', 'User Guides'):
+            post = ClientResource.query.filter_by(title=stale_title).first()
+            assert post is None, (
+                f'seeder should have removed stale row {stale_title!r}'
+            )
 
     def test_uses_known_categories(self, app, db_session):
         _invoke(app, ['seed-drift-and-anchor-resources'])
@@ -405,6 +429,8 @@ class TestSeedDriftAndAnchorResources:
         result = _invoke(app, ['seed-drift-and-anchor-resources'])
         assert result.exit_code == 0, result.output
         assert ClientResource.query.count() == first_count
+        # Second run: every source-list row is unchanged AND the
+        # stale placeholders are still gone (idempotent re-removal).
         assert 'unchanged' in result.output
 
     def test_creates_client_if_missing(self, app, db_session):

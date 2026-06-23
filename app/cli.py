@@ -668,22 +668,6 @@ DRIFT_AND_ANCHOR_RESOURCES = [
         'sort_order': 30,
     },
     {
-        'title': 'Project Workspace',
-        'description': (
-            'Coming soon — interactive backlog view (OpenProject integration).'
-        ),
-        'category': 'backlog',
-        'external_url': '#',
-        'sort_order': 40,
-    },
-    {
-        'title': 'User Guides',
-        'description': 'MkDocs-hosted strategy frameworks and playbooks.',
-        'category': 'guide',
-        'external_url': '#',
-        'sort_order': 50,
-    },
-    {
         'title': 'Contact',
         'description': 'Reach the Psi Function team — quinn@psifunction.com.',
         'category': 'general',
@@ -763,11 +747,27 @@ def seed_drift_and_anchor_resources():
             unchanged_count += 1
 
     db.session.commit()
+
+    # Remove placeholder rows that previously hooked the Projects and
+    # User Guides cards to dead `#` links. Quinn's R1 review: cards
+    # should show the empty-state copy instead, the same as Documents
+    # and Applications. Idempotent — only deletes if the row exists.
+    deleted_count = 0
+    for stale_title in ('Project Workspace', 'User Guides'):
+        stale = ClientResource.query.filter_by(
+            client_id=client_org.id, title=stale_title,
+        ).first()
+        if stale is not None:
+            db.session.delete(stale)
+            deleted_count += 1
+            click.echo(f'  - {stale_title} (stale placeholder)')
+
+    db.session.commit()
     click.echo('')
     click.echo(
         f'Seeded Drift & Anchor resources: {created_count} created, '
-        f'{updated_count} updated, {unchanged_count} unchanged '
-        f'(total {len(DRIFT_AND_ANCHOR_RESOURCES)}).'
+        f'{updated_count} updated, {unchanged_count} unchanged, '
+        f'{deleted_count} removed (total {len(DRIFT_AND_ANCHOR_RESOURCES)}).'
     )
 
 
