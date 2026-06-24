@@ -65,6 +65,17 @@
   padding: var(--space-6);
 }
 
+/* Disable card raise on hover for the login-grid cards. These are
+   display/utility containers (the door image and the auth form),
+   not interactive cards, so the global .card:hover raise effect
+   feels misleading. Keep the cards visually static on hover. */
+.portal-login-grid__media:hover,
+.portal-login-grid__auth:hover {
+  transform: none;
+  box-shadow: none;
+  background: var(--color-surface);
+}
+
 /* --- Auth tabs --- */
 
 .portal-auth-tabs {

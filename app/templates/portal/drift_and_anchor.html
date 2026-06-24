@@ -81,7 +81,7 @@
     <!-- Welcome + logout -->
     <div class="portal-welcome">
       <span class="portal-welcome__greeting">
-        Welcome, {{ user.display_name or user.email }}
+        Welcome, {{ user.display_name or user.email.split('@')[0] }}
       </span>
       <a class="portal-welcome__logout" href="{{ url_for('auth.logout') }}">Log out</a>
     </div>
