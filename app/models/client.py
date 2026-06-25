@@ -47,12 +47,12 @@ class ClientResource(db.Model):
     client = db.relationship('Client', back_populates='resources')
 
     CATEGORIES = {
-        'proposal': 'Documents',
+        'document': 'Documents',
         'backlog': 'Project Backlog',
         'guide': 'User Guides',
         'asset': 'Assets & Deliverables',
         'invoice': 'Invoices',
-        'custom': 'Custom Tools',
+        'application': 'Applications',
         'general': 'General',
         # Showcase / engagement-narrative categories. Used by the ACME
         # demo client to surface the Psi Function service arc; available

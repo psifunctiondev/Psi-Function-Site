@@ -59,12 +59,12 @@
   <div class="portal-dashboard-col">
     <h2 class="portal-dashboard-col__title">Applications</h2>
     <div class="portal-dashboard-col__items">
-      {% for r in resources_by_cat.get('custom', []) %}
+      {% for r in resources_by_cat.get('application', []) %}
         <a class="portal-dashboard-col__item" href="{{ r.external_url or url_for('static', filename=r.file_path) }}" {% if r.external_url %}target="_blank" rel="noopener noreferrer"{% endif %}>
           {{ r.title }}
         </a>
       {% else %}
-        <span class="portal-dashboard-col__empty">No tools yet</span>
+        <span class="portal-dashboard-col__empty">No applications yet</span>
       {% endfor %}
     </div>
   </div>

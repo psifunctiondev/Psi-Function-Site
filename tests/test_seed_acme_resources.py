@@ -37,8 +37,8 @@ class TestResourceCategories:
 
     def test_legacy_categories_preserved(self):
         """The existing categories must still be present (no breakage)."""
-        for key in ('proposal', 'backlog', 'guide', 'asset',
-                    'invoice', 'custom', 'general'):
+        for key in ('document', 'backlog', 'guide', 'asset',
+                    'invoice', 'application', 'general'):
             assert key in ClientResource.CATEGORIES
 
 
