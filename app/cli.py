@@ -668,6 +668,16 @@ DRIFT_AND_ANCHOR_RESOURCES = [
         'sort_order': 30,
     },
     {
+        'title': 'Competitive Audit',
+        'description': (
+            'Capture a competitive audit request. '
+            'Back-end processing runs separately.'
+        ),
+        'category': 'application',
+        'external_url': '/p/drift-and-anchor/competitive-audit/',
+        'sort_order': 10,
+    },
+    {
         'title': 'Contact',
         'description': 'Reach the Psi Function team — quinn@psifunction.com.',
         'category': 'general',
