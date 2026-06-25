@@ -176,30 +176,6 @@ class TestDriftAndAnchorRouteAuth:
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def drift_and_anchor_client(db_session):
-    """A Drift & Anchor client row matching the BRANDING_PROFILES entry."""
-    c = Client(
-        slug='drift-and-anchor',
-        name='Drift & Anchor',
-        primary_color='#160E33',
-        accent_color='#C9A66B',
-        tagline='Your brand is everything. And nothing without the right story.',
-        logo_url='https://example.com/da-logo.png',
-        banner_url='https://example.com/da-banner.jpg',
-        font_url=(
-            'https://fonts.googleapis.com/css2?'
-            'family=DM+Serif+Display:ital,wght@0,400;1,400'
-        ),
-        font_display='"DM Serif Display", serif',
-        logo_max_height='5rem',
-        is_active=True,
-    )
-    db_session.add(c)
-    db_session.commit()
-    return c
-
-
-@pytest.fixture
 def drift_and_anchor_user(db_session, drift_and_anchor_client):
     from app.models.user import User
     user = User(
