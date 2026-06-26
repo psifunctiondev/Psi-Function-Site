@@ -382,6 +382,11 @@ class TestRouteGet:
         # The client_name field is present and empty.
         assert 'name="client_name"' in body
         assert 'value=""' in body
+        # Slice 7 item 2: the "Competitive Audit for Client:" label
+        # above client_name was retired; only the input remains.
+        assert 'Competitive Audit for Client:' not in body
+        assert '>Brand Name:</label>' in body
+        assert '>Brand Home Page URL:</label>' in body
         # Exactly ONE default competitor sub-card is rendered.
         # The default card carries data-competitive-audit-card; we
         # count those (not the JS literal that also mentions the
@@ -886,8 +891,11 @@ class TestTemplate:
         # The 5-column grid wrapper still exists (column 1 = client,
         # columns 2-5 = the FIRST competitor sub-card).
         assert 'competitive-audit-grid' in body
-        # Column 1 — client name.
-        assert 'Competitive Audit for Client:' in body
+        # Column 1 — client name. Slice 7 (item 2): the
+        # "Competitive Audit for Client:" label was removed; only
+        # the input remains. The label text must NOT render.
+        assert 'Competitive Audit for Client:' not in body
+        assert 'name="client_name"' in body
         # Exactly ONE competitor sub-card is server-rendered.
         # Count the dedicated data attribute on the server-rendered
         # default card (cloned cards don't carry it).
@@ -903,30 +911,106 @@ class TestTemplate:
         # for competitor index 1.
         assert 'Competitor 1' in body
         assert 'competitor_1_brand_name' in body
-        assert 'Competitor Brand Name:' in body
+        # Slice 7 (item 3): "Competitor Brand Name:" → "Brand Name:"
+        assert '>Brand Name:</label>' in body
+        assert 'Competitor Brand Name:' not in body
         assert 'competitor_1_home_url' in body
-        assert 'Home Page URL:' in body
+        # Slice 7 (item 4): "Home Page URL:" → "Brand Home Page URL:".
+        # Anchor to the literal `>Home Page URL:</label>` so we don't
+        # false-positive on the substring "Home Page URL:" appearing
+        # inside "Brand Home Page URL:".
+        assert '>Brand Home Page URL:</label>' in body
+        assert '>Home Page URL:</label>' not in body
         # Slice 6 (item 9): "Include Socials:" retired; only "Socials:"
         # is rendered now.
         assert '>Socials:</div>' in body
         assert 'Include Socials:' not in body
+        # Slice 7 items 11-14: the socials label now sits in a
+        # dedicated .competitive-audit-socials__label element, and
+        # all four (label + checkbox) pairs sit on the SAME inline
+        # row inside .competitive-audit-socials.
+        assert 'competitive-audit-socials__label' in body
+        # Slice 7 item 12: colons stripped from the checkbox labels
+        # (X, Facebook, Instagram, YouTube); the "Socials:" label
+        # itself keeps its colon.
+        assert '>X</label>' in body
+        assert '>Facebook</label>' in body
+        assert '>Instagram</label>' in body
+        assert '>YouTube</label>' in body
+        assert '>X:</label>' not in body
+        assert '>Facebook:</label>' not in body
+        assert '>Instagram:</label>' not in body
+        assert '>YouTube:</label>' not in body
         assert 'competitor_1_include_x' in body
         assert 'competitor_1_include_facebook' in body
         assert 'competitor_1_include_instagram' in body
         assert 'competitor_1_include_youtube' in body
+        # Slice 7 items 5-6: brand_name + URL sit side-by-side inside
+        # .competitive-audit-fields-grid. Same-line sanity: both
+        # field names must appear inside that wrapper.
+        fields_block = re.search(
+            r'<div class="competitive-audit-fields-grid">(.*?)</div>\s*<!--',
+            body, flags=re.S,
+        )
+        assert fields_block is not None, 'sub-grid wrapper not found'
+        inner = fields_block.group(1)
+        assert 'competitor_1_brand_name' in inner
+        assert 'competitor_1_home_url' in inner
+        # Slice 7 items 7-10: top-align declared in the CSS rule.
+        assert re.search(
+            r'\.competitive-audit-fields-grid\s+\.competitive-audit-row\s*\{'
+            r'[^}]*align-items:\s*flex-start',
+            body,
+        )
+        # Slice 7 item 13: .competitive-audit-social > label is no
+        # longer font-weight: 700. Slice 6 had pinned it at 700 —
+        # the rule must have dropped that.
+        social_label_rule = re.search(
+            r'\.competitive-audit-social\s*>\s*label\s*\{[^}]+\}',
+            body,
+        )
+        assert social_label_rule is not None, 'social-label rule missing'
+        assert 'font-weight: 400' in social_label_rule.group(0)
+        assert 'font-weight: 700' not in social_label_rule.group(0)
         # The default card does NOT pre-render indices 2..4 — Quinn
         # (slice 6 items 3-5): single default card, more via JS Add.
         assert 'competitor_2_brand_name' not in body
         assert 'competitor_3_brand_name' not in body
         assert 'competitor_4_brand_name' not in body
         # Order check: brand_name comes before home_url within the
-        # default card.
+        # default card, and the fields block comes before the socials.
         first_card = body[body.find('Competitor 1'):body.find('data-competitive-audit-extra-cards')]
-        assert first_card.find('Competitor Brand Name:') < first_card.find(
-            'Home Page URL:',
+        assert first_card.find('>Brand Name:</label>') < first_card.find(
+            '>Brand Home Page URL:</label>',
         )
-        assert first_card.find('Home Page URL:') < first_card.find(
+        assert first_card.find('>Brand Home Page URL:</label>') < first_card.find(
             '>Socials:</div>',
+        )
+
+    def test_action_buttons_get_scoped_font_size_bump(
+        self, app, client, admin, drift_and_anchor_client,
+    ):
+        # Slice 7 item 15: .competitive-audit-actions .btn gets a
+        # scoped font-size override (~16px) so the primary CTA reads
+        # stronger. The rule must exist; the override must NOT be on
+        # a naked .btn selector (would leak globally).
+        body = self._get(client)
+        rule = re.search(
+            r'\.competitive-audit-actions\s+\.btn\s*\{[^}]+\}',
+            body,
+        )
+        assert rule is not None, 'scoped .competitive-audit-actions .btn rule missing'
+        rule_body = rule.group(0)
+        assert 'font-size' in rule_body
+        # Page-scoped (not naked .btn): the selector must start with
+        # .competitive-audit-actions. We already asserted that via the
+        # regex match.
+        # Negative: no naked `.btn { font-size: 16px ... }` or
+        # `.btn { font-size: 1rem ... }` rule that would leak.
+        assert not re.search(
+            r'^\s*\.btn\s*\{[^}]*font-size:\s*(1rem|16px|17px)',
+            body,
+            flags=re.MULTILINE,
         )
 
     def test_social_toggles_default_checked_on_first_visit(

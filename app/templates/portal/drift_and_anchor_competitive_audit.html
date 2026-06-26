@@ -130,6 +130,33 @@
     margin-top: var(--space-2);
   }
 
+  /* Slice 7 items 5-6: internal 2-col sub-grid inside the FIRST
+     competitor sub-card (and any added clone). brand_name sits in
+     sub-col 1 (left half), home_url in sub-col 2 (right half). The
+     outer card still spans the page-level cols 2-5. */
+  .competitive-audit-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+  @media (max-width: 700px) {
+    /* Narrow viewports: stack the two fields full-width rather than
+       squeeze them into ~50% of an already-narrow card. */
+    .competitive-audit-fields-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  /* Items 7-10: top-align the label + input inside each row so they
+     all hug the top edge of the row (no baseline-anchored middle
+     alignment now that brand_name and home_url sit side-by-side). */
+  .competitive-audit-fields-grid .competitive-audit-row {
+    align-items: flex-start;
+  }
+  .competitive-audit-fields-grid .competitive-audit-row > label,
+  .competitive-audit-fields-grid .competitive-audit-row > input {
+    align-self: flex-start;
+  }
+
   /* Container for ADDED competitor sub-cards (cloned by JS on Add).
      Each clone is rendered as a full-width row using the same
      .competitive-audit-col markup with a re-indexed prefix. */
@@ -187,22 +214,32 @@
     pointer-events: auto;
   }
 
+  /* Slice 7 items 11-14: socials label + four (label + checkbox)
+     pairs all sit on ONE inline row, evenly spaced. Labels are
+     un-bolded (400), the trailing colons on the checkbox labels are
+     gone, and the gap between each label and its checkbox is
+     tightened to ~16px (about a checkbox-width). */
   .competitive-audit-socials {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    margin-top: var(--space-2);
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+  .competitive-audit-socials__label {
+    font-weight: 700;
+    font-size: var(--text-sm);
   }
   .competitive-audit-socials > .competitive-audit-social {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-1);
   }
   .competitive-audit-social > label {
-    font-weight: 700;
+    font-weight: 400;
     font-size: var(--text-sm);
-    min-width: 5rem;
   }
 
   /* First-visit "Start New Audit" card — Quinn (item 1): LEFT-
@@ -278,6 +315,13 @@
     align-items: center;
     margin-top: var(--space-4);
   }
+  .competitive-audit-actions .btn {
+    /* Slice 7 item 15: bump the action-button font size from the
+       inherited ~14px to ~16px so the primary CTA reads stronger.
+       Scoped to .competitive-audit-actions so we don't widen the
+       global .btn rule. */
+    font-size: 1rem;
+  }
   .competitive-audit-actions .btn[disabled] {
     cursor: not-allowed;
     opacity: 0.55;
@@ -324,11 +368,11 @@
 
         <div class="competitive-audit-grid">
 
-          {# Column 1: Client Name — label + text input on one line. #}
+          {# Column 1: Client Name — slice 7 item 2: drop the "Competitive
+              Audit for Client:" label above the input, keep the input. #}
           <div class="competitive-audit-col">
             <div class="competitive-audit-col__title">Client</div>
             <div class="competitive-audit-row">
-              <label for="client_name">Competitive Audit for Client:</label>
               <input type="text" id="client_name" name="client_name"
                      value="{{ form_data.client_name or '' }}"
                      required>
@@ -343,46 +387,56 @@
                 data-server-rendered="1">
             <div class="competitive-audit-col__title">Competitor 1</div>
 
-            <div class="competitive-audit-row">
-              <label for="competitor_1_brand_name">Competitor Brand Name:</label>
-              <input type="text" id="competitor_1_brand_name"
-                     name="competitor_1_brand_name"
-                     value="{{ (comp.brand_name if comp else '') or '' }}">
+            {# Slice 7 items 5-6: brand_name + URL now live in an internal
+               2-col sub-grid (left half = brand, right half = URL). The
+               outer competitor card still spans cols 2-5 of the page-
+               level 5-column grid. #}
+            <div class="competitive-audit-fields-grid">
+              <div class="competitive-audit-row">
+                <label for="competitor_1_brand_name">Brand Name:</label>
+                <input type="text" id="competitor_1_brand_name"
+                       name="competitor_1_brand_name"
+                       value="{{ (comp.brand_name if comp else '') or '' }}">
+              </div>
+
+              <div class="competitive-audit-row">
+                <label for="competitor_1_home_url">Brand Home Page URL:</label>
+                <input type="text" id="competitor_1_home_url"
+                       name="competitor_1_home_url"
+                       value="{{ (comp.home_url if comp else '') or '' }}">
+              </div>
             </div>
 
-            <div class="competitive-audit-row">
-              <label for="competitor_1_home_url">Home Page URL:</label>
-              <input type="text" id="competitor_1_home_url"
-                     name="competitor_1_home_url"
-                     value="{{ (comp.home_url if comp else '') or '' }}">
-            </div>
-
-            <div class="competitive-audit-row" style="font-weight:700;">Socials:</div>
+{# Slice 7 items 11-14: socials label + all four (label + checkbox)
+               pairs on ONE inline row. Labels un-bolded, colons stripped
+               from the checkbox labels (the "Socials:" label keeps its
+               colon), gap between label and checkbox tightened to ~16px. #}
             <div class="competitive-audit-socials">
               {% set socials = comp.include_socials if comp and comp.include_socials else {} %}
+              <div class="competitive-audit-socials__label">Socials:</div>
               <div class="competitive-audit-social">
-                <label for="competitor_1_include_x">X:</label>
                 <input type="checkbox" id="competitor_1_include_x"
                        name="competitor_1_include_x"
                        {% if socials.get('x', True) %}checked{% endif %}>
+                <label for="competitor_1_include_x">X</label>
               </div>
               <div class="competitive-audit-social">
-                <label for="competitor_1_include_facebook">Facebook:</label>
                 <input type="checkbox" id="competitor_1_include_facebook"
                        name="competitor_1_include_facebook"
                        {% if socials.get('facebook', True) %}checked{% endif %}>
+                <label for="competitor_1_include_facebook">Facebook</label>
               </div>
               <div class="competitive-audit-social">
-                <label for="competitor_1_include_instagram">Instagram:</label>
                 <input type="checkbox" id="competitor_1_include_instagram"
                        name="competitor_1_include_instagram"
                        {% if socials.get('instagram', True) %}checked{% endif %}>
+                <label for="competitor_1_include_instagram">Instagram</label>
               </div>
               <div class="competitive-audit-social">
-                <label for="competitor_1_include_youtube">YouTube:</label>
                 <input type="checkbox" id="competitor_1_include_youtube"
                        name="competitor_1_include_youtube"
                        {% if socials.get('youtube', True) %}checked{% endif %}>
+                <label for="competitor_1_include_youtube">YouTube</label>
               </div>
             </div>
 
