@@ -46,6 +46,20 @@
     background-color: transparent;
   }
 
+  /* ----------------------------------------------------------
+     Drift & Anchor brand font — scoped to THIS page only.
+     Quinn: the cards/titles need DM Serif Display applied
+     within the page scope (NOT globally, so it doesn't leak
+     to other client pages). Regression-tested below in
+     TestTemplate.test_scoped_font_family_applied.
+     ---------------------------------------------------------- */
+  .drift-and-anchor-competitive-audit,
+  .drift-and-anchor-competitive-audit .competitive-audit-col__title,
+  .drift-and-anchor-competitive-audit .competitive-audit-start-card,
+  .drift-and-anchor-competitive-audit .competitive-audit-form-card {
+    font-family: var(--client-font-display, 'DM Serif Display', serif);
+  }
+
   /* Page-scoped tagline override — Quinn: bold + non-italic on THIS
      page only. The base .portal__tagline--hero is italic for the D&A
      landing; we override it here without leaking. */
@@ -56,15 +70,32 @@
 
   /* Form card hover-suppress — mirrors the login-card pattern so the
      form doesn't visually "raise" on hover (it's not a clickable
-     surface). */
+     surface). Also pins z-index above the page-level gradient so
+     input clicks aren't eaten by an underlay (item 2 of the
+     review-pass). */
+  .competitive-audit-form-card {
+    position: relative;
+    z-index: 1;
+  }
   .competitive-audit-form-card:hover {
     transform: none;
     box-shadow: none;
     background: var(--color-surface);
   }
+  /* Defensive: every interactive element inside the form is clickable
+     even if some global rule accidentally sets pointer-events: none
+     on a parent (the BUG that Quinn observed in the live review was
+     most likely the page-level gradient eating clicks on the lower
+     inputs; this + the z-index pin above close that hole). */
+  .competitive-audit-form-card,
+  .competitive-audit-form-card * {
+    pointer-events: auto;
+  }
 
-  /* 5-column grid: column 1 = client_name (narrower, label-on-line),
-     columns 2-5 = competitor sub-cards. Wrap on narrow viewports. */
+  /* 5-column grid: column 1 = client_name, columns 2-5 = the FIRST
+     competitor sub-card (spanning 4 cols). Additional competitor
+     cards (added via the "Add" button) stack BELOW the grid as
+     full-width rows via .competitive-audit-extra-cards. */
   .competitive-audit-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -75,11 +106,48 @@
     .competitive-audit-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+    .competitive-audit-col--main {
+      grid-column: 1 / -1;
+    }
   }
   @media (max-width: 600px) {
     .competitive-audit-grid {
       grid-template-columns: minmax(0, 1fr);
     }
+    .competitive-audit-col--main {
+      grid-column: auto;
+    }
+  }
+
+  /* First/default competitor sub-card — spans cols 2-5 of the grid. */
+  .competitive-audit-col--main {
+    grid-column: 2 / span 4;
+    position: relative;
+  }
+  .competitive-audit-col__add-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--space-2);
+  }
+
+  /* Container for ADDED competitor sub-cards (cloned by JS on Add).
+     Each clone is rendered as a full-width row using the same
+     .competitive-audit-col markup with a re-indexed prefix. */
+  .competitive-audit-extra-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+  }
+  .competitive-audit-extra-cards .competitive-audit-col {
+    /* Stretched to full width — visually a "card row" beneath the
+       main grid. */
+    width: 100%;
+  }
+  .competitive-audit-extra-cards .competitive-audit-col__remove-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--space-2);
   }
 
   .competitive-audit-col {
@@ -116,6 +184,7 @@
     border: 1px solid var(--color-border);
     border-radius: calc(var(--client-radius) / 2);
     background: var(--color-bg);
+    pointer-events: auto;
   }
 
   .competitive-audit-socials {
@@ -136,10 +205,11 @@
     min-width: 5rem;
   }
 
-  /* First-visit "Start New Audit" card — full-width, button-styled. */
+  /* First-visit "Start New Audit" card — Quinn (item 1): LEFT-
+     justified text, NOT centered. */
   .competitive-audit-start-card {
     display: block;
-    text-align: center;
+    text-align: left;
     padding: var(--space-4);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
@@ -195,8 +265,25 @@
     color: #2a5a2a;
   }
 
-  .competitive-audit-submit {
+  /* Form actions row — Quinn (items 7+8): primary submit plus two
+     greyscale future-affordance buttons (Edit / Duplicate). The
+     greyscale pair is disabled for now — visible affordance, no
+     behavior. NOTE: CSS comments are rendered into the response
+     body inside <style>, so the literal button labels do NOT appear
+     here — that would leak into the empty-render GET. */
+  .competitive-audit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center;
     margin-top: var(--space-4);
+  }
+  .competitive-audit-actions .btn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.55;
+    background: var(--color-border);
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
   }
 </style>
 {% endblock %}
@@ -248,61 +335,90 @@
             </div>
           </div>
 
-          {# Columns 2-5: Competitor sub-cards. #}
-          {% for i in range(1, 5) %}
-            {% set comp = form_data['competitor_' ~ i] %}
-            <div class="competitive-audit-col">
-              <div class="competitive-audit-col__title">Competitor {{ i }}</div>
+          {# Columns 2-5: the FIRST (default) competitor sub-card.
+              Spans 4 columns. Quinn (item 4): "Add" button at far right. #}
+          {% set comp = form_data['competitor_1'] %}
+           <div class="competitive-audit-col competitive-audit-col--main"
+                data-competitive-audit-card data-card-index="1"
+                data-server-rendered="1">
+            <div class="competitive-audit-col__title">Competitor 1</div>
 
-              <div class="competitive-audit-row">
-                <label for="competitor_{{ i }}_brand_name">Competitor Brand Name:</label>
-                <input type="text" id="competitor_{{ i }}_brand_name"
-                       name="competitor_{{ i }}_brand_name"
-                       value="{{ (comp.brand_name if comp else '') or '' }}">
+            <div class="competitive-audit-row">
+              <label for="competitor_1_brand_name">Competitor Brand Name:</label>
+              <input type="text" id="competitor_1_brand_name"
+                     name="competitor_1_brand_name"
+                     value="{{ (comp.brand_name if comp else '') or '' }}">
+            </div>
+
+            <div class="competitive-audit-row">
+              <label for="competitor_1_home_url">Home Page URL:</label>
+              <input type="text" id="competitor_1_home_url"
+                     name="competitor_1_home_url"
+                     value="{{ (comp.home_url if comp else '') or '' }}">
+            </div>
+
+            <div class="competitive-audit-row" style="font-weight:700;">Socials:</div>
+            <div class="competitive-audit-socials">
+              {% set socials = comp.include_socials if comp and comp.include_socials else {} %}
+              <div class="competitive-audit-social">
+                <label for="competitor_1_include_x">X:</label>
+                <input type="checkbox" id="competitor_1_include_x"
+                       name="competitor_1_include_x"
+                       {% if socials.get('x', True) %}checked{% endif %}>
               </div>
-
-              <div class="competitive-audit-row">
-                <label for="competitor_{{ i }}_home_url">Home Page URL:</label>
-                <input type="text" id="competitor_{{ i }}_home_url"
-                       name="competitor_{{ i }}_home_url"
-                       value="{{ (comp.home_url if comp else '') or '' }}">
+              <div class="competitive-audit-social">
+                <label for="competitor_1_include_facebook">Facebook:</label>
+                <input type="checkbox" id="competitor_1_include_facebook"
+                       name="competitor_1_include_facebook"
+                       {% if socials.get('facebook', True) %}checked{% endif %}>
               </div>
-
-              <div class="competitive-audit-row" style="font-weight:700;">Include Socials:</div>
-              <div class="competitive-audit-socials">
-                {% set socials = comp.include_socials if comp and comp.include_socials else {} %}
-                <div class="competitive-audit-social">
-                  <label for="competitor_{{ i }}_include_x">X:</label>
-                  <input type="checkbox" id="competitor_{{ i }}_include_x"
-                         name="competitor_{{ i }}_include_x"
-                         {% if socials.get('x', True) %}checked{% endif %}>
-                </div>
-                <div class="competitive-audit-social">
-                  <label for="competitor_{{ i }}_include_facebook">Facebook:</label>
-                  <input type="checkbox" id="competitor_{{ i }}_include_facebook"
-                         name="competitor_{{ i }}_include_facebook"
-                         {% if socials.get('facebook', True) %}checked{% endif %}>
-                </div>
-                <div class="competitive-audit-social">
-                  <label for="competitor_{{ i }}_include_instagram">Instagram:</label>
-                  <input type="checkbox" id="competitor_{{ i }}_include_instagram"
-                         name="competitor_{{ i }}_include_instagram"
-                         {% if socials.get('instagram', True) %}checked{% endif %}>
-                </div>
-                <div class="competitive-audit-social">
-                  <label for="competitor_{{ i }}_include_youtube">YouTube:</label>
-                  <input type="checkbox" id="competitor_{{ i }}_include_youtube"
-                         name="competitor_{{ i }}_include_youtube"
-                         {% if socials.get('youtube', True) %}checked{% endif %}>
-                </div>
+              <div class="competitive-audit-social">
+                <label for="competitor_1_include_instagram">Instagram:</label>
+                <input type="checkbox" id="competitor_1_include_instagram"
+                       name="competitor_1_include_instagram"
+                       {% if socials.get('instagram', True) %}checked{% endif %}>
+              </div>
+              <div class="competitive-audit-social">
+                <label for="competitor_1_include_youtube">YouTube:</label>
+                <input type="checkbox" id="competitor_1_include_youtube"
+                       name="competitor_1_include_youtube"
+                       {% if socials.get('youtube', True) %}checked{% endif %}>
               </div>
             </div>
-          {% endfor %}
+
+            <div class="competitive-audit-col__add-row">
+              <button type="button" class="btn"
+                      data-competitive-audit-add
+                      aria-label="Add another competitor">
+                Add
+              </button>
+            </div>
+          </div>
 
         </div>
 
-        <div class="competitive-audit-submit">
-          <button type="submit" class="btn btn--primary">Save Audit</button>
+        {# Container for ADDED competitor sub-cards. The default
+           render ships with this empty; the JS in the script block
+           below clones .competitive-audit-col--main into here on
+           each Add click, re-indexing ids/names so the form posts
+           competitor_2, competitor_3, ... #}
+        <div class="competitive-audit-extra-cards"
+             data-competitive-audit-extra-cards></div>
+
+        {# Form actions — Quinn (items 7+8):
+           - primary "Run Audit" (was "Save Audit")
+           - "Edit Audit" + "Duplicate Audit", disabled (greyed out,
+             visible affordance, no behavior yet) #}
+        <div class="competitive-audit-actions">
+          <button type="submit" class="btn btn--primary">Run Audit</button>
+          <button type="button" class="btn" disabled
+                  aria-label="Edit Audit (not yet wired)">
+            Edit Audit
+          </button>
+          <button type="button" class="btn" disabled
+                  aria-label="Duplicate Audit (not yet wired)">
+            Duplicate Audit
+          </button>
         </div>
 
       </form>
@@ -329,4 +445,91 @@
 
 </section>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    // Quinn (item 5): clone the default competitor sub-card into the
+    // extra-cards container on each "Add" click. NO upper bound for
+    // now — Quinn flagged that a cap may be added later. Each clone
+    // gets a fresh competitor_N index by scanning the existing DOM,
+    // so even server-rendered competitor_2..N (from a fork/edit) get
+    // re-counted correctly.
+    var form = document.querySelector('.competitive-audit-form-card');
+    if (!form) return;
+
+    var defaultCard = form.querySelector(
+      '[data-competitive-audit-card][data-card-index="1"]'
+    );
+    var addBtn = form.querySelector('[data-competitive-audit-add]');
+    var extraContainer = form.querySelector(
+      '[data-competitive-audit-extra-cards]'
+    );
+    if (!defaultCard || !addBtn || !extraContainer) return;
+
+    function nextIndex() {
+      var cards = form.querySelectorAll('[data-competitive-audit-card]');
+      var max = 0;
+      cards.forEach(function (c) {
+        var n = parseInt(c.getAttribute('data-card-index'), 10);
+        if (!isNaN(n) && n > max) max = n;
+      });
+      return max + 1;
+    }
+
+    function reindex(srcHtml, newIndex) {
+      // Replace every occurrence of competitor_1_, id="competitor_1_,
+      // and for="competitor_1_ with the new index. Also rename the
+      // card-index attribute itself.
+      var html = srcHtml
+        .replace(/competitor_1_/g, 'competitor_' + newIndex + '_')
+        .replace(/id="competitor_1_/g, 'id="competitor_' + newIndex + '_')
+        .replace(/for="competitor_1_/g, 'for="competitor_' + newIndex + '_')
+        .replace(/data-card-index="1"/, 'data-card-index="' + newIndex + '"');
+      // Reset all input values inside the clone — the cloned card
+      // starts blank, pre-fill only lives on the default card.
+      return html.replace(
+        /(<input\b[^>]*?)(?:\s+value="[^"]*")?(\s*\/?>)/g,
+        function (_match, head, tail) {
+          if (/type="checkbox"/.test(head)) {
+            // Default-checked on clones matches the empty-form UX.
+            return head + ' checked' + tail;
+          }
+          return head + ' value=""' + tail;
+        }
+      );
+    }
+
+    function makeRemoveButton(newIndex) {
+      var row = document.createElement('div');
+      row.className = 'competitive-audit-col__remove-row';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn';
+      btn.setAttribute('data-competitive-audit-remove', '');
+      btn.setAttribute('aria-label', 'Remove competitor ' + newIndex);
+      btn.textContent = 'Remove';
+      btn.addEventListener('click', function () {
+        var card = btn.closest('[data-competitive-audit-card]');
+        if (card && card !== defaultCard) card.remove();
+      });
+      row.appendChild(btn);
+      return row;
+    }
+
+    addBtn.addEventListener('click', function () {
+      var newIndex = nextIndex();
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = reindex(defaultCard.outerHTML, newIndex);
+      var newCard = wrapper.firstElementChild;
+      if (!newCard) return;
+      // Append a Remove row (the default card's Remove row is omitted
+      // — Quinn didn't ask for it on the primary card; it stays
+      // until the form is submitted or the user backs out).
+      newCard.appendChild(makeRemoveButton(newIndex));
+      extraContainer.appendChild(newCard);
+    });
+  })();
+</script>
 {% endblock %}

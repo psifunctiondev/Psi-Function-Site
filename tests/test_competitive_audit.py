@@ -246,27 +246,29 @@ class TestCompetitiveAuditSubmissionModel:
         assert sub.forked_from is None
         assert sub.forks == []
 
-    def test_default_form_data_shape_has_four_competitor_slots(
+    def test_default_form_data_shape_has_one_default_competitor_slot(
         self, db_session, drift_and_anchor_client, dna_user,
     ):
-        # The empty form payload — used by the route on first-visit GET
-        # — must contain 4 competitor slots so the template can iterate
-        # unconditionally.
+        # Slice 6 (Quinn items 3-5): the template renders ONE
+        # competitor sub-card by default; the parser discovers
+        # additional indices from submitted form keys. The
+        # _EMPTY_FORM_DATA constant therefore only seeds index 1.
         empty = {
             'client_name': '',
             'competitor_1': None,
-            'competitor_2': None,
-            'competitor_3': None,
-            'competitor_4': None,
         }
         sub = self._make_row(
             db_session, drift_and_anchor_client, dna_user,
             form_data=empty,
         )
         db_session.refresh(sub)
-        for i in range(1, 5):
-            assert f'competitor_{i}' in sub.form_data
-            assert sub.form_data[f'competitor_{i}'] is None
+        assert 'competitor_1' in sub.form_data
+        assert sub.form_data['competitor_1'] is None
+        # Slice 6: no hard-coded 2..4 nulls in the empty shape — the
+        # parser only writes keys that were actually submitted.
+        assert 'competitor_2' not in sub.form_data
+        assert 'competitor_3' not in sub.form_data
+        assert 'competitor_4' not in sub.form_data
 
     def test_client_relationship_backref(
         self, db_session, drift_and_anchor_client, dna_user,
@@ -355,8 +357,11 @@ class TestRouteGet:
         body = resp.get_data(as_text=True)
         # First-visit card present; form NOT yet rendered.
         assert '+ Start New Audit' in body
-        # The form submit button is the "Save Audit" — should be
+        # The form submit button is the "Run Audit" — should be
         # absent on the first-visit card render.
+        assert 'Run Audit' not in body
+        # The "Save Audit" label was retired in slice 6 — must not
+        # leak back into the page.
         assert 'Save Audit' not in body
 
     def test_new_query_param_reveals_empty_form(self, app, client, admin,
@@ -368,14 +373,31 @@ class TestRouteGet:
         )
         assert resp.status_code == 200
         body = resp.get_data(as_text=True)
-        # Form is now visible: Save Audit button rendered.
-        assert 'Save Audit' in body
+        # Form is now visible: Run Audit button rendered.
+        assert 'Run Audit' in body
+        assert 'Save Audit' not in body
         # First-visit card is NOT also rendered — they're mutually
         # exclusive on this page.
         assert '+ Start New Audit' not in body
         # The client_name field is present and empty.
         assert 'name="client_name"' in body
         assert 'value=""' in body
+        # Exactly ONE default competitor sub-card is rendered.
+        # The default card carries data-competitive-audit-card; we
+        # count those (not the JS literal that also mentions the
+        # attribute name).
+        # Exactly one server-rendered card carries the --main modifier
+        # (column 2-5 span). Cloned cards don't. CSS comments and JS
+        # selectors that mention these class names are out of scope;
+        # we instead count a dedicated data attribute that ONLY appears
+        # on the server-rendered default card.
+        assert body.count('data-server-rendered="1"') == 1
+        assert 'data-card-index="2"' not in body
+        # The "Add" affordance is present (slice 6 item 4).
+        assert 'data-competitive-audit-add' in body
+        # Socials label uses the slice 6 (item 9) wording.
+        assert '>Socials:</div>' in body
+        assert 'Include Socials:' not in body
 
     def test_edit_prefills_form_and_sets_submission_id_hidden(
         self, app, client, admin, drift_and_anchor_client, dna_user,
@@ -538,7 +560,8 @@ class TestRoutePost:
                 'competitor_1_home_url': 'https://beta.com',
                 'competitor_1_include_x': 'on',
                 'competitor_1_include_facebook': 'on',
-                # competitor_2..4 not posted at all
+                # competitor_2..N not posted at all (slice 6: no
+                # fixed cap on competitor sub-cards)
             },
             follow_redirects=False,
         )
@@ -562,12 +585,14 @@ class TestRoutePost:
         # state, not to stored form_data.
         assert sub.form_data['competitor_1']['include_socials']['instagram'] is False
         assert sub.form_data['competitor_1']['include_socials']['youtube'] is False
-        # Empty sub-cards → None, NOT {}.
-        assert sub.form_data['competitor_2'] is None
-        assert sub.form_data['competitor_3'] is None
-        assert sub.form_data['competitor_4'] is None
-        # Brand-name-only with no home_url still counts as a populated
-        # sub-card (home_url is the only required field within a sub-card).
+        # Slice 6: the parser discovers competitor indices from the
+        # form keys. Only competitor_1 was posted → form_data should
+        # contain exactly that one key (no surprise competitor_2..4
+        # null entries from a hard-coded 1..4 range).
+        assert 'competitor_1' in sub.form_data
+        assert 'competitor_2' not in sub.form_data
+        assert 'competitor_3' not in sub.form_data
+        assert 'competitor_4' not in sub.form_data
         # And defaults.
         assert sub.status == CompetitiveAuditSubmission.STATUS_SUBMITTED
         assert sub.forked_from_id is None
@@ -648,7 +673,9 @@ class TestRoutePost:
         self, app, client, admin, drift_and_anchor_client,
     ):
         _login(client, 'admin@test.com', 'adminpass123')
-        # brand_name AND home_url both blank for competitor_2 → null.
+        # brand_name AND home_url both blank for the extra
+        # competitor sub-cards → null. Index 2..4 here stand in for
+        # any "added via JS" sub-cards (slice 6 item 5: no cap).
         client.post(
             '/p/drift-and-anchor/competitive-audit/',
             data={
@@ -670,6 +697,61 @@ class TestRoutePost:
         # Pure whitespace in either field still counts as empty.
         assert sub.form_data['competitor_3'] is None
         assert sub.form_data['competitor_4'] is None
+        # Populated sub-card stores a real dict.
+        assert isinstance(sub.form_data['competitor_1'], dict)
+        assert sub.form_data['competitor_1']['brand_name'] == 'B1'
+
+    def test_parser_discovers_arbitrary_competitor_indices(
+        self, app, client, admin, drift_and_anchor_client,
+    ):
+        # Slice 6 (Quinn item 5: no upper bound on competitor sub-
+        # cards): the parser discovers indices from the form keys,
+        # so a submission with competitor_1..competitor_7 should
+        # persist all of them.
+        _login(client, 'admin@test.com', 'adminpass123')
+        data = {'client_name': 'ManyComps'}
+        for i in range(1, 8):
+            data[f'competitor_{i}_brand_name'] = f'Brand {i}'
+            data[f'competitor_{i}_home_url'] = f'https://b{i}.com'
+        client.post(
+            '/p/drift-and-anchor/competitive-audit/',
+            data=data,
+            follow_redirects=False,
+        )
+        sub = CompetitiveAuditSubmission.query.first()
+        for i in range(1, 8):
+            assert sub.form_data[f'competitor_{i}']['brand_name'] == f'Brand {i}'
+            assert sub.form_data[f'competitor_{i}']['home_url'] == f'https://b{i}.com'
+        # Nothing leaked past the submitted indices.
+        assert 'competitor_8' not in sub.form_data
+        assert 'competitor_0' not in sub.form_data
+
+    def test_parser_skips_unsubmitted_indices(
+        self, app, client, admin, drift_and_anchor_client,
+    ):
+        # Slice 6: if only competitor_3 is posted (e.g. the user
+        # submitted a sparse form), the parser must NOT surprise-
+        # create competitor_1 and competitor_2 entries — only the
+        # posted index plus the always-present index 1 (per the
+        # parser's "ensure 1 is present" rule) should be written.
+        _login(client, 'admin@test.com', 'adminpass123')
+        client.post(
+            '/p/drift-and-anchor/competitive-audit/',
+            data={
+                'client_name': 'Sparse',
+                'competitor_3_brand_name': 'C3',
+                'competitor_3_home_url': 'https://c3.com',
+            },
+            follow_redirects=False,
+        )
+        sub = CompetitiveAuditSubmission.query.first()
+        # Index 1 is empty → null (template renders it by default
+        # even if user didn't fill it).
+        assert sub.form_data['competitor_1'] is None
+        # Index 2 was not posted and should not appear at all.
+        assert 'competitor_2' not in sub.form_data
+        # Index 3 is populated.
+        assert sub.form_data['competitor_3']['brand_name'] == 'C3'
 
     def test_post_with_submission_id_cross_client_404s(
         self, app, client, admin, drift_and_anchor_client, dna_other,
@@ -797,35 +879,54 @@ class TestTemplate:
             body,
         )
 
-    def test_five_columns_with_correct_labels_in_order(
+    def test_one_default_competitor_card_spanning_cols_2_to_5(
         self, app, client, admin, drift_and_anchor_client,
     ):
         body = self._get(client)
-        # The 5-column grid wrapper.
+        # The 5-column grid wrapper still exists (column 1 = client,
+        # columns 2-5 = the FIRST competitor sub-card).
         assert 'competitive-audit-grid' in body
         # Column 1 — client name.
         assert 'Competitive Audit for Client:' in body
-        # Columns 2-5 — each competitor sub-card has the expected
-        # labels in this exact order.
-        for i in range(1, 5):
-            assert f'Competitor {i}' in body
-            assert f'competitor_{i}_brand_name' in body
-            assert 'Competitor Brand Name:' in body
-            assert f'competitor_{i}_home_url' in body
-            assert 'Home Page URL:' in body
-            assert 'Include Socials:' in body
-            assert f'competitor_{i}_include_x' in body
-            assert f'competitor_{i}_include_facebook' in body
-            assert f'competitor_{i}_include_instagram' in body
-            assert f'competitor_{i}_include_youtube' in body
-        # Order check: brand_name comes before home_url within each
-        # sub-card. Use the first sub-card's section as the proxy.
-        first_card = body[body.find('Competitor 1'):body.find('Competitor 2')]
+        # Exactly ONE competitor sub-card is server-rendered.
+        # Count the dedicated data attribute on the server-rendered
+        # default card (cloned cards don't carry it).
+        assert body.count('data-server-rendered="1"') == 1
+        # No card with index 2 is rendered — additional cards are
+        # only added by the JS Add click.
+        assert 'data-card-index="2"' not in body
+        # The default card uses the span-2-to-5 class.
+        assert 'competitive-audit-col--main' in body
+        # The card carries the Add button affordance.
+        assert 'data-competitive-audit-add' in body
+        # Default card contains the standard labels and field names
+        # for competitor index 1.
+        assert 'Competitor 1' in body
+        assert 'competitor_1_brand_name' in body
+        assert 'Competitor Brand Name:' in body
+        assert 'competitor_1_home_url' in body
+        assert 'Home Page URL:' in body
+        # Slice 6 (item 9): "Include Socials:" retired; only "Socials:"
+        # is rendered now.
+        assert '>Socials:</div>' in body
+        assert 'Include Socials:' not in body
+        assert 'competitor_1_include_x' in body
+        assert 'competitor_1_include_facebook' in body
+        assert 'competitor_1_include_instagram' in body
+        assert 'competitor_1_include_youtube' in body
+        # The default card does NOT pre-render indices 2..4 — Quinn
+        # (slice 6 items 3-5): single default card, more via JS Add.
+        assert 'competitor_2_brand_name' not in body
+        assert 'competitor_3_brand_name' not in body
+        assert 'competitor_4_brand_name' not in body
+        # Order check: brand_name comes before home_url within the
+        # default card.
+        first_card = body[body.find('Competitor 1'):body.find('data-competitive-audit-extra-cards')]
         assert first_card.find('Competitor Brand Name:') < first_card.find(
             'Home Page URL:',
         )
         assert first_card.find('Home Page URL:') < first_card.find(
-            'Include Socials:',
+            '>Socials:</div>',
         )
 
     def test_social_toggles_default_checked_on_first_visit(

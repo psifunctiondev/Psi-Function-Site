@@ -237,18 +237,37 @@ def invite_user_submit(slug):
     return redirect(url_for('portal.client_dashboard', slug=slug))
 
 
-# ---------- Drift & Anchor: Competitive Audit Requests (R1) ---------- #
+# ---------- Drift & Anchor: Competitive Audit Requests (R1+R2) ---------- #
 
 # Empty form_data shape — used for both the GET empty-state render and
-# POST failure re-render so the template always has a complete shape to
-# iterate over (4 competitor sub-cards, social toggles default checked).
+# POST failure re-render. The template ships with ONE competitor
+# sub-card by default (slice 6, Quinn review pass: items 3-5); users
+# can add more via the JS "Add" button. The parser below discovers
+# the actual number of sub-cards from the submitted form keys, so
+# there's no fixed upper bound.
 _EMPTY_FORM_DATA = {
     'client_name': '',
     'competitor_1': None,
-    'competitor_2': None,
-    'competitor_3': None,
-    'competitor_4': None,
 }
+
+
+def _discover_competitor_indices(form):
+    """Return the sorted list of competitor sub-card indices in a POSTed form.
+
+    Walks the form's keys for ``competitor_<i>_brand_name`` /
+    ``competitor_<i>_home_url`` patterns and collects the unique ``<i>``
+    values. Used by ``_parse_competitive_audit_form`` so the parser
+    works for an arbitrary number of sub-cards (added client-side via
+    the "Add" button — Quinn slice 6 item 5: no upper bound yet).
+    """
+    import re
+    indices = set()
+    pattern = re.compile(r'^competitor_(\d+)_(?:brand_name|home_url)$')
+    for key in form.keys():
+        m = pattern.match(key)
+        if m:
+            indices.add(int(m.group(1)))
+    return sorted(indices)
 
 
 def _parse_competitive_audit_form(form):
@@ -257,11 +276,24 @@ def _parse_competitive_audit_form(form):
     Empty competitor sub-cards (no fields filled in) land as ``None``
     in the stored JSON, not as empty dicts — keeps the shape
     predictable for the R2 back-end pipeline.
+
+    The number of sub-cards is discovered from the form keys rather
+    than a hard-coded 1..4 range, so the dynamic "Add" button
+    (slice 6, Quinn review pass) works without an upper bound.
     """
-    form_data = dict(_EMPTY_FORM_DATA)
+    form_data = {'client_name': ''}
     form_data['client_name'] = (form.get('client_name') or '').strip()
 
-    for i in range(1, 5):
+    indices = _discover_competitor_indices(form)
+    # Always include index 1 even if not present in form — the
+    # template always renders one card and the parser should not
+    # surprise-delete it on an empty submission.
+    if not indices:
+        indices = [1]
+    else:
+        indices = sorted(set(indices) | {1})
+
+    for i in indices:
         prefix = f'competitor_{i}_'
         brand_name = (form.get(f'{prefix}brand_name') or '').strip()
         home_url = (form.get(f'{prefix}home_url') or '').strip()
