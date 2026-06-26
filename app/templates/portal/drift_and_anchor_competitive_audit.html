@@ -52,11 +52,22 @@
      within the page scope (NOT globally, so it doesn't leak
      to other client pages). Regression-tested below in
      TestTemplate.test_scoped_font_family_applied.
+
+     Slice 8 (item 6): .btn elements inside the form (and the
+     first-visit / collapsed cards) now inherit the page's
+     display font too, so the action buttons match the text-
+     entry labels visually. Scoped to .competitive-audit-form-card
+     / .competitive-audit-start-card / .competitive-audit-collapsed-card
+     so we don't widen the global .btn font rule.
      ---------------------------------------------------------- */
   .drift-and-anchor-competitive-audit,
   .drift-and-anchor-competitive-audit .competitive-audit-col__title,
   .drift-and-anchor-competitive-audit .competitive-audit-start-card,
-  .drift-and-anchor-competitive-audit .competitive-audit-form-card {
+  .drift-and-anchor-competitive-audit .competitive-audit-collapsed-card,
+  .drift-and-anchor-competitive-audit .competitive-audit-form-card,
+  .drift-and-anchor-competitive-audit .competitive-audit-form-card .btn,
+  .drift-and-anchor-competitive-audit .competitive-audit-start-card .btn,
+  .drift-and-anchor-competitive-audit .competitive-audit-collapsed-card .btn {
     font-family: var(--client-font-display, 'DM Serif Display', serif);
   }
 
@@ -124,10 +135,15 @@
     grid-column: 2 / span 4;
     position: relative;
   }
+  /* Slice 8 (item 4): the Add button now lives INSIDE the socials
+     row, inline with the Socials: label and the four checkbox
+     pairs. It used to sit on its own row beneath the card. We keep
+     this class around (and empty) so any JS that still references it
+     doesn't 404 — the real styling for the button now lives on
+     .competitive-audit-socials .btn[data-competitive-audit-add]. */
   .competitive-audit-col__add-row {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: var(--space-2);
+    /* Deprecated in slice 8 — Add button no longer renders here. */
+    display: none;
   }
 
   /* Slice 7 items 5-6: internal 2-col sub-grid inside the FIRST
@@ -158,18 +174,39 @@
   }
 
   /* Container for ADDED competitor sub-cards (cloned by JS on Add).
-     Each clone is rendered as a full-width row using the same
-     .competitive-audit-col markup with a re-indexed prefix. */
+     Slice 8 (item 8): each clone should span cols 2-5 of the same
+     5-column grid the default competitor card sits in, so the
+     left/right edges of every competitor card line up vertically
+     (col 1 = the Client card; cols 2-5 = all competitor sub-cards).
+     We make the container itself a 5-column grid; each child col
+     then spans 2 / span 4 to match the default card. */
   .competitive-audit-extra-cards {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: var(--space-4);
     margin-top: var(--space-4);
   }
   .competitive-audit-extra-cards .competitive-audit-col {
-    /* Stretched to full width — visually a "card row" beneath the
-       main grid. */
-    width: 100%;
+    grid-column: 2 / span 4;
+  }
+  @media (max-width: 1100px) {
+    /* Mirror the grid breakpoint so the extra cards line up with
+       the default card after the page collapses to 2 columns. */
+    .competitive-audit-extra-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .competitive-audit-extra-cards .competitive-audit-col {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 600px) {
+    /* And again for the single-column <600px breakpoint. */
+    .competitive-audit-extra-cards {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .competitive-audit-extra-cards .competitive-audit-col {
+      grid-column: auto;
+    }
   }
   .competitive-audit-extra-cards .competitive-audit-col__remove-row {
     display: flex;
@@ -188,7 +225,8 @@
   }
   .competitive-audit-col__title {
     font-size: var(--text-sm);
-    color: var(--color-text-muted);
+    color: var(--color-text);
+    font-weight: 700;
     margin: 0 0 var(--space-2) 0;
   }
 
@@ -200,13 +238,21 @@
     flex-wrap: wrap;
   }
   .competitive-audit-row > label {
-    font-weight: 700;
+    /* Slice 8 (item 2): "Brand Name:" / "Brand Home Page URL:" —
+       non-bold (font-weight: 400). Same as the socials row labels.
+       The Client / Competitor N titles live on
+       .competitive-audit-col__title which keeps font-weight: 700. */
+    font-weight: 400;
     font-size: var(--text-sm);
   }
   .competitive-audit-row > input[type="text"] {
     flex: 1 1 100%;
     min-width: 0;
     font: inherit;
+    /* Slice 8 (item 3): pin entry text to non-bold. Inputs default
+       to font-weight: 400 in most browsers; pin explicitly so a
+       global rule change can't accidentally bold them. */
+    font-weight: 400;
     padding: var(--space-1) var(--space-2);
     border: 1px solid var(--color-border);
     border-radius: calc(var(--client-radius) / 2);
@@ -228,7 +274,11 @@
     margin-top: var(--space-3);
   }
   .competitive-audit-socials__label {
-    font-weight: 700;
+    /* Slice 8 (item 2): the spec calls for "all other labels" to
+       be non-bold. "Socials:" is currently a <div> styled like a
+       label, not a real <label for="..."> — treat it the same way
+       per the spec's strict interpretation. */
+    font-weight: 400;
     font-size: var(--text-sm);
   }
   .competitive-audit-socials > .competitive-audit-social {
@@ -240,6 +290,14 @@
   .competitive-audit-social > label {
     font-weight: 400;
     font-size: var(--text-sm);
+  }
+  /* Slice 8 (item 4): the Add button is now a flex child of the
+     socials row. Push it to the right edge so it lines up with the
+     far-right side of the competitor sub-card. On narrow viewports
+     (<700px) it can wrap to its own line — the flex-wrap on the
+     parent row handles that without further rules. */
+  .competitive-audit-socials > [data-competitive-audit-add] {
+    margin-left: auto;
   }
 
   /* First-visit "Start New Audit" card — Quinn (item 1): LEFT-
@@ -260,60 +318,25 @@
     background: var(--color-surface);
   }
 
-  /* History list — table-like rows, status chip + actions. */
-  .competitive-audit-history {
-    margin-top: var(--space-6);
-  }
-  .competitive-audit-history__row {
-    display: grid;
-    grid-template-columns: 14rem 12rem 1fr auto auto auto;
-    gap: var(--space-3);
-    align-items: center;
-    padding: var(--space-2) 0;
-    border-top: 1px solid var(--color-border);
-    font-size: var(--text-sm);
-  }
-  .competitive-audit-history__row--highlight {
-    background: rgba(201, 166, 107, 0.08);
-  }
-  .competitive-audit-history__row:first-child {
-    border-top: none;
-  }
-
-  .status-chip {
-    display: inline-block;
-    padding: 2px var(--space-2);
-    border-radius: 999px;
-    font-size: var(--text-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: var(--letter-spacing-wide);
-  }
-  .status-chip--neutral {
-    background: var(--color-border);
-    color: var(--color-text-muted);
-  }
-  .status-chip--accent {
-    background: var(--client-accent);
-    color: var(--client-primary);
-  }
-  .status-chip--success {
-    background: #cce5cc;
-    color: #2a5a2a;
-  }
-
   /* Form actions row — Quinn (items 7+8): primary submit plus two
      greyscale future-affordance buttons (Edit / Duplicate). The
      greyscale pair is disabled for now — visible affordance, no
      behavior. NOTE: CSS comments are rendered into the response
      body inside <style>, so the literal button labels do NOT appear
-     here — that would leak into the empty-render GET. */
+     here — that would leak into the empty-render GET.
+
+     Slice 8 (item 5): actions now live in col 1 of the grid (under
+     the Client card), stacked vertically (flex-direction: column).
+     They are no longer a full-width row at the bottom of the form. */
   .competitive-audit-actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
-    align-items: center;
-    margin-top: var(--space-4);
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: stretch;
+    /* No margin-top here — the parent .competitive-audit-col uses
+       flex-direction: column with its own gap so actions sit
+       visually just under the client_name input. */
+    margin-top: 0;
   }
   .competitive-audit-actions .btn {
     /* Slice 7 item 15: bump the action-button font size from the
@@ -321,6 +344,8 @@
        Scoped to .competitive-audit-actions so we don't widen the
        global .btn rule. */
     font-size: 1rem;
+    width: 100%;
+    text-align: center;
   }
   .competitive-audit-actions .btn[disabled] {
     cursor: not-allowed;
@@ -328,6 +353,30 @@
     background: var(--color-border);
     color: var(--color-text-muted);
     border-color: var(--color-border);
+  }
+
+  /* Collapsed card (slice 8 item 9): mirrors .competitive-audit-start-card
+     but uses ">" as the leading character. Same white surface,
+     border, radius, and D&A display font. */
+  .competitive-audit-collapsed-card {
+    display: block;
+    text-align: left;
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--client-radius);
+    font-weight: 700;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+  .competitive-audit-collapsed-card:hover {
+    color: var(--color-accent, var(--client-accent));
+    background: var(--color-surface);
+  }
+  /* Stacked collapsed card + start card — Quinn wants a small gap
+     between them so the two cards don't visually merge. */
+  .competitive-audit-collapsed-card + .competitive-audit-start-card {
+    margin-top: var(--space-4);
   }
 </style>
 {% endblock %}
@@ -350,12 +399,33 @@
 
     {# Intentionally NO portal-welcome block on this page. #}
 
-    {# First-visit CTA, OR the form when ?new=1 / ?edit=<id> / ?fork=<id> / POST failure. #}
-    {% if not show_form %}
+    {# First-visit CTA, OR the form when ?new=1 / ?edit=<id> / ?fork=<id> / POST failure,
+       OR the collapsed state after a successful POST. Slice 8 (items 9-11). #}
+    {% if collapsed_audit %}
+      {# Slice 8 item 9: collapsed view shown after a successful Run Audit POST.
+         The leading character is ">", the title text is the saved client_name
+         (fall back to "Untitled Audit" if empty), and the click re-expands
+         the audit via the existing ?edit=<id> route. The "+ Start New Audit"
+         card sits below it (slice 8 item 11). #}
+      <a class="competitive-audit-collapsed-card"
+         href="{{ url_for('portal.drift_and_anchor_competitive_audit') }}?edit={{ collapsed_audit.id }}">
+        &gt; {{ collapsed_audit.form_data.get('client_name') or 'Untitled Audit' }}
+      </a>
+      <a class="competitive-audit-start-card" href="{{ url_for('portal.drift_and_anchor_competitive_audit', _anchor=None) }}?new=1">
+        + Start New Audit
+      </a>
+    {% elif not show_form %}
       <a class="competitive-audit-start-card" href="{{ url_for('portal.drift_and_anchor_competitive_audit', _anchor=None) }}?new=1">
         + Start New Audit
       </a>
     {% else %}
+      {# Slice 8 (item 10): edit_mode is true whenever the user is editing or
+         forking an existing submission. In edit mode Run Audit is greyed
+         out (you don't "run" an existing audit, you just re-save it), and
+         Edit + Duplicate become real links back to the ?edit and ?fork
+         routes for that submission. Outside edit mode they're greyed out
+         visible-affordance only (slice 7 items 7+8). #}
+      {% set edit_mode = edit_target is not none %}
       <form method="post" action="{{ url_for('portal.drift_and_anchor_competitive_audit') }}" class="competitive-audit-form-card card">
 
         {# Edit-in-place / fork carry-forward — submitted hidden. #}
@@ -368,8 +438,10 @@
 
         <div class="competitive-audit-grid">
 
-          {# Column 1: Client Name — slice 7 item 2: drop the "Competitive
-              Audit for Client:" label above the input, keep the input. #}
+          {# Column 1: Client Name + the vertically-stacked action buttons.
+              Slice 8 (item 5): actions now live INSIDE col 1, just below
+              the client_name input. Vertical stack via
+              .competitive-audit-actions { flex-direction: column }. #}
           <div class="competitive-audit-col">
             <div class="competitive-audit-col__title">Client</div>
             <div class="competitive-audit-row">
@@ -377,10 +449,35 @@
                      value="{{ form_data.client_name or '' }}"
                      required>
             </div>
+            <div class="competitive-audit-actions">
+              <button type="submit" class="btn btn--primary"
+                      {% if edit_mode %}disabled
+                      aria-label="Run Audit (greyed — edit in place instead)"{% endif %}>
+                Run Audit
+              </button>
+              {% if edit_mode %}
+                <a class="btn" href="{{ url_for('portal.drift_and_anchor_competitive_audit') }}?edit={{ edit_target.id }}">
+                  Edit Audit
+                </a>
+                <a class="btn" href="{{ url_for('portal.drift_and_anchor_competitive_audit') }}?fork={{ edit_target.id }}">
+                  Duplicate Audit
+                </a>
+              {% else %}
+                <button type="button" class="btn" disabled
+                        aria-label="Edit Audit (not yet wired)">
+                  Edit Audit
+                </button>
+                <button type="button" class="btn" disabled
+                        aria-label="Duplicate Audit (not yet wired)">
+                  Duplicate Audit
+                </button>
+              {% endif %}
+            </div>
           </div>
 
           {# Columns 2-5: the FIRST (default) competitor sub-card.
-              Spans 4 columns. Quinn (item 4): "Add" button at far right. #}
+              Spans 4 columns. Slice 8 (item 4): Add button now sits
+              INLINE on the socials row (not on its own row below). #}
           {% set comp = form_data['competitor_1'] %}
            <div class="competitive-audit-col competitive-audit-col--main"
                 data-competitive-audit-card data-card-index="1"
@@ -410,7 +507,12 @@
 {# Slice 7 items 11-14: socials label + all four (label + checkbox)
                pairs on ONE inline row. Labels un-bolded, colons stripped
                from the checkbox labels (the "Socials:" label keeps its
-               colon), gap between label and checkbox tightened to ~16px. #}
+               colon), gap between label and checkbox tightened to ~16px.
+
+               Slice 8 (item 4): the Add button now lives inside this same
+               row, pushed to the far right via margin-left: auto on the
+               button's CSS rule (see the .competitive-audit-socials
+               selector above). #}
             <div class="competitive-audit-socials">
               {% set socials = comp.include_socials if comp and comp.include_socials else {} %}
               <div class="competitive-audit-socials__label">Socials:</div>
@@ -438,9 +540,6 @@
                        {% if socials.get('youtube', True) %}checked{% endif %}>
                 <label for="competitor_1_include_youtube">YouTube</label>
               </div>
-            </div>
-
-            <div class="competitive-audit-col__add-row">
               <button type="button" class="btn"
                       data-competitive-audit-add
                       aria-label="Add another competitor">
@@ -459,40 +558,7 @@
         <div class="competitive-audit-extra-cards"
              data-competitive-audit-extra-cards></div>
 
-        {# Form actions — Quinn (items 7+8):
-           - primary "Run Audit" (was "Save Audit")
-           - "Edit Audit" + "Duplicate Audit", disabled (greyed out,
-             visible affordance, no behavior yet) #}
-        <div class="competitive-audit-actions">
-          <button type="submit" class="btn btn--primary">Run Audit</button>
-          <button type="button" class="btn" disabled
-                  aria-label="Edit Audit (not yet wired)">
-            Edit Audit
-          </button>
-          <button type="button" class="btn" disabled
-                  aria-label="Duplicate Audit (not yet wired)">
-            Duplicate Audit
-          </button>
-        </div>
-
       </form>
-    {% endif %}
-
-    {# History list — sorted by the route (created_at DESC). #}
-    {% if history %}
-      <div class="competitive-audit-history">
-        <h2>Past Submissions</h2>
-        {% for sub in history %}
-          <div class="competitive-audit-history__row {% if edit_target and edit_target.id == sub.id %}competitive-audit-history__row--highlight{% endif %}">
-            <span>{{ sub.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
-            <span>{{ sub.author.display_name or sub.author.email.split('@')[0] }}</span>
-            <span>{{ sub.form_data.get('client_name', '—') }}</span>
-            <span class="status-chip {{ sub.status_chip_class }}">{{ sub.status }}</span>
-            <a href="{{ url_for('portal.drift_and_anchor_competitive_audit') }}?edit={{ sub.id }}">Edit</a>
-            <a href="{{ url_for('portal.drift_and_anchor_competitive_audit') }}?fork={{ sub.id }}">Duplicate</a>
-          </div>
-        {% endfor %}
-      </div>
     {% endif %}
 
   </div>
@@ -536,11 +602,22 @@
       // Replace every occurrence of competitor_1_, id="competitor_1_,
       // and for="competitor_1_ with the new index. Also rename the
       // card-index attribute itself.
+      //
+      // Slice 8 (item 7): the title DOM element on the cloned card is
+      // `<div class="competitive-audit-col__title">Competitor 1</div>`.
+      // Rewrite that literal text to "Competitor N" so the cloned card
+      // visually matches its re-indexed form field names. We anchor on
+      // the className + closing </div> so we don't false-positive on
+      // any other "Competitor 1" string in the template.
       var html = srcHtml
         .replace(/competitor_1_/g, 'competitor_' + newIndex + '_')
         .replace(/id="competitor_1_/g, 'id="competitor_' + newIndex + '_')
         .replace(/for="competitor_1_/g, 'for="competitor_' + newIndex + '_')
-        .replace(/data-card-index="1"/, 'data-card-index="' + newIndex + '"');
+        .replace(/data-card-index="1"/, 'data-card-index="' + newIndex + '"')
+        .replace(
+          'class="competitive-audit-col__title">Competitor 1<',
+          'class="competitive-audit-col__title">Competitor ' + newIndex + '<'
+        );
       // Reset all input values inside the clone — the cloned card
       // starts blank, pre-fill only lives on the default card.
       return html.replace(

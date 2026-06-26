@@ -390,6 +390,7 @@ def drift_and_anchor_competitive_audit():
                 edit_target=None,
                 fork_source=None,
                 show_form=True,
+                collapsed_audit=None,
             )
 
         submission_id = request.form.get('submission_id', type=int)
@@ -413,10 +414,25 @@ def drift_and_anchor_competitive_audit():
             db.session.add(sub)
 
         db.session.commit()
+        # Slice 8 (item 9): instead of PRG-redirecting back to the
+        # empty form, re-render the same page in the collapsed state
+        # with the just-saved submission. This is server-rendered so
+        # it's pytest-testable and browser-back-safe; the collapsed
+        # card title text is the saved client_name (fallback to
+        # "Untitled Audit"), and clicking it re-expands via the
+        # existing ?edit=<id> route.
         flash('Saved.', 'success')
-        return redirect(url_for(
-            'portal.drift_and_anchor_competitive_audit',
-        ))
+        return render_template(
+            'portal/drift_and_anchor_competitive_audit.html',
+            client=client,
+            user=current_user,
+            history=history,
+            form_data=dict(_EMPTY_FORM_DATA),
+            edit_target=None,
+            fork_source=None,
+            show_form=False,
+            collapsed_audit=sub,
+        )
 
     # GET — choose the form's prefill source.
     if edit_target is not None:
@@ -442,4 +458,5 @@ def drift_and_anchor_competitive_audit():
         edit_target=edit_target,
         fork_source=fork_source,
         show_form=show_form,
+        collapsed_audit=None,
     )
