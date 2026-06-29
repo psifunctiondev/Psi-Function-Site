@@ -23,6 +23,10 @@ def about():
 def services():
     return render_template('public/services.html')
 
+@public_bp.get('/products')
+def products():
+    return render_template('public/products.html')
+
 @public_bp.get('/contact')
 def contact():
     return render_template('public/contact.html')

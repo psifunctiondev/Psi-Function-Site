@@ -1,0 +1,196 @@
+/* =============================================================
+   css/products.css
+   Products page — eyebrow + asymmetric 5-column grid layout
+   mirroring the About page's "Inspiration" row pattern.
+
+   Layout anatomy (desktop):
+   ┌─────────────────────────────────────────────────────────┐
+   │  products__eyebrow  (full width, above the grid)        │
+   ├───────────────────────────────┬─────────────────────────┤
+   │  Logo card  (2fr)             │  Description text (3fr) │
+   │  (placeholder for now)        │  h2 + p + p             │
+   ├───────────────────────────────┼─────────────────────────┤
+   │  Logo card  (2fr)             │  Description text (3fr) │
+   ├───────────────────────────────┼─────────────────────────┤
+   │  Logo card  (2fr)             │  Description text (3fr) │
+   └───────────────────────────────┴─────────────────────────┘
+
+   Each row alternates as: 2-col logo + 3-col text.
+   This matches the about.css inspiration row direction.
+
+   Depends on: components.css (for .card, .card__title, .card__text),
+               tokens/ (palette, typography, space-size, layout,
+               motion, shape-shadow), theme-*.css
+   ============================================================= */
+
+
+/* ----------------------------------------------------------
+   Page shell — needed so eyebrow can be full-width while
+   the grid sits inside a container. Mirrors .about-page.
+   ---------------------------------------------------------- */
+
+.products-page {
+  width: 100%;
+  overflow: hidden;
+}
+
+
+/* ----------------------------------------------------------
+   EYEBROW — matches home/about/services eyebrow style.
+   Mixed case (not uppercase) per design spec.
+   ---------------------------------------------------------- */
+
+.products__eyebrow {
+  margin: 0;
+  width: 100%;
+  padding-block: var(--space-1);
+  padding-inline: var(--page-padding-inline-desktop);
+
+  /* Absorb the header fade-zone */
+  padding-top: calc(var(--space-1) + var(--header-height) * 0.25);
+
+  font-family: var(--font-family-display);
+  font-size: var(--text-4xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-logo);
+  line-height: var(--line-height-tight);
+  text-align: center;
+
+  color: var(--color-primary);
+}
+
+
+/* ----------------------------------------------------------
+   Container spacing below eyebrow
+   ---------------------------------------------------------- */
+
+.products-page .container {
+  padding-block-start: var(--section-space-sm);
+  padding-block-end:   var(--section-space-md);
+}
+
+
+/* ----------------------------------------------------------
+   Outer 5-column grid.
+   ---------------------------------------------------------- */
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
+}
+
+/* Span helpers */
+.products-grid__span-2 { grid-column: span 2; }
+.products-grid__span-3 { grid-column: span 3; }
+
+
+/* ----------------------------------------------------------
+   Media card (logo cards) — no internal padding so the
+   placeholder box can fill it edge-to-edge.
+   ---------------------------------------------------------- */
+
+.products-grid__media-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+
+/* ----------------------------------------------------------
+   Logo card — flex column so the placeholder centers
+   vertically and horizontally. Stays in normal flow.
+   ---------------------------------------------------------- */
+
+.products-grid__logo-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 14rem; /* Ensures the card has visual weight
+                         even with an empty placeholder */
+}
+
+
+/* ----------------------------------------------------------
+   Logo placeholder — a subtle bordered box with a 4:3
+   aspect ratio, centered inside the logo card. Designed
+   to be replaced wholesale by an <img> once logos land.
+   Uses theme tokens so it works across all 4 themes
+   (auto/day/twilight/night).
+   ---------------------------------------------------------- */
+
+.products-grid__logo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  margin: var(--space-3);
+  background: var(--color-surface-elevated);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+}
+
+
+/* ----------------------------------------------------------
+   Logo placeholder text — large, low-emphasis product name.
+   ---------------------------------------------------------- */
+
+.products-grid__logo-text {
+  font-family: var(--font-family-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-muted);
+  text-align: center;
+  padding-inline: var(--space-3);
+}
+
+
+/* ----------------------------------------------------------
+   Responsive — tablet (≤ 1024px): collapse to single column.
+   Mirrors the about/services page breakpoint exactly.
+   ---------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+  .products__eyebrow {
+    font-size: var(--text-lg);
+    padding-inline: var(--page-padding-inline-mobile);
+    text-align: left;
+  }
+
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .products-grid__span-2,
+  .products-grid__span-3 {
+    grid-column: span 1;
+  }
+
+  /* Logo card: fixed height so it reads as a placeholder
+     slot, not a thin strip, when full width. */
+  .products-grid__logo-card {
+    min-height: 12rem;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Responsive — mobile (≤ 600px): tighten spacing.
+   ---------------------------------------------------------- */
+
+@media (max-width: 600px) {
+  .products-grid {
+    gap: var(--space-3);
+  }
+
+  .products-grid__logo-card {
+    min-height: 10rem;
+  }
+
+  .products-grid__logo-text {
+    font-size: var(--text-xl);
+  }
+}

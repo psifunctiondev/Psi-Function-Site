@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Products — Psi Function{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/products.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="products-page">
+
+  <!-- EYEBROW: full-width, above the two-column grid -->
+  <p class="products__eyebrow">Products</p>
+
+  <p class="page-intro">
+    Tools we've built to do the work.
+  </p>
+
+  <div class="container section-stack">
+    <div class="products-grid">
+
+      <!-- Row 1: 2-col logo + 3-col text — Methodos -->
+      <div class="card products-grid__span-2 products-grid__media-card products-grid__logo-card">
+        <div class="products-grid__logo-placeholder">
+          <span class="products-grid__logo-text">Methodos</span>
+        </div>
+      </div>
+
+      <div class="card products-grid__span-3">
+        <h2 class="card__title">Methodos</h2>
+        <p class="card__text">
+          Methodos is a framework for structuring AI-native work. Goals, tasks, and artifacts, each with a clear owner.
+        </p>
+        <p class="card__text">
+          Designed and battle-tested inside Psi Function's own agent team, Methodos separates strategic intent from execution: who decides the goal, who builds the artifact, who keeps the knowledge. It is what makes an AI-augmented team actually run like a team.
+        </p>
+      </div>
+
+      <!-- Row 2: 2-col logo + 3-col text — render2image -->
+      <div class="card products-grid__span-2 products-grid__media-card products-grid__logo-card">
+        <div class="products-grid__logo-placeholder">
+          <span class="products-grid__logo-text">render2image</span>
+        </div>
+      </div>
+
+      <div class="card products-grid__span-3">
+        <h2 class="card__title">render2image</h2>
+        <p class="card__text">
+          Turn architectural renders into photo-realistic images.
+        </p>
+        <p class="card__text">
+          render2image takes a flat Enscape (or similar) render and produces a finished photograph — same composition, same lighting, same materials — with the realism that helps clients see themselves in the space. Built on Flux and ControlNet, designed for architectural visualization studios that need client-ready imagery at the pace of design.
+        </p>
+      </div>
+
+      <!-- Row 3: 2-col logo + 3-col text — BrandSight -->
+      <div class="card products-grid__span-2 products-grid__media-card products-grid__logo-card">
+        <div class="products-grid__logo-placeholder">
+          <span class="products-grid__logo-text">BrandSight</span>
+        </div>
+      </div>
+
+      <div class="card products-grid__span-3">
+        <h2 class="card__title">BrandSight</h2>
+        <p class="card__text">
+          BrandSight is a structured competitive audit for brands.
+        </p>
+        <p class="card__text">
+          Submit your website and a list of competitors; BrandSight returns a side-by-side analysis of positioning, messaging, visual identity, and customer experience — the kind of audit a strategy consultancy delivers, automated. Built on the Drift &amp; Anchor methodology, packaged as a self-serve product.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}
