@@ -39,12 +39,13 @@
 
          Measured 2026-06-30 in a live headless Firefox screenshot of the
          products page (cross-checked with vision model + pixel analysis):
-         'e' spans SVG x ≈ 243–279, center ≈ 261. Macron at x1=245, x2=280
-         (midpoint 262.5) sits centered over the 'e' to within ~2 SVG units
-         of perfect alignment. Earlier positions (185–220 and 251–286) were
-         too far right by ~66 and ~11 SVG units respectively. Re-measure
-         if Quinn changes the font-family chain. -->
-    <line x1="245" y1="55" x2="280" y2="55" stroke="#1A2433" stroke-width="7" stroke-linecap="round"/>
+         'e' spans SVG x ≈ 223–259, center ≈ 241. Macron at x1=225, x2=260
+         (midpoint 242.5) sits centered over the 'e' to within ~2 SVG units
+         of perfect alignment. Earlier positions (185–220, 251–286, 245–280)
+         were each tuned from a different measurement baseline — only the
+         live-render measurement (this one) is reliable. Re-measure if
+         Quinn changes the font-family chain. -->
+    <line x1="225" y1="55" x2="260" y2="55" stroke="#1A2433" stroke-width="7" stroke-linecap="round"/>
 
     <animate
       attributeName="opacity"
