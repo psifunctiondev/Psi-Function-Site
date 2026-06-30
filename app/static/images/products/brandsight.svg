@@ -1,55 +1,48 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!--
-    BrandSight — animated logo (hand-drawn by Quinn in Inkscape).
-    ViewBox expanded to fit content with 4 units of padding on each side.
-    Original Inkscape export used viewBox="0 0 79.751328 11.202301" (mm units)
-    but content was placed at coordinates x=64-130, y=104-122 — way outside
-    the viewBox. Inkscape's per-layer translate(-64.9, -107.4) brought content
-    back inside, but with insufficient margin: the "B" of "Brand" landed at
-    x=-0.84 (clipped at left edge) and the eye landed at y=-2.4 (clipped at top).
-    Result on the live page: "rand Sight" with eye overlapping the "S" of
-    "Sight" instead of sitting in the space between the two words.
+  BrandSight animated logo — v2 (2026-06-30).
 
-    New viewBox: -4.84 -6.4 89 21 (px units instead of mm).
-    Content bbox: x∈[-0.84, 80.16], y∈[-2.4, 10.6] → 81x13 → aspect 6.23:1.
-    Padded to 89x21 → aspect 4.24:1 (close to methodos.svg + render2photo.svg
-    at 4.75:1, but naturally narrower because this is text+icon, not wordmark).
+  Text-as-paths: no font dependency, self-contained SVG. Wordmark and eye
+  are all <path> elements (font-family strings in style="" attrs are
+  Inkscape metadata, ignored by browsers when rendering paths).
 
-    No scale transformation applied: the existing per-layer translates are
-    preserved. Only the viewBox + width/height changed. Units normalized
-    from mm to px (user units) so the file is consistent with the other
-    two product SVGs.
+  Animation: 29 s SMIL cycle, infinite loop.
+    t=0–5s    closed-eye hold
+    t=5–8s    fade closed → open (3 s linear)
+    t=8–13s   open-eye hold
+    t=13–16s  3× blink (0.5 s closed + 0.5 s open, snap)
+    t=16–21s  open-eye hold
+    t=21–24s  fade open → closed (3 s linear)
+    t=24–29s  closed-eye hold, then loop
 
-    Why not normalize to 760x160: content aspect is 6.23:1, canvas would need
-    to be 6.23:1 to fit without clipping or letterboxing. Force-fitting to
-    4.75:1 would either crop the text horizontally or distort the aspect.
-    BrandSight stays narrower than its row-mates — visual asymmetry is honest.
-  -->
+  ViewBox: -2 -2 89 17
+    Content bbox (after per-layer translate(-64.93, -107.45)):
+      x ∈ [0.50, 81.00]  width 80.5
+      y ∈ [0.75, 12.25]  height 11.5
+    Padding of 2.5 units left, 6 units right, 2.75 top, 2.75 bottom.
+    Content aspect 7.0:1 (narrower than methodos.svg 4.75:1 and
+    render2photo.svg 1:1) — this is text + small icon, the natural
+    aspect. With object-fit:contain on the page, the SVG renders at
+    its natural aspect inside the logo card.
 
-<svg
-   width="89" height="21" viewBox="-4.84 -6.4 89 21"
-   version="1.1"
-   id="svg5"
-   xml:space="preserve"
-   inkscape:export-filename="BrandSightOpen.svg"
-   inkscape:export-xdpi="96"
-   inkscape:export-ydpi="96"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns:xlink="http://www.w3.org/1999/xlink"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview
-     id="namedview7"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     
-     showgrid="false" /><defs
-     id="defs2"><linearGradient
+  Source: Quinn hand-drew the two eye states in Inkscape
+  (BrandSightClosed.svg + BrandSightOpen.svg); this build script
+  (psi-product-logos/brandsight/work/build_animated.py) stitches them
+  into one self-contained file.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="89" height="17" viewBox="-2 -2 89 17"
+     version="1.1" id="brandsight-animated">
+  <title>BrandSight — animated logo</title>
+  <desc>SMIL-animated logo: closed eye (lashes down) holds 5 s, then
+        3 s crossfade to open eye (oval + iris), holds 5 s, blinks 3× at
+        0.5 s each, holds 5 s, then 3 s crossfade back to closed, holds 5 s.
+        29.0 s cycle, infinite loop. Wordmark static. Coral accent
+        (#ffb48f) over graphite (#1a2433).</desc>
+  <defs>
+    <linearGradient
        id="linearGradient9188"
        inkscape:swatch="solid"><stop
          style="stop-color:#ffb48f;stop-opacity:1;"
@@ -66,6 +59,15 @@
          offset="0"
          id="stop5378" /></linearGradient><linearGradient
        inkscape:collect="always"
+       xlink:href="#linearGradient5386"
+       id="linearGradient9184"
+       gradientUnits="userSpaceOnUse"
+       x1="64.523781"
+       y1="118.73774"
+       x2="130.72842"
+       y2="118.73774"
+       gradientTransform="translate(0.40273688,-5.7150215)" /><linearGradient
+       inkscape:collect="always"
        xlink:href="#linearGradient9188"
        id="linearGradient9190"
        x1="98.105003"
@@ -74,66 +76,215 @@
        y2="112.13023"
        gradientUnits="userSpaceOnUse" /><linearGradient
        inkscape:collect="always"
-       xlink:href="#linearGradient9188"
-       id="linearGradient9756"
-       gradientUnits="userSpaceOnUse"
-       x1="98.105003"
-       y1="112.13023"
-       x2="111.14468"
-       y2="112.13023" /><linearGradient
-       inkscape:collect="always"
-       xlink:href="#linearGradient9188"
-       id="linearGradient9758"
-       gradientUnits="userSpaceOnUse"
-       x1="98.105003"
-       y1="112.13023"
-       x2="111.14468"
-       y2="112.13023" /><linearGradient
-       inkscape:collect="always"
-       xlink:href="#linearGradient9188"
-       id="linearGradient9760"
-       gradientUnits="userSpaceOnUse"
-       x1="98.105003"
-       y1="112.13023"
-       x2="111.14468"
-       y2="112.13023" /><linearGradient
-       inkscape:collect="always"
        xlink:href="#linearGradient5386"
-       id="linearGradient9762"
+       id="linearGradient10216"
        gradientUnits="userSpaceOnUse"
        gradientTransform="translate(0.40273688,-5.7150215)"
        x1="64.523781"
        y1="118.73774"
        x2="130.72842"
-       y2="118.73774" /></defs><g
-     inkscape:groupmode="layer"
-     id="layer2"
-     inkscape:label="Layer 2"
-     style="display:inline"
-     transform="translate(-64.926515,-107.3891)"><text
-       xml:space="preserve"
-       style="font-size:11.2889px;font-family:'Liberation Sans Narrow';-inkscape-font-specification:'Liberation Sans Narrow';fill:url(#linearGradient9762);fill-opacity:1;stroke:#000000;stroke-width:0.3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
-       x="64.083092"
-       y="116.04815"
-       id="text1164"><tspan
-         sodipodi:role="line"
-         id="tspan1162"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:11.2889px;font-family:'IBM Plex Mono';-inkscape-font-specification:'IBM Plex Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:url(#linearGradient9762);fill-opacity:1;stroke:#1a2433;stroke-width:0.3;stroke-dasharray:none;stroke-opacity:1"
-         x="64.083092"
-         y="116.04815">Brand  Sight</tspan></text></g><g
-     inkscape:groupmode="layer"
-     id="layer3"
-     inkscape:label="Layer 3"
-     style="display:inline;stroke:url(#linearGradient9190)"
-     transform="translate(-64.926515,-107.3891)"><g
-       style="display:inline;fill:none;stroke:url(#linearGradient9760);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+       y2="118.73774" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5386"
+       id="linearGradient10218"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(0.40273688,-5.7150215)"
+       x1="64.523781"
+       y1="118.73774"
+       x2="130.72842"
+       y2="118.73774" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5386"
+       id="linearGradient10220"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(0.40273688,-5.7150215)"
+       x1="64.523781"
+       y1="118.73774"
+       x2="130.72842"
+       y2="118.73774" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5386"
+       id="linearGradient10222"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(0.40273688,-5.7150215)"
+       x1="64.523781"
+       y1="118.73774"
+       x2="130.72842"
+       y2="118.73774" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5386"
+       id="linearGradient10224"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(0.40273688,-5.7150215)"
+       x1="64.523781"
+       y1="118.73774"
+       x2="130.72842"
+       y2="118.73774" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5386"
+       id="linearGradient10226"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(0.40273688,-5.7150215)"
+       x1="64.523781"
+       y1="118.73774"
+       x2="130.72842"
+       y2="118.73774" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5386"
+       id="linearGradient10228"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(0.40273688,-5.7150215)"
+       x1="64.523781"
+       y1="118.73774"
+       x2="130.72842"
+       y2="118.73774" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5386"
+       id="linearGradient10230"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(0.40273688,-5.7150215)"
+       x1="64.523781"
+       y1="118.73774"
+       x2="130.72842"
+       y2="118.73774" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5386"
+       id="linearGradient10232"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(0.40273688,-5.7150215)"
+       x1="64.523781"
+       y1="118.73774"
+       x2="130.72842"
+       y2="118.73774" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5386"
+       id="linearGradient10234"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(0.40273688,-5.7150215)"
+       x1="64.523781"
+       y1="118.73774"
+       x2="130.72842"
+       y2="118.73774" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient9188"
+       id="linearGradient10236"
+       gradientUnits="userSpaceOnUse"
+       x1="98.105003"
+       y1="112.13023"
+       x2="111.14468"
+       y2="112.13023" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient9188"
+       id="linearGradient10238"
+       gradientUnits="userSpaceOnUse"
+       x1="98.105003"
+       y1="112.13023"
+       x2="111.14468"
+       y2="112.13023" /><linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient9188"
+       id="linearGradient10240"
+       gradientUnits="userSpaceOnUse"
+       x1="98.105003"
+       y1="112.13023"
+       x2="111.14468"
+       y2="112.13023" />
+  </defs>
+
+  <!-- Static wordmark: Br [eye] ndSight -->
+  <g id="bs-wordmark" transform="translate(-64.926515,-107.45405)">
+    <g
+       aria-label="Brand  Sight"
+       id="text1164"
+       style="font-size:11.2889px;font-family:'Liberation Sans Narrow';-inkscape-font-specification:'Liberation Sans Narrow';fill:url(#linearGradient9184);stroke:#000000;stroke-width:0.3;stroke-linejoin:round"><path
+         d="m 65.076515,108.1685 h 2.675469 q 1.016001,0 1.591735,0.55315 0.575734,0.55316 0.575734,1.47885 0,0.7112 -0.349956,1.1176 -0.338667,0.4064 -0.880534,0.57573 v 0.0339 q 0.666045,0.15805 1.095023,0.59831 0.428979,0.42898 0.428979,1.25307 0,0.47413 -0.158045,0.89182 -0.158045,0.41769 -0.451556,0.72249 -0.282222,0.3048 -0.677334,0.48543 -0.383823,0.16933 -0.835379,0.16933 h -3.014136 z m 2.731914,7.05556 q 0.654756,0 1.02729,-0.29351 0.372534,-0.29351 0.372534,-0.90311 v -0.46285 q 0,-0.59831 -0.372534,-0.89182 -0.372534,-0.3048 -1.02729,-0.3048 h -1.783646 v 2.85609 z m -0.158045,-3.63503 q 0.598312,0 0.936979,-0.25964 0.338667,-0.27093 0.338667,-0.8128 v -0.44027 q 0,-0.54187 -0.338667,-0.8128 -0.338667,-0.27093 -0.936979,-0.27093 h -1.625601 v 2.59644 z"
+         style="font-family:'IBM Plex Mono';-inkscape-font-specification:'IBM Plex Mono, Normal';fill:url(#linearGradient10216);stroke:#1a2433"
+         id="path9903" /><path
+         d="m 71.725682,115.2805 h 1.704624 v -4.28978 h -1.704624 v -0.76764 h 2.607736 v 1.46755 h 0.05644 q 0.180622,-0.68862 0.677334,-1.07244 0.508001,-0.39511 1.286935,-0.39511 h 0.812801 v 0.90311 h -1.095024 q -0.778934,0 -1.264357,0.45155 -0.474133,0.45156 -0.474133,1.18534 v 2.51742 h 2.25778 v 0.76765 h -4.865516 z"
+         style="font-family:'IBM Plex Mono';-inkscape-font-specification:'IBM Plex Mono, Normal';fill:url(#linearGradient10218);stroke:#1a2433"
+         id="path9905" /><path
+         d="m 83.217786,116.04815 q -0.530578,0 -0.756356,-0.27093 -0.225778,-0.27094 -0.282222,-0.67734 h -0.05644 q -0.191911,0.508 -0.620889,0.80151 -0.41769,0.28223 -1.12889,0.28223 -0.914401,0 -1.456269,-0.47414 -0.541867,-0.47413 -0.541867,-1.29822 0,-0.8128 0.587023,-1.25307 0.598312,-0.44027 1.919113,-0.44027 h 1.241779 v -0.57573 q 0,-0.64347 -0.361245,-0.95956 -0.361245,-0.32738 -1.02729,-0.32738 -0.587022,0 -0.959556,0.23707 -0.372534,0.22578 -0.598312,0.62089 l -0.6096,-0.45155 q 0.112889,-0.22578 0.3048,-0.44027 0.191911,-0.21449 0.474134,-0.37254 0.282222,-0.16933 0.643467,-0.25964 0.361245,-0.1016 0.801512,-0.1016 1.02729,0 1.625602,0.51929 0.6096,0.51929 0.6096,1.44498 v 3.20605 h 0.812801 v 0.79022 z m -2.686758,-0.62089 q 0.349956,0 0.632179,-0.079 0.293511,-0.0903 0.508,-0.22578 0.214489,-0.14676 0.327378,-0.33867 0.124178,-0.2032 0.124178,-0.42898 v -0.95955 h -1.241779 q -0.812801,0 -1.185334,0.22578 -0.372534,0.22577 -0.372534,0.65475 v 0.23707 q 0,0.45155 0.316089,0.68862 0.327378,0.22578 0.891823,0.22578 z"
+         style="font-family:'IBM Plex Mono';-inkscape-font-specification:'IBM Plex Mono, Normal';fill:url(#linearGradient10220);stroke:#1a2433"
+         id="path9907" /><path
+         d="m 85.509438,116.04815 v -5.82507 h 0.903112 v 0.94826 h 0.04516 q 0.09031,-0.21448 0.225778,-0.4064 0.135466,-0.2032 0.327378,-0.34995 0.2032,-0.14676 0.474134,-0.23707 0.270933,-0.0903 0.632178,-0.0903 0.914401,0 1.467557,0.58702 0.553156,0.57574 0.553156,1.63689 v 3.73663 h -0.903112 v -3.57858 q 0,-0.80151 -0.349956,-1.18534 -0.349956,-0.39511 -1.02729,-0.39511 -0.270933,0 -0.530578,0.0677 -0.259645,0.0677 -0.462845,0.2032 -0.2032,0.13546 -0.327378,0.34995 -0.124178,0.21449 -0.124178,0.49671 v 4.04143 z"
+         style="font-family:'IBM Plex Mono';-inkscape-font-specification:'IBM Plex Mono, Normal';fill:url(#linearGradient10222);stroke:#1a2433"
+         id="path9909" /><path
+         d="m 95.974252,115.09988 h -0.04516 q -0.564445,1.08374 -1.794935,1.08374 -1.072446,0 -1.682046,-0.80152 -0.598312,-0.80151 -0.598312,-2.24649 0,-1.44498 0.598312,-2.24649 0.6096,-0.80151 1.682046,-0.80151 1.23049,0 1.794935,1.08373 h 0.04516 v -3.47698 h 0.903112 v 8.35379 h -0.903112 z m -1.490134,0.28222 q 0.3048,0 0.575734,-0.079 0.270933,-0.079 0.474133,-0.22578 0.203201,-0.15804 0.31609,-0.37253 0.124177,-0.22578 0.124177,-0.51929 v -2.09973 q 0,-0.29352 -0.124177,-0.50801 -0.112889,-0.22577 -0.31609,-0.37253 -0.2032,-0.15804 -0.474133,-0.23707 -0.270934,-0.079 -0.575734,-0.079 -0.790223,0 -1.230491,0.48542 -0.428978,0.47414 -0.428978,1.26436 v 0.99342 q 0,0.79023 0.428978,1.27565 0.440268,0.47413 1.230491,0.47413 z"
+         style="font-family:'IBM Plex Mono';-inkscape-font-specification:'IBM Plex Mono, Normal';fill:url(#linearGradient10224);stroke:#1a2433"
+         id="path9911" /><path
+         d="m 114.86059,116.18362 q -1.06115,0 -1.73849,-0.38383 -0.67733,-0.39511 -1.1176,-1.00471 l 0.68863,-0.56444 q 0.46284,0.57573 0.97084,0.85795 0.51929,0.28223 1.23049,0.28223 0.85796,0 1.30951,-0.39512 0.45156,-0.39511 0.45156,-1.10631 0,-0.57573 -0.32738,-0.89182 -0.32738,-0.32738 -1.14018,-0.46285 l -0.88053,-0.14675 q -0.57574,-0.1016 -0.97085,-0.3048 -0.38382,-0.2032 -0.62089,-0.48543 -0.23706,-0.29351 -0.33866,-0.63217 -0.1016,-0.34996 -0.1016,-0.72249 0,-1.08374 0.7112,-1.63689 0.7112,-0.55316 1.91911,-0.55316 0.94827,0 1.59173,0.31609 0.65476,0.31609 1.04987,0.89182 l -0.66604,0.57574 q -0.32738,-0.42898 -0.79023,-0.69992 -0.46284,-0.27093 -1.19662,-0.27093 -0.80151,0 -1.23049,0.33867 -0.42898,0.33866 -0.42898,1.016 0,0.53058 0.31609,0.86924 0.32738,0.32738 1.16276,0.47414 l 0.84667,0.14675 q 0.57573,0.1016 0.97084,0.3048 0.39511,0.2032 0.63218,0.48543 0.24836,0.28222 0.34996,0.63218 0.1016,0.34995 0.1016,0.73377 0,1.09503 -0.72249,1.71592 -0.7112,0.62089 -2.03201,0.62089 z"
+         style="font-family:'IBM Plex Mono';-inkscape-font-specification:'IBM Plex Mono, Normal';fill:url(#linearGradient10226);stroke:#1a2433"
+         id="path9913" /><path
+         d="m 122.01776,108.93614 q -0.39511,0 -0.55315,-0.15804 -0.15805,-0.16934 -0.15805,-0.41769 v -0.18062 q 0,-0.24836 0.15805,-0.4064 0.15804,-0.16934 0.55315,-0.16934 0.39511,0 0.55316,0.16934 0.15804,0.15804 0.15804,0.4064 v 0.18062 q 0,0.24835 -0.15804,0.41769 -0.15805,0.15804 -0.55316,0.15804 z m -2.55129,6.34436 h 2.09974 v -4.28978 h -2.09974 v -0.76764 h 3.00285 v 5.05742 h 1.96427 v 0.76765 h -4.96712 z"
+         style="font-family:'IBM Plex Mono';-inkscape-font-specification:'IBM Plex Mono, Normal';fill:url(#linearGradient10228);stroke:#1a2433"
+         id="path9915" /><path
+         d="m 131.37627,116.71419 q 0,0.88054 -0.73378,1.29823 -0.73378,0.42898 -2.20134,0.42898 -1.41111,0 -2.032,-0.37254 -0.6096,-0.37253 -0.6096,-1.07244 0,-0.47414 0.24836,-0.73378 0.24835,-0.25965 0.69991,-0.38382 v -0.13547 q -0.24836,-0.12418 -0.38382,-0.31609 -0.13547,-0.19191 -0.13547,-0.48542 0,-0.45156 0.29351,-0.67734 0.3048,-0.22578 0.75636,-0.33866 v -0.0452 q -0.54187,-0.23707 -0.84667,-0.69991 -0.29351,-0.46285 -0.29351,-1.08374 0,-0.44026 0.15804,-0.8128 0.15805,-0.37253 0.45156,-0.63218 0.3048,-0.27093 0.72249,-0.41768 0.41769,-0.14676 0.92569,-0.14676 0.65475,0 1.15147,0.23707 v -0.1016 q 0,-0.33867 0.15804,-0.56445 0.15804,-0.22578 0.54187,-0.22578 h 1.07244 v 0.79023 h -1.30951 v 0.39511 q 0.31609,0.27093 0.48542,0.64347 0.16934,0.37253 0.16934,0.83537 0,0.44027 -0.16934,0.8128 -0.15804,0.37254 -0.45155,0.64347 -0.29351,0.25965 -0.72249,0.4064 -0.41769,0.14676 -0.92569,0.14676 -0.14676,0 -0.28223,-0.0113 -0.13546,-0.0113 -0.27093,-0.0339 -0.13547,0.0226 -0.28222,0.079 -0.14676,0.0452 -0.27094,0.13547 -0.12417,0.079 -0.2032,0.19191 -0.079,0.11289 -0.079,0.25965 0,0.25964 0.25965,0.34995 0.25964,0.079 0.67733,0.079 h 1.28694 q 1.12889,0 1.63689,0.42897 0.508,0.41769 0.508,1.12889 z m -0.84667,0.0452 q 0,-0.34996 -0.28222,-0.56445 -0.28223,-0.2032 -0.98214,-0.2032 h -2.02071 q -0.58702,0.23707 -0.58702,0.79023 0,0.38382 0.3048,0.65475 0.3048,0.28223 1.016,0.28223 h 0.88053 q 0.79023,0 1.23049,-0.24836 0.44027,-0.23707 0.44027,-0.7112 z m -2.1336,-3.3528 q 0.67733,0 0.99342,-0.31609 0.32738,-0.31609 0.32738,-0.83538 v -0.32738 q 0,-0.51929 -0.32738,-0.82409 -0.31609,-0.31609 -0.99342,-0.31609 -0.67734,0 -0.99343,0.31609 -0.31609,0.3048 -0.31609,0.82409 v 0.32738 q 0,0.51929 0.31609,0.83538 0.31609,0.31609 0.99343,0.31609 z"
+         style="font-family:'IBM Plex Mono';-inkscape-font-specification:'IBM Plex Mono, Normal';fill:url(#linearGradient10230);stroke:#1a2433"
+         id="path9917" /><path
+         d="m 132.92285,107.69436 h 0.90311 v 3.47698 h 0.0452 q 0.0903,-0.21448 0.22577,-0.4064 0.13547,-0.2032 0.32738,-0.34995 0.2032,-0.14676 0.47414,-0.23707 0.27093,-0.0903 0.63217,-0.0903 0.91441,0 1.46756,0.58702 0.55316,0.57574 0.55316,1.63689 v 3.73663 h -0.90311 v -3.57858 q 0,-0.80151 -0.34996,-1.18534 -0.34996,-0.39511 -1.02729,-0.39511 -0.27093,0 -0.53058,0.0677 -0.25964,0.0677 -0.46284,0.2032 -0.2032,0.13546 -0.32738,0.34995 -0.12418,0.21449 -0.12418,0.49671 v 4.04143 h -0.90311 z"
+         style="font-family:'IBM Plex Mono';-inkscape-font-specification:'IBM Plex Mono, Normal';fill:url(#linearGradient10232);stroke:#1a2433"
+         id="path9919" /><path
+         d="m 142.25877,116.04815 q -0.66604,0 -0.98213,-0.37253 -0.3048,-0.37254 -0.3048,-0.95956 v -3.72534 h -1.94169 v -0.76764 h 1.44498 q 0.29351,0 0.4064,-0.11289 0.12418,-0.12418 0.12418,-0.41769 v -1.524 h 0.86924 v 2.05458 h 2.65289 v 0.76764 h -2.65289 v 4.28978 h 2.65289 v 0.76765 z"
+         style="font-family:'IBM Plex Mono';-inkscape-font-specification:'IBM Plex Mono, Normal';fill:url(#linearGradient10234);stroke:#1a2433"
+         id="path9921" /></g>
+  </g>
+
+  <!-- Closed-eye layer: starts visible, fades out as the eye opens -->
+  <g id="bs-eye-closed-anim" opacity="1">
+    <animate attributeName="opacity"
+             values="1.000;1.000;0.500;0.000;0.000;0.000;1.000;1.000;0.000;0.000;1.000;1.000;0.000;0.000;1.000;1.000;0.000;0.000;0.500;1.000;1.000"
+             keyTimes="0.000000;0.172414;0.224138;0.275862;0.448276;0.465483;0.465517;0.482724;0.482759;0.499966;0.500000;0.517207;0.517241;0.534448;0.534483;0.551690;0.551724;0.724138;0.775862;0.827586;1.000000"
+             dur="29.0s" repeatCount="indefinite" calcMode="linear" />
+    <animateTransform attributeName="transform" type="translate"
+             values="0,0;0,0;0,0.15;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0"
+             keyTimes="0.000000;0.172414;0.224138;0.275862;0.448276;0.465483;0.465517;0.482724;0.482759;0.499966;0.500000;0.517207;0.517241;0.534448;0.534483;0.551690;0.551724;0.724138;0.775862;0.827586;1.000000"
+             dur="29.0s" repeatCount="indefinite" calcMode="linear"
+             additive="sum" />
+    <g id="bs-eye-closed" transform="translate(-64.926515,-107.45405)">
+      <g
+       style="display:inline;fill:none;stroke:#ffb48f;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+       id="g307"
+       transform="matrix(0.59531735,0,0,0.54953686,97.501708,108.01136)"><path
+         d="M 15,18 14.278,14.75"
+         id="path286"
+         style="stroke:#ffb48f;stroke-opacity:1" /><path
+         d="M 2,8 A 10.645,10.645 0 0 0 22,8"
+         id="path288"
+         style="stroke:#ffb48f;stroke-opacity:1" /><path
+         d="M 20,15 18.274,12.95"
+         id="path290"
+         style="stroke:#ffb48f;stroke-opacity:1" /><path
+         d="M 4,15 5.726,12.95"
+         id="path292"
+         style="stroke:#ffb48f;stroke-opacity:1" /><path
+         d="M 9,18 9.722,14.75"
+         id="path294"
+         style="stroke:#ffb48f;stroke-opacity:1" /></g>
+    </g>
+  </g>
+
+  <!-- Open-eye layer: starts hidden, fades in as the eye opens -->
+  <g id="bs-eye-open-anim" opacity="0">
+    <animate attributeName="opacity"
+             values="0.000;0.000;0.500;1.000;1.000;1.000;0.000;0.000;1.000;1.000;0.000;0.000;1.000;1.000;0.000;0.000;1.000;1.000;0.500;0.000;0.000"
+             keyTimes="0.000000;0.172414;0.224138;0.275862;0.448276;0.465483;0.465517;0.482724;0.482759;0.499966;0.500000;0.517207;0.517241;0.534448;0.534483;0.551690;0.551724;0.724138;0.775862;0.827586;1.000000"
+             dur="29.0s" repeatCount="indefinite" calcMode="linear" />
+    <animateTransform attributeName="transform" type="translate"
+             values="0,0;0,0;0,-0.15;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0;0,0"
+             keyTimes="0.000000;0.172414;0.224138;0.275862;0.448276;0.465483;0.465517;0.482724;0.482759;0.499966;0.500000;0.517207;0.517241;0.534448;0.534483;0.551690;0.551724;0.724138;0.775862;0.827586;1.000000"
+             dur="29.0s" repeatCount="indefinite" calcMode="linear"
+             additive="sum" />
+    <g id="bs-eye-open" transform="translate(-64.926515,-107.45405)">
+      <g
+       style="display:inline;fill:none;stroke:url(#linearGradient9190);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
        id="g8809"
        transform="matrix(0.59268851,0,0,0.59268851,97.512578,105.01797)"><path
          d="m 2.062,12.348 a 1,1 0 0 1 0,-0.696 10.75,10.75 0 0 1 19.876,0 1,1 0 0 1 0,0.696 10.75,10.75 0 0 1 -19.876,0"
          id="path8797"
-         style="stroke:url(#linearGradient9756);stroke-opacity:1" /><circle
-         cx="12"
-         cy="12"
-         r="3"
+         style="stroke:url(#linearGradient9190);stroke-opacity:1" /><path
          id="circle8799"
-         style="stroke:url(#linearGradient9758);stroke-opacity:1" /></g></g></svg>
+         d="m 15,12 a 3,3 0 0 1 -3,3 3,3 0 0 1 -3,-3 3,3 0 0 1 3,-3 3,3 0 0 1 3,3 z"
+         style="stroke:url(#linearGradient9190)" /></g>
+    </g>
+  </g>
+</svg>
