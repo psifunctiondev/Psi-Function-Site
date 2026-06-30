@@ -1,10 +1,33 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<!--
+    BrandSight — animated logo (hand-drawn by Quinn in Inkscape).
+    ViewBox expanded to fit content with 4 units of padding on each side.
+    Original Inkscape export used viewBox="0 0 79.751328 11.202301" (mm units)
+    but content was placed at coordinates x=64-130, y=104-122 — way outside
+    the viewBox. Inkscape's per-layer translate(-64.9, -107.4) brought content
+    back inside, but with insufficient margin: the "B" of "Brand" landed at
+    x=-0.84 (clipped at left edge) and the eye landed at y=-2.4 (clipped at top).
+    Result on the live page: "rand Sight" with eye overlapping the "S" of
+    "Sight" instead of sitting in the space between the two words.
+
+    New viewBox: -4.84 -6.4 89 21 (px units instead of mm).
+    Content bbox: x∈[-0.84, 80.16], y∈[-2.4, 10.6] → 81x13 → aspect 6.23:1.
+    Padded to 89x21 → aspect 4.24:1 (close to methodos.svg + render2photo.svg
+    at 4.75:1, but naturally narrower because this is text+icon, not wordmark).
+
+    No scale transformation applied: the existing per-layer translates are
+    preserved. Only the viewBox + width/height changed. Units normalized
+    from mm to px (user units) so the file is consistent with the other
+    two product SVGs.
+
+    Why not normalize to 760x160: content aspect is 6.23:1, canvas would need
+    to be 6.23:1 to fit without clipping or letterboxing. Force-fitting to
+    4.75:1 would either crop the text horizontally or distort the aspect.
+    BrandSight stays narrower than its row-mates — visual asymmetry is honest.
+  -->
 
 <svg
-   width="79.751328mm"
-   height="11.202301mm"
-   viewBox="0 0 79.751328 11.202301"
+   width="89" height="21" viewBox="-4.84 -6.4 89 21"
    version="1.1"
    id="svg5"
    xml:space="preserve"
@@ -24,7 +47,7 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm"
+     
      showgrid="false" /><defs
      id="defs2"><linearGradient
        id="linearGradient9188"
