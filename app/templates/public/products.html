@@ -52,10 +52,20 @@
       </div>
 
       <!-- Row 3: 2-col logo + 3-col text — BrandSight -->
-      <div class="card products-grid__span-2 products-grid__media-card products-grid__logo-card">
-        <img class="products-grid__logo-img"
-             src="{{ url_for('static', filename='images/products/brandsight.svg') }}"
-             alt="BrandSight wordmark">
+      <!-- SVG inlined (not <img>) so it inherits the page's IBM Plex Mono
+           @font-face. When loaded as <img>, the SVG is sandboxed and falls
+           back to system fonts, which makes "Brand Sight" render narrower
+           than the monospace layout Quinn designed in Inkscape — the eye
+           ends up overlapping "Si" instead of sitting in the double-space
+           between the words. -->
+      <div class="card products-grid__span-2 products-grid__media-card products-grid__logo-card products-grid__logo-card--inline">
+        <svg class="products-grid__logo-img"
+             width="89" height="21" viewBox="-4.84 -6.4 89 21"
+             xmlns="http://www.w3.org/2000/svg"
+             xmlns:xlink="http://www.w3.org/1999/xlink"
+             role="img" aria-label="BrandSight wordmark">
+          {% include 'public/products/_partials/brandsight_svg.html' %}
+        </svg>
       </div>
 
       <div class="card products-grid__span-3">

@@ -127,6 +127,18 @@
   object-fit: contain;
 }
 
+/* Inline SVG variant of the logo card. BrandSight is inlined (not <img>)
+   so it inherits the page's IBM Plex Mono font and the eye stays in the
+   space between "Brand" and "Sight". Inline <svg> doesn't honor object-fit
+   the way <img> does — preserveAspectRatio on the SVG handles that. */
+.products-grid__logo-card--inline .products-grid__logo-img {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  /* SVG's preserveAspectRatio="xMidYMid meet" keeps aspect + centers */
+}
+
 
 /* ----------------------------------------------------------
    Logo placeholder — kept as a graceful fallback if an <img>
