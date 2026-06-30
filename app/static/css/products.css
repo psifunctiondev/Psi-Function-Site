@@ -1,0 +1,211 @@
+/* =============================================================
+   css/products.css
+   Products page — eyebrow + asymmetric 5-column grid layout
+   mirroring the About page's "Inspiration" row pattern.
+
+   Layout anatomy (desktop):
+   ┌─────────────────────────────────────────────────────────┐
+   │  products__eyebrow  (full width, above the grid)        │
+   ├───────────────────────────────┬─────────────────────────┤
+   │  Logo card  (2fr)             │  Description text (3fr) │
+   │  SVG logo image               │  h2 + p + p             │
+   ├───────────────────────────────┼─────────────────────────┤
+   │  Logo card  (2fr)             │  Description text (3fr) │
+   ├───────────────────────────────┼─────────────────────────┤
+   │  Logo card  (2fr)             │  Description text (3fr) │
+   └───────────────────────────────┴─────────────────────────┘
+
+   Each row alternates as: 2-col logo + 3-col text.
+   This matches the about.css inspiration row direction.
+
+   Depends on: components.css (for .card, .card__title, .card__text),
+               tokens/ (palette, typography, space-size, layout,
+               motion, shape-shadow), theme-*.css
+   ============================================================= */
+
+
+/* ----------------------------------------------------------
+   Page shell — needed so eyebrow can be full-width while
+   the grid sits inside a container. Mirrors .about-page.
+   ---------------------------------------------------------- */
+
+.products-page {
+  width: 100%;
+  overflow: hidden;
+}
+
+
+/* ----------------------------------------------------------
+   EYEBROW — matches home/about/services eyebrow style.
+   Mixed case (not uppercase) per design spec.
+   ---------------------------------------------------------- */
+
+.products__eyebrow {
+  margin: 0;
+  width: 100%;
+  padding-block: var(--space-1);
+  padding-inline: var(--page-padding-inline-desktop);
+
+  /* Absorb the header fade-zone */
+  padding-top: calc(var(--space-1) + var(--header-height) * 0.25);
+
+  font-family: var(--font-family-display);
+  font-size: var(--text-4xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-logo);
+  line-height: var(--line-height-tight);
+  text-align: center;
+
+  color: var(--color-primary);
+}
+
+
+/* ----------------------------------------------------------
+   Container spacing below eyebrow
+   ---------------------------------------------------------- */
+
+.products-page .container {
+  padding-block-start: var(--section-space-sm);
+  padding-block-end:   var(--section-space-md);
+}
+
+
+/* ----------------------------------------------------------
+   Outer 5-column grid.
+   ---------------------------------------------------------- */
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
+}
+
+/* Span helpers */
+.products-grid__span-2 { grid-column: span 2; }
+.products-grid__span-3 { grid-column: span 3; }
+
+
+/* ----------------------------------------------------------
+   Media card (logo cards) — keeps the card visually distinct
+   from text cards. The .products-grid__logo-card child handles
+   its own internal padding.
+   ---------------------------------------------------------- */
+
+.products-grid__media-card {
+  overflow: hidden;
+}
+
+
+/* ----------------------------------------------------------
+   Logo card — flex column so the logo image centers
+   vertically and horizontally. Stays in normal flow.
+   No aspect-ratio: the card stretches with the CSS Grid row
+   so its top/bottom edges align with the text card in the
+   same row. The logo image (object-fit: contain) centers
+   within whatever space the text card dictates.
+   ---------------------------------------------------------- */
+
+.products-grid__logo-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+}
+
+
+/* ----------------------------------------------------------
+   Logo image — fills the card, contains the SVG so the
+   aspect is preserved. max-height caps the image so it
+   never overflows the card's vertically-centered flex layout.
+   ---------------------------------------------------------- */
+
+.products-grid__logo-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+
+/* ----------------------------------------------------------
+   Logo placeholder — kept as a graceful fallback if an <img>
+   fails to load. Uses theme tokens so it works across all 4
+   themes (auto/day/twilight/night).
+   ---------------------------------------------------------- */
+
+.products-grid__logo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 760 / 160;
+  background: var(--color-surface-elevated);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+}
+
+
+/* ----------------------------------------------------------
+   Logo placeholder text — large, low-emphasis product name.
+   ---------------------------------------------------------- */
+
+.products-grid__logo-text {
+  font-family: var(--font-family-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-muted);
+  text-align: center;
+  padding-inline: var(--space-3);
+}
+
+
+/* ----------------------------------------------------------
+   Responsive — tablet (≤ 1024px): collapse to single column.
+   Mirrors the about/services page breakpoint exactly.
+   ---------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+  .products__eyebrow {
+    font-size: var(--text-lg);
+    padding-inline: var(--page-padding-inline-mobile);
+    text-align: left;
+  }
+
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .products-grid__span-2,
+  .products-grid__span-3 {
+    grid-column: span 1;
+  }
+
+  /* Logo card: cap min-height so it never collapses below a
+     readable logo size on narrow screens. */
+  .products-grid__logo-card {
+    min-height: 8rem;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Responsive — mobile (≤ 600px): tighten spacing.
+   ---------------------------------------------------------- */
+
+@media (max-width: 600px) {
+  .products-grid {
+    gap: var(--space-3);
+  }
+
+  .products-grid__logo-card {
+    min-height: 6rem;
+  }
+
+  .products-grid__logo-text {
+    font-size: var(--text-xl);
+  }
+}

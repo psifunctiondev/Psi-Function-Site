@@ -26,3 +26,5 @@ tests/test_health.py
 tests/test_models.py
 tests/test_portal.py
 tests/test_public_routes.py
+tests/test_seed_acme_demo.py
+tests/test_seed_acme_resources.py

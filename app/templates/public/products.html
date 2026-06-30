@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Products — Psi Function{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/products.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="products-page">
+
+  <!-- EYEBROW: full-width, above the two-column grid -->
+  <p class="products__eyebrow">Psi Function Products</p>
+
+  <p class="page-intro">
+    Proven products - customizable to fit your needs, and inspirational as the basis for your new solution. Let's talk about how they can help you.
+  </p>
+
+  <div class="container section-stack">
+    <div class="products-grid">
+
+      <!-- Row 1: 2-col logo + 3-col text — Methodos -->
+      <div class="card products-grid__span-2 products-grid__media-card products-grid__logo-card">
+        <img class="products-grid__logo-img"
+             src="{{ url_for('static', filename='images/products/methodos.svg') }}"
+             alt="méthod/os wordmark — animated, Navy + Coral">
+      </div>
+
+      <div class="card products-grid__span-3">
+        <h2 class="card__title">méthod/os</h2>
+        <p class="card__text">
+          <b>méthod/os</b> - from the Ancient Greek concept μέθοδος - is an integrated methodology and operating system for collaborative, directed, automated intelligence. It is a framework that can bring your business into modern efficiency and capability overnight by coherently deploying agentic artificial intelligence to pursue complex goals.
+        </p>
+        <p class="card__text">
+          <b>méthod/os</b> defines how independent agents cooperate toward shared goals while maintaining transparency, accountability, and continuity. While it can deploy on any infrastructure, our default implementation uses open source tools and connects to frontier, hosted, and local inference models.
+        </p>
+      </div>
+
+      <!-- Row 2: 2-col logo + 3-col text — render2photo -->
+      <div class="card products-grid__span-2 products-grid__media-card products-grid__logo-card">
+        <img class="products-grid__logo-img"
+             src="{{ url_for('static', filename='images/products/render2photo.svg') }}"
+             alt="render2photo — sketch and photo crossfade">
+      </div>
+
+      <div class="card products-grid__span-3">
+        <h2 class="card__title">render2photo</h2>
+        <p class="card__text">
+          Originally built for architecture and interior design agencies, render2photo uses a purpose-built generative artificial intelligence work flow to convert the high-resolution, but still cartoonish, output of design software programs into photographs. This conversion helps clients to see design ideas more clearly, and can replace the ubiquitous and uninspiring "Coming Soon" images at construction sites with a vision to be excited about.
+        </p>
+      </div>
+
+      <!-- Row 3: 2-col logo + 3-col text — BrandSight -->
+      <!-- v2 logo (2026-06-30): text-as-paths, no font dependency. SMIL
+           animation: closed-hold 5s → opens 3s → open-hold 5s → blinks 3×
+           → open-hold 5s → closes 3s → loop. 29s cycle. -->
+      <div class="card products-grid__span-2 products-grid__media-card products-grid__logo-card">
+        <img class="products-grid__logo-img"
+             src="{{ url_for('static', filename='images/products/brandsight.svg') }}"
+             alt="BrandSight wordmark with animated eye">
+      </div>
+
+      <div class="card products-grid__span-3">
+        <h2 class="card__title">Brand-Sight</h2>
+        <p class="card__text">
+          Our brand strategy partner <a href="https://drift-and-anchor.com/" target="_blank" rel="noopener noreferrer">Drift & Anchor</a> first comissioned Brand-Sight to replicate their days-long manual audit — positioning, messaging, visual identity, customer experience — with a tool that runs in minutes.
+        </p>
+        <p class="card__text">
+          We can deploy Brand-Sight to streamline your competitive research process on competitor brands, customer bases, or economics. Or - perhaps with supporting analysis from Drift & Anchor - conduct an assessment of your brand.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}
