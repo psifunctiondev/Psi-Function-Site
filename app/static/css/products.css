@@ -8,7 +8,7 @@
    │  products__eyebrow  (full width, above the grid)        │
    ├───────────────────────────────┬─────────────────────────┤
    │  Logo card  (2fr)             │  Description text (3fr) │
-   │  (placeholder for now)        │  h2 + p + p             │
+   │  SVG logo image               │  h2 + p + p             │
    ├───────────────────────────────┼─────────────────────────┤
    │  Logo card  (2fr)             │  Description text (3fr) │
    ├───────────────────────────────┼─────────────────────────┤
@@ -97,23 +97,38 @@
 
 
 /* ----------------------------------------------------------
-   Logo card — flex column so the placeholder centers
+   Logo card — flex column so the logo image centers
    vertically and horizontally. Stays in normal flow.
+   Card aspect matches the logo viewBox (760x160 ≈ 4.75:1)
+   so the SVG fills edge-to-edge without letterboxing.
    ---------------------------------------------------------- */
 
 .products-grid__logo-card {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 14rem; /* Ensures the card has visual weight
-                         even with an empty placeholder */
+  aspect-ratio: 760 / 160; /* Matches SVG viewBox of every
+                              product logo */
 }
 
 
 /* ----------------------------------------------------------
-   Logo placeholder — a subtle bordered box with a 4:3
-   aspect ratio, centered inside the logo card. Designed
-   to be replaced wholesale by an <img> once logos land.
+   Logo image — fills the card, contains the SVG so the
+   aspect is preserved. viewBox-sized logos (760x160) on a
+   4.75:1 card → edge-to-edge, no letterboxing.
+   ---------------------------------------------------------- */
+
+.products-grid__logo-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+
+/* ----------------------------------------------------------
+   Logo placeholder — kept as a graceful fallback if an <img>
+   fails to load. Same 4.75:1 aspect as the live card.
    Uses theme tokens so it works across all 4 themes
    (auto/day/twilight/night).
    ---------------------------------------------------------- */
@@ -123,7 +138,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 760 / 160;
   margin: var(--space-3);
   background: var(--color-surface-elevated);
   border: 1px dashed var(--color-border-strong);
@@ -169,10 +184,10 @@
     grid-column: span 1;
   }
 
-  /* Logo card: fixed height so it reads as a placeholder
-     slot, not a thin strip, when full width. */
+  /* Logo card: aspect ratio is preserved, but cap max-height
+     so it doesn't dominate the viewport on narrow screens. */
   .products-grid__logo-card {
-    min-height: 12rem;
+    max-height: 12rem;
   }
 }
 
@@ -187,7 +202,7 @@
   }
 
   .products-grid__logo-card {
-    min-height: 10rem;
+    max-height: 10rem;
   }
 
   .products-grid__logo-text {

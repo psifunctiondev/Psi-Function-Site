@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 160" width="760" height="160">
+  <!--
+    Methodos logo — animated wordmark v3
+    English: "method" + "/" + "os"
+      · "method" non-bold, Navy (#1A2433)
+      · "/os" bold, Coral (#F0643A)
+      · manual flat macron bar centered over the 'e'
+    Greek:   "μέθοδ" + "ος"
+      · font's natural tonos accent on ε
+      · "μέθοδ" non-bold Navy, "ος" bold Coral
+      · no slash — typographic color split does the separation
+    Animation: 13.5s loop (each state held ~4.5s, cross-fades ~1.5s)
+      · English holds 0-33%
+      · crossfade English→Greek 33-44% (English drifts up, Greek settles down)
+      · Greek holds 44-89%
+      · crossfade Greek→English 89-100%
+  -->
+
+  <!-- ═══════════════════════════════════════════════
+       ENGLISH — method/os
+  ═══════════════════════════════════════════════ -->
+  <g id="english">
+    <text
+      font-family="Inter, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+      font-size="110"
+      letter-spacing="-1"
+      x="40" y="128">
+      <tspan fill="#1A2433" font-weight="400">method</tspan><tspan fill="#F0643A" font-weight="700">/os</tspan>
+    </text>
+
+    <!-- Manual flat macron bar centered over the 'e' (shifted +8px total right 2026-06-30 — Quinn asked for it slightly further right than the first 140→175 pass; was originally x1=135/x2=170) -->
+    <line x1="143" y1="55" x2="178" y2="55" stroke="#1A2433" stroke-width="7" stroke-linecap="round"/>
+
+    <animate
+      attributeName="opacity"
+      values="1; 1; 0; 0; 1"
+      keyTimes="0; 0.33; 0.44; 0.89; 1"
+      dur="13.5s"
+      repeatCount="indefinite"
+      calcMode="spline"
+      keySplines="0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1"/>
+
+    <animateTransform
+      attributeName="transform"
+      type="translate"
+      values="0 0; 0 0; 0 -8; 0 -8; 0 0"
+      keyTimes="0; 0.33; 0.44; 0.89; 1"
+      dur="13.5s"
+      repeatCount="indefinite"
+      calcMode="spline"
+      keySplines="0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1"
+      additive="sum"/>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════
+       GREEK — μέθοδος
+  ═══════════════════════════════════════════════ -->
+  <g id="greek" opacity="0">
+    <text
+      font-family="Inter, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+      font-size="110"
+      letter-spacing="-1"
+      x="40" y="128">
+      <tspan fill="#1A2433" font-weight="400">μέθοδ</tspan><tspan fill="#F0643A" font-weight="700">ος</tspan>
+    </text>
+
+    <animate
+      attributeName="opacity"
+      values="0; 0; 1; 1; 0"
+      keyTimes="0; 0.33; 0.44; 0.89; 1"
+      dur="13.5s"
+      repeatCount="indefinite"
+      calcMode="spline"
+      keySplines="0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1"/>
+
+    <animateTransform
+      attributeName="transform"
+      type="translate"
+      values="0 8; 0 8; 0 0; 0 0; 0 8"
+      keyTimes="0; 0.33; 0.44; 0.89; 1"
+      dur="13.5s"
+      repeatCount="indefinite"
+      calcMode="spline"
+      keySplines="0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1"
+      additive="sum"/>
+  </g>
+
+</svg>
