@@ -24,12 +24,21 @@
       font-family="Inter, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
       font-size="110"
       letter-spacing="-1"
-      x="40" y="128">
+      text-anchor="middle"
+      x="380" y="128">
       <tspan fill="#1A2433" font-weight="400">method</tspan><tspan fill="#F0643A" font-weight="700">/os</tspan>
     </text>
 
-    <!-- Manual flat macron bar centered over the 'e' (shifted +8px total right 2026-06-30 — Quinn asked for it slightly further right than the first 140→175 pass; was originally x1=135/x2=170) -->
-    <line x1="143" y1="55" x2="178" y2="55" stroke="#1A2433" stroke-width="7" stroke-linecap="round"/>
+    <!-- Manual flat macron bar over the 'e' — position depends on rendered font.
+         Wordmark is now text-anchor="middle" x=380, so the visible width of
+         "method/os" varies by font (Inter on design machine, system-ui/
+         -apple-system/Helvetica/Arial in browser fallbacks). 'e' lands at
+         roughly SVG x=194.5 in Helvetica fallback (measured in headless
+         Firefox screenshot 2026-06-30). Position x1=185 x2=220 puts the
+         macron over the 'e' with Quinn's prior +8 rightward aesthetic
+         bias (originally x1=135→143, x2=170→178 in pre-centering layout).
+         Re-measure if the rendered font changes. -->
+    <line x1="185" y1="55" x2="220" y2="55" stroke="#1A2433" stroke-width="7" stroke-linecap="round"/>
 
     <animate
       attributeName="opacity"
@@ -60,7 +69,8 @@
       font-family="Inter, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
       font-size="110"
       letter-spacing="-1"
-      x="40" y="128">
+      text-anchor="middle"
+      x="380" y="128">
       <tspan fill="#1A2433" font-weight="400">μέθοδ</tspan><tspan fill="#F0643A" font-weight="700">ος</tspan>
     </text>
 
