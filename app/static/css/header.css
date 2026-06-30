@@ -42,11 +42,16 @@
   z-index: -1;
 }
 
-/* --- Inner row: three explicit zones --- */
+/* --- Inner row: four explicit zones ---
+   LEFT   : logo circle
+   CENTER : nav pill
+   3RD    : theme switcher (same fill as nav pill, disconnected by the grid gap)
+   RIGHT  : Contact Us pill
+--- */
 
 .site-header__inner {
   display: grid;
-  grid-template-columns: var(--header-height) 1fr auto;
+  grid-template-columns: var(--header-height) 1fr auto auto;
   align-items: center;
   gap: var(--space-4);
   height: var(--header-height);
@@ -160,6 +165,10 @@
 
 .site-nav__theme-wrapper {
   position: relative; /* popup anchors to this */
+  /* Standalone grid zone — not a child of .site-nav anymore. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .site-nav__theme-toggle {
@@ -502,12 +511,17 @@
     padding-block: var(--space-3);
   }
 
-  /* Show hamburger, hide desktop nav */
+  /* Show hamburger, hide desktop nav + desktop theme switcher */
   .hamburger-toggle {
     display: flex;
   }
 
   .site-nav {
+    display: none;
+  }
+
+  /* Mobile panel has its own theme strip; hide the desktop icon-circle. */
+  .site-nav__theme-wrapper {
     display: none;
   }
 
