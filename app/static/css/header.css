@@ -42,11 +42,16 @@
   z-index: -1;
 }
 
-/* --- Inner row: three explicit zones --- */
+/* --- Inner row: four explicit zones ---
+   LEFT   : logo circle
+   CENTER : nav pill
+   3RD    : theme switcher (same fill as nav pill, disconnected by the grid gap)
+   RIGHT  : Contact Us pill
+--- */
 
 .site-header__inner {
   display: grid;
-  grid-template-columns: var(--header-height) 1fr auto;
+  grid-template-columns: var(--header-height) 1fr auto auto;
   align-items: center;
   gap: var(--space-4);
   height: var(--header-height);
@@ -153,35 +158,62 @@
 
 /* -------------------------------------------------------
    Theme toggle button (inside nav pill)
-   Looks like a nav link but is a <button> for a11y.
+   An icon-circle, not a text link. Same height as logo / pill /
+   contact, so the top nav stays visually balanced.
+   The visible icon is the active theme; click to open chooser.
    ------------------------------------------------------- */
 
 .site-nav__theme-wrapper {
   position: relative; /* popup anchors to this */
+  /* Standalone grid zone — not a child of .site-nav anymore. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .site-nav__theme-toggle {
-  /* Reset button chrome so it matches .site-nav__link exactly */
-  background: none;
-  border: none;
+  /* Circle geometry — same formula as logo / nav-pill / contact-pill */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  aspect-ratio: 1 / 1;
+  height: calc(var(--header-height) - var(--space-4) * 2);
   padding: 0;
-  margin: 0;
-  cursor: pointer;
-  font-family: var(--font-family-display);
-  font-size: var(--text-sm);
-  letter-spacing: var(--letter-spacing-wide);
-  line-height: 1;
+  border: none;
+  border-radius: var(--radius-pill);
+
+  background: var(--color-bg);
   color: var(--color-text);
-  transition: color var(--duration-fast) var(--ease-standard);
+  cursor: pointer;
+  flex-shrink: 0;
+
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
 }
 
 .site-nav__theme-toggle:hover {
+  background: var(--color-surface);
   color: var(--color-accent);
+}
+
+.site-nav__theme-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.site-nav__theme-icon .theme-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 /* -------------------------------------------------------
    Theme popup
-   Anchored below the Theme button, left-aligned to it.
+   Anchored below the icon-circle, centered on it.
+   Holds 4 icon buttons in a row; active row gets a filled pill
+   highlight behind its icon.
    ------------------------------------------------------- */
 
 .theme-popup {
@@ -191,10 +223,14 @@
   transform: translateX(-50%);
   z-index: var(--z-dropdown);
 
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+
   background: var(--color-surface-elevated);
   border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-2);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1);
   min-width: 11rem;
 
   box-shadow: var(--shadow-md);
@@ -219,23 +255,19 @@
 }
 
 .theme-popup__option {
-  display: grid;
-  grid-template-columns: 1rem 1fr;
-  grid-template-rows: auto auto;
-  column-gap: var(--space-2);
+  display: flex;
   align-items: center;
+  justify-content: center;
 
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
   border: none;
+  border-radius: var(--radius-pill);
   background: none;
   cursor: pointer;
-  text-align: left;
   color: var(--color-text);
-  font-family: var(--font-family-display);
-  font-size: var(--text-sm);
-  letter-spacing: var(--letter-spacing-wide);
+
   transition: background var(--duration-fast) var(--ease-standard),
               color var(--duration-fast) var(--ease-standard);
 }
@@ -245,34 +277,27 @@
   color: var(--color-accent);
 }
 
-/* Checkmark column — hidden unless active */
-.theme-popup__check {
-  grid-column: 1;
-  grid-row: 1;
-  font-size: var(--text-sm);
-  color: var(--color-primary);
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-standard);
+.theme-popup__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.theme-popup__option--active .theme-popup__check {
-  opacity: 1;
+.theme-popup__icon .theme-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
-.theme-popup__label {
-  grid-column: 2;
-  grid-row: 1;
+/* Active row — filled pill highlight behind the icon */
+.theme-popup__option--active {
+  background: var(--color-primary);
+  color: var(--color-bg);
 }
 
-/* Small hint line (used for Auto) */
-.theme-popup__hint {
-  grid-column: 2;
-  grid-row: 2;
-  font-family: var(--font-family-sans);
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  letter-spacing: 0;
-  margin-top: 0.1rem;
+.theme-popup__option--active:hover {
+  background: var(--color-primary);
+  color: var(--color-bg);
 }
 
 /* -------------------------------------------------------
@@ -418,31 +443,60 @@
   margin-bottom: var(--space-1);
 }
 
-.mobile-menu__theme-option {
-  display: block;
-  width: 100%;
-  padding: var(--space-2) var(--space-2);
-  border-radius: var(--radius-md);
-  border: none;
-  background: none;
-  cursor: pointer;
-  text-align: left;
-  color: var(--color-text);
-  font-family: var(--font-family-display);
-  font-size: var(--text-sm);
-  letter-spacing: var(--letter-spacing-wide);
-  transition:
-    background var(--duration-fast) var(--ease-standard),
-    color var(--duration-fast) var(--ease-standard);
+.mobile-menu__theme-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
 }
 
-.mobile-menu__theme-option:hover {
+.mobile-menu__theme-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 2.75rem;        /* Touch target ≥ 44px with the surrounding padding */
+  height: 2.75rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  cursor: pointer;
+  color: var(--color-text);
+
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+
+.mobile-menu__theme-icon:hover {
   background: var(--color-surface);
   color: var(--color-accent);
 }
 
-.mobile-menu__theme-option--active {
-  color: var(--color-primary);
+.mobile-menu__theme-icon .theme-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* Active state in the mobile strip — same filled pill highlight as desktop popup */
+.mobile-menu__theme-icon--active {
+  background: var(--color-primary);
+  color: var(--color-bg);
+}
+
+.mobile-menu__theme-icon--active:hover {
+  background: var(--color-primary);
+  color: var(--color-bg);
+}
+
+.mobile-menu__theme-caption {
+  display: block;
+  font-family: var(--font-family-display);
+  font-size: var(--text-sm);
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
 }
 
 
@@ -457,12 +511,17 @@
     padding-block: var(--space-3);
   }
 
-  /* Show hamburger, hide desktop nav */
+  /* Show hamburger, hide desktop nav + desktop theme switcher */
   .hamburger-toggle {
     display: flex;
   }
 
   .site-nav {
+    display: none;
+  }
+
+  /* Mobile panel has its own theme strip; hide the desktop icon-circle. */
+  .site-nav__theme-wrapper {
     display: none;
   }
 
