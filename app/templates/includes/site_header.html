@@ -27,10 +27,21 @@
 
       <div class="mobile-menu__theme-group">
         <span class="mobile-menu__theme-label">Theme</span>
-        <button class="mobile-menu__theme-option" data-theme-value="auto">Auto</button>
-        <button class="mobile-menu__theme-option" data-theme-value="day">Day</button>
-        <button class="mobile-menu__theme-option" data-theme-value="twilight">Twilight</button>
-        <button class="mobile-menu__theme-option" data-theme-value="night">Night</button>
+        <div class="mobile-menu__theme-strip" role="radiogroup" aria-label="Theme">
+          <button class="mobile-menu__theme-icon" data-theme-value="auto" role="radio" aria-checked="false" title="Auto" aria-label="Set theme to Auto">
+            {{ theme_icon('auto') }}
+          </button>
+          <button class="mobile-menu__theme-icon" data-theme-value="day" role="radio" aria-checked="false" title="Day" aria-label="Set theme to Day">
+            {{ theme_icon('day') }}
+          </button>
+          <button class="mobile-menu__theme-icon" data-theme-value="twilight" role="radio" aria-checked="false" title="Twilight" aria-label="Set theme to Twilight">
+            {{ theme_icon('twilight') }}
+          </button>
+          <button class="mobile-menu__theme-icon" data-theme-value="night" role="radio" aria-checked="false" title="Night" aria-label="Set theme to Night">
+            {{ theme_icon('night') }}
+          </button>
+        </div>
+        <span class="mobile-menu__theme-caption" id="mobile-theme-caption" aria-live="polite">Auto</span>
       </div>
     </div>
 
@@ -53,17 +64,23 @@
       <a class="site-nav__link" href="/about">About</a>
 
       <!--
-        Theme toggle — a button that looks like a nav link.
+        Theme switcher — an icon-circle button (replaces the text "Theme" link).
         The popup is positioned relative to this wrapper.
+        The visible icon is the active theme; click to open the chooser.
       -->
       <div class="site-nav__theme-wrapper">
         <button
-          class="site-nav__link site-nav__theme-toggle"
+          class="site-nav__theme-toggle"
           aria-haspopup="true"
           aria-expanded="false"
           aria-controls="theme-popup"
+          aria-label="Theme"
+          title="Theme"
           id="theme-toggle-btn"
-        >Theme</button>
+          data-theme-value=""
+        ><span class="site-nav__theme-icon" id="theme-active-icon" aria-hidden="true">
+          {{ theme_icon('auto') }}
+        </span></button>
 
         <div
           class="theme-popup"
@@ -72,24 +89,17 @@
           aria-labelledby="theme-toggle-btn"
           hidden
         >
-          <button class="theme-popup__option" role="menuitem" data-theme-value="auto">
-            <span class="theme-popup__check" aria-hidden="true">✓</span>
-            <span class="theme-popup__label">Auto</span>
-      <!--
-            <span class="theme-popup__hint">Follows time of day</span>
-      -->
+          <button class="theme-popup__option" role="menuitem" data-theme-value="auto" title="Auto" aria-label="Set theme to Auto">
+            <span class="theme-popup__icon" aria-hidden="true">{{ theme_icon('auto') }}</span>
           </button>
-          <button class="theme-popup__option" role="menuitem" data-theme-value="day">
-            <span class="theme-popup__check" aria-hidden="true">✓</span>
-            <span class="theme-popup__label">Day</span>
+          <button class="theme-popup__option" role="menuitem" data-theme-value="day" title="Day" aria-label="Set theme to Day">
+            <span class="theme-popup__icon" aria-hidden="true">{{ theme_icon('day') }}</span>
           </button>
-          <button class="theme-popup__option" role="menuitem" data-theme-value="twilight">
-            <span class="theme-popup__check" aria-hidden="true">✓</span>
-            <span class="theme-popup__label">Twilight</span>
+          <button class="theme-popup__option" role="menuitem" data-theme-value="twilight" title="Twilight" aria-label="Set theme to Twilight">
+            <span class="theme-popup__icon" aria-hidden="true">{{ theme_icon('twilight') }}</span>
           </button>
-          <button class="theme-popup__option" role="menuitem" data-theme-value="night">
-            <span class="theme-popup__check" aria-hidden="true">✓</span>
-            <span class="theme-popup__label">Night</span>
+          <button class="theme-popup__option" role="menuitem" data-theme-value="night" title="Night" aria-label="Set theme to Night">
+            <span class="theme-popup__icon" aria-hidden="true">{{ theme_icon('night') }}</span>
           </button>
         </div>
       </div>
