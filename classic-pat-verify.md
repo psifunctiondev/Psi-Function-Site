@@ -1,1 +1,0 @@
-# classic-pat-verify
