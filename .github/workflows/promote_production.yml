@@ -63,3 +63,80 @@ jobs:
       - name: Smoke test production
         run: |
           bash deploy/scripts/smoke_test.sh https://psifunction.com
+
+      # Cloudflare in front of psifunction.com caches static assets for ~4h
+      # (default `max-age` heuristic on files served with `Cache-Control: public`).
+      # Without this purge, any CSS/JS/image/font that changed in this release
+      # keeps serving the previous release from the edge for up to 4 hours after
+      # the deploy — HTML is dynamic and refreshes immediately, so the resulting
+      # "new HTML + stale CSS" mismatch breaks the page visually (see incident
+      # 2026-07-08 — Contact-pill clipped at left edge of viewport).
+      #
+      # Required secrets:
+      #   CLOUDFLARE_API_TOKEN: zone-scoped token with `Zone / Cache Purge: Edit`
+      #                          on psifunction.com. Generate at
+      #                          https://dash.cloudflare.com/profile/api-tokens
+      #                          (Custom token, not API Keys tab).
+      #   CLOUDFLARE_ZONE_ID:   the zone id for psifunction.com. Visible in the
+      #                          Cloudflare dashboard's URL when viewing the
+      #                          zone, OR via `GET /zones?name=psifunction.com`
+      #                          with the API token.
+      - name: Purge Cloudflare edge cache for static assets
+        if: success()
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: |
+          if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ZONE_ID" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ZONE_ID not set; skipping edge cache purge."
+            echo "::warning::Stale static assets may serve for up to ~4h after this deploy."
+            echo "::warning::Add the secrets at https://github.com/psifunctiondev/Psi-Function-Site/settings/secrets/actions"
+            exit 0
+          fi
+
+          echo "Purging /static/* from Cloudflare edge for zone $CF_ZONE_ID"
+          HTTP_CODE=$(curl -sS -o /tmp/cf-purge-response.json -w "%{http_code}" \
+            -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/purge_cache" \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"files":["https://psifunction.com/static/css/header.css","https://psifunction.com/static/css/site.css","https://psifunction.com/static/js/site.js"]}')
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Cloudflare purge failed with HTTP $HTTP_CODE"
+            cat /tmp/cf-purge-response.json
+            exit 1
+          fi
+
+          SUCCESS=$(python3 -c "import json; d=json.load(open('/tmp/cf-purge-response.json')); print(d.get('success', False))")
+          if [ "$SUCCESS" != "True" ]; then
+            echo "::error::Cloudflare purge returned success=false"
+            cat /tmp/cf-purge-response.json
+            exit 1
+          fi
+
+          PURGED=$(python3 -c "import json; d=json.load(open('/tmp/cf-purge-response.json')); print(len(d.get('result',{}).get('files', [])))")
+          echo "Purged $PURGED URLs from Cloudflare edge cache"
+
+      - name: Verify static asset was actually re-cached from origin
+        if: success()
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CF_API_TOKEN" ]; then
+            echo "Skipping verification (no CF token configured)"
+            exit 0
+          fi
+          # Hit header.css with a cache-busting query string so we always get
+          # fresh bytes (the prod path itself is still being purged, so the
+          # ?ts= makes this a separate cache key). Just sanity-check we get
+          # the NEW grid rule, not the stale 3-col one.
+          GRID=$(curl -sS "https://psifunction.com/static/css/header.css?ts=$(date +%s)" \
+            | grep -A 5 "site-header__inner {" | grep "grid-template-columns" | head -1 || true)
+          if echo "$GRID" | grep -q "auto auto"; then
+            echo "✓ header.css served from edge contains the 4-col grid rule"
+          elif echo "$GRID" | grep -q "1fr auto$"; then
+            echo "::error::header.css still serving STALE 3-col grid rule — purge did not take effect"
+            exit 1
+          else
+            echo "::warning::could not determine grid rule (response shape unexpected): $GRID"
+          fi
