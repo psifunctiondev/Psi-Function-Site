@@ -1,0 +1,200 @@
+name: Seed Staging From Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Target environment to overwrite from production's database"
+        required: true
+        type: choice
+        options:
+          - staging
+      confirm:
+        description: "Type 'yes-copy-production-data-to-staging' exactly to confirm"
+        required: true
+        type: string
+
+concurrency:
+  group: seed-staging
+  cancel-in-progress: false
+
+jobs:
+  seed-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Validate confirmation string
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EXPECTED="yes-copy-production-data-to-staging"
+          if [ "${{ inputs.confirm }}" != "$EXPECTED" ]; then
+            echo "Refusing to run: confirmation string did not match." >&2
+            echo "Expected: $EXPECTED" >&2
+            echo "Got:      ${{ inputs.confirm }}" >&2
+            exit 1
+          fi
+
+          if [ "${{ inputs.target_environment }}" != "staging" ]; then
+            echo "Refusing to run: target_environment must be 'staging' (got '${{ inputs.target_environment }}')." >&2
+            exit 1
+          fi
+
+          echo "Confirmation OK. Target: ${{ inputs.target_environment }}"
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Configure known_hosts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Sync seed scripts to deploy host
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+
+          # Ship the two files this workflow invokes to the persistent
+          # /opt/consulting-site/scripts/ directory (same layout as the
+          # existing backup_postgres.sh and db_connect.sh).  This avoids
+          # putting them under /opt/consulting-site/staging/source/ which
+          # deploy_release.sh rotates.
+          rsync -a \
+            -e "ssh -p ${DEPLOY_PORT}" \
+            ./deploy/scripts/copy_data.sh \
+            ./deploy/scripts/scrub_data.sql \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:/opt/consulting-site/scripts/"
+
+
+      - name: Run copy_data.sh and capture the staging password
+        id: seed
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+
+          # The script echoes the generated password on the LAST line of
+          # stdout (between [copy_data] log lines, which go to stderr).
+          # Capture stdout to a file and pick the password off the end.
+          SCRIPT_OUT="$(mktemp)"
+          trap 'rm -f "$SCRIPT_OUT"' EXIT
+
+          set +e
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "bash /opt/consulting-site/scripts/copy_data.sh production staging copy" \
+            >"$SCRIPT_OUT" 2>&1
+          SSH_RC=$?
+          set -e
+
+          # Always show the remote log in the Actions UI for debugging,
+          # even on failure.
+          echo "===== remote script output ====="
+          cat "$SCRIPT_OUT"
+          echo "===== end remote script output (rc=${SSH_RC}) ====="
+
+          if [ "$SSH_RC" -ne 0 ]; then
+            echo "copy_data.sh exited with code ${SSH_RC}; see output above." >&2
+            exit "$SSH_RC"
+          fi
+
+          # The password is the last non-empty line of stdout.  All log
+          # lines go to stderr, but the script doesn't suppress stdout
+          # for log lines — we filter for the 20-char base64-ish shape
+          # to be robust.
+          PASSWORD="$(grep -E '^[A-Za-z0-9]{20}$' "$SCRIPT_OUT" | tail -n1)"
+
+          if [ -z "$PASSWORD" ]; then
+            echo "Failed to extract a 20-char password from copy_data.sh output." >&2
+            exit 1
+          fi
+
+          # Mask BEFORE writing the summary.  GitHub also auto-masks
+          # secrets that appear in $GITHUB_STEP_SUMMARY, but doing this
+          # explicitly is the documented safe pattern.
+          echo "::add-mask::${PASSWORD}"
+          echo "staging_password=${PASSWORD}" >> "${GITHUB_OUTPUT}"
+
+      - name: Write password to step summary
+        if: steps.seed.outputs.staging_password != ''
+        shell: bash
+        env:
+          STAGING_PASSWORD: ${{ steps.seed.outputs.staging_password }}
+        run: |
+          {
+            echo "## Staging seed complete"
+            echo
+            echo "Production database was copied into staging.  Every \`user\` row in staging now shares this password:"
+            echo
+            echo '```'
+            echo "${STAGING_PASSWORD}"
+            echo '```'
+            echo
+            echo "Login as any scrubbed user (e.g. \`ctai+user1@staging.psifunction.invalid\`) with the password above."
+            echo
+            echo "The password is also written to \`/opt/consulting-site/staging/.staging_password\` on the deploy host (mode 600, owner \`deploy:deploy\`).  All scrubbed users share the same password within a single restore."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Verify staging password file
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+
+          PASSWORD_FILE="/opt/consulting-site/staging/.staging_password"
+
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "
+            if [ ! -e '${PASSWORD_FILE}' ]; then
+              echo 'Staging password file does not exist: ${PASSWORD_FILE}' >&2
+              exit 1
+            fi
+
+            # stat -c is GNU.  On the deploy host (Ubuntu 24.04) it works.
+            # Fall back to ls -l parsing if unavailable.
+            if STAT_OUT=\$(stat -c '%a %U:%G' '${PASSWORD_FILE}' 2>/dev/null); then
+              echo \"stat: \${STAT_OUT}\"
+            else
+              echo 'stat -c unavailable; falling back to ls -l'
+              ls -l '${PASSWORD_FILE}'
+              STAT_OUT=\$(ls -l '${PASSWORD_FILE}' | awk '{print \$1}')
+              echo \"ls: \${STAT_OUT}\"
+            fi
+
+            # Hard checks regardless of which command succeeded.
+            PERMS=\$(stat -c '%a' '${PASSWORD_FILE}' 2>/dev/null || true)
+            OWNER=\$(stat -c '%U:%G' '${PASSWORD_FILE}' 2>/dev/null || true)
+
+            if [ \"\${PERMS}\" != '600' ]; then
+              echo \"ERROR: expected mode 600, got \${PERMS}\" >&2
+              exit 1
+            fi
+            if [ \"\${OWNER}\" != 'deploy:deploy' ]; then
+              echo \"ERROR: expected owner deploy:deploy, got \${OWNER}\" >&2
+              exit 1
+            fi
+
+            echo 'Staging password file OK: ${PASSWORD_FILE} (mode \${PERMS}, owner \${OWNER})'
+          "
