@@ -1,0 +1,22 @@
+[Unit]
+Description=Consulting Site DrifterBot Worker (%i)
+After=network.target
+
+[Service]
+User=deploy
+Group=www-data
+WorkingDirectory=/opt/consulting-site/%i/current
+EnvironmentFile=-/opt/consulting-site/%i/shared/env/app.env
+Environment=PYTHONUNBUFFERED=1
+UMask=0007
+
+ExecStart=/opt/consulting-site/%i/current/.venv/bin/python -m agents.driftbot.worker
+
+Restart=always
+RestartSec=5
+TimeoutStopSec=120
+KillMode=mixed
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

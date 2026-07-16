@@ -27,6 +27,24 @@
 
 <div class="portal-dashboard-grid">
 
+  {# Drift & Anchor-only: DrifterBot audit request CTA. #}
+  {% if client.slug == 'drift-and-anchor' %}
+    <div class="portal-dashboard-cta">
+      <h2 class="portal-dashboard-cta__title">
+        Competitive audit with DrifterBot
+      </h2>
+      <p class="portal-dashboard-cta__text">
+        We&rsquo;ll scan public sources for your competitors,
+        synthesize in Drift &amp; Anchor voice, and drop a Slides
+        draft into your Google Drive folder.
+      </p>
+      <a class="portal-dashboard-cta__button"
+         href="{{ url_for('portal.drift_and_anchor_competitive_audit') }}">
+        Request an audit
+      </a>
+    </div>
+  {% endif %}
+
   <!-- Column 1: Documents -->
   <div class="portal-dashboard-col">
     <h2 class="portal-dashboard-col__title">Documents</h2>

@@ -237,7 +237,6 @@ def invite_user_submit(slug):
     return redirect(url_for('portal.client_dashboard', slug=slug))
 
 
-# ---------- Drift & Anchor: Competitive Audit Requests (R1+R2) ---------- #
 
 # Empty form_data shape — used for both the GET empty-state render and
 # POST failure re-render. The template ships with ONE competitor
