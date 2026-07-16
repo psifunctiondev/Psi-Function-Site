@@ -70,6 +70,16 @@ class CompetitiveAuditSubmission(db.Model):
         nullable=True,
     )
 
+    # Worker-output columns (β-3). The DrifterBot worker writes these
+    # as it claims / processes / completes each submission. All four
+    # are nullable: R1 UI submissions don't touch them, and a row may
+    # be claimed but not yet finished (audit_id / completed_at blank
+    # while running).
+    audit_id = db.Column(db.String(32), nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+    started_at = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
     # Relationships
     client = db.relationship('Client', backref='competitive_audits')
     author = db.relationship('User', backref='competitive_audits')
@@ -80,11 +90,18 @@ class CompetitiveAuditSubmission(db.Model):
     )
 
     # Status constants. R1 UI never transitions out of 'submitted';
-    # R2 will add 'processing' / 'complete' flows.
+    # the DrifterBot worker (β-3) drives the processing / complete /
+    # failed transitions downstream.
     STATUS_SUBMITTED = 'submitted'
     STATUS_PROCESSING = 'processing'
     STATUS_COMPLETE = 'complete'
-    STATUSES = (STATUS_SUBMITTED, STATUS_PROCESSING, STATUS_COMPLETE)
+    STATUS_FAILED = 'failed'
+    STATUSES = (
+        STATUS_SUBMITTED,
+        STATUS_PROCESSING,
+        STATUS_COMPLETE,
+        STATUS_FAILED,
+    )
 
     # Composite index serves the history-list query path
     # (filter by client_id, ORDER BY created_at DESC) and the
@@ -113,6 +130,7 @@ class CompetitiveAuditSubmission(db.Model):
             self.STATUS_SUBMITTED: 'status-chip--neutral',
             self.STATUS_PROCESSING: 'status-chip--accent',
             self.STATUS_COMPLETE: 'status-chip--success',
+            self.STATUS_FAILED: 'status-chip--danger',
         }.get(self.status, 'status-chip--neutral')
 
     def __repr__(self):

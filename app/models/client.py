@@ -22,9 +22,6 @@ class Client(db.Model):
     # Relationships
     users = db.relationship('User', back_populates='client', lazy='dynamic')
     resources = db.relationship('ClientResource', back_populates='client', lazy='dynamic')
-    audit_requests = db.relationship(
-        'AuditRequest', back_populates='client', lazy='dynamic',
-    )
 
     def __repr__(self):
         return f'<Client {self.slug}>'
