@@ -1,0 +1,666 @@
+{% extends 'base.html' %}
+
+{% block title %}Competitive Audit Requests — {{ client.name }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+{% if client.font_url %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{{ client.font_url }}">
+{% endif %}
+<style>
+  :root {
+    --client-primary: {{ client.primary_color or '#160E33' }};
+    --client-accent: {{ client.accent_color or '#C9A66B' }};
+    --client-radius: 8px;
+    {% if client.font_display %}--client-font-display: {{ client.font_display|safe }};
+    --client-font-weight: 400;{% endif %}
+    {% if client.logo_max_height %}--client-logo-max-height: {{ client.logo_max_height }};{% endif %}
+  }
+
+  /* Light-locked portal area, same pattern as the D&A landing. */
+  .portal-page {
+    --color-bg: #f5f5f5;
+    --color-surface: #ffffff;
+    --color-text: #313131;
+    --color-text-muted: #878787;
+    --color-heading: #313131;
+    --color-border: #e0e0e0;
+    --color-link: var(--client-primary);
+    --color-link-hover: var(--client-accent);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  body:has(.portal-page) main {
+    --portal-fade-height: calc(var(--header-height) * 0.25);
+    background:
+      linear-gradient(
+        to bottom,
+        #f5f5f5 0,
+        #f5f5f5 calc(100% - var(--portal-fade-height)),
+        transparent 100%
+      )
+      no-repeat;
+    background-color: transparent;
+  }
+
+  /* ----------------------------------------------------------
+     Drift & Anchor brand font — scoped to THIS page only.
+     Quinn: the cards/titles need DM Serif Display applied
+     within the page scope (NOT globally, so it doesn't leak
+     to other client pages). Regression-tested below in
+     TestTemplate.test_scoped_font_family_applied.
+
+     Slice 8 (item 6): .btn elements inside the form (and the
+     first-visit / collapsed cards) now inherit the page's
+     display font too, so the action buttons match the text-
+     entry labels visually. Scoped to .competitive-audit-form-card
+     / .competitive-audit-start-card / .competitive-audit-collapsed-card
+     so we don't widen the global .btn font rule.
+     ---------------------------------------------------------- */
+  .drift-and-anchor-competitive-audit,
+  .drift-and-anchor-competitive-audit .competitive-audit-col__title,
+  .drift-and-anchor-competitive-audit .competitive-audit-start-card,
+  .drift-and-anchor-competitive-audit .competitive-audit-collapsed-card,
+  .drift-and-anchor-competitive-audit .competitive-audit-form-card,
+  .drift-and-anchor-competitive-audit .competitive-audit-form-card .btn,
+  .drift-and-anchor-competitive-audit .competitive-audit-start-card .btn,
+  .drift-and-anchor-competitive-audit .competitive-audit-collapsed-card .btn {
+    font-family: var(--client-font-display, 'DM Serif Display', serif);
+  }
+
+  /* Page-scoped tagline override — Quinn: bold + non-italic on THIS
+     page only. The base .portal__tagline--hero is italic for the D&A
+     landing; we override it here without leaking. */
+  .drift-and-anchor-competitive-audit .portal__tagline--hero {
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  /* Form card hover-suppress — mirrors the login-card pattern so the
+     form doesn't visually "raise" on hover (it's not a clickable
+     surface). Also pins z-index above the page-level gradient so
+     input clicks aren't eaten by an underlay (item 2 of the
+     review-pass). */
+  .competitive-audit-form-card {
+    position: relative;
+    z-index: 1;
+  }
+  .competitive-audit-form-card:hover {
+    transform: none;
+    box-shadow: none;
+    background: var(--color-surface);
+  }
+  /* Defensive: every interactive element inside the form is clickable
+     even if some global rule accidentally sets pointer-events: none
+     on a parent (the BUG that Quinn observed in the live review was
+     most likely the page-level gradient eating clicks on the lower
+     inputs; this + the z-index pin above close that hole). */
+  .competitive-audit-form-card,
+  .competitive-audit-form-card * {
+    pointer-events: auto;
+  }
+
+  /* 5-column grid: column 1 = client_name, columns 2-5 = the FIRST
+     competitor sub-card (spanning 4 cols). Additional competitor
+     cards (added via the "Add" button) stack BELOW the grid as
+     full-width rows via .competitive-audit-extra-cards. */
+  .competitive-audit-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+  }
+  @media (max-width: 1100px) {
+    .competitive-audit-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .competitive-audit-col--main {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 600px) {
+    .competitive-audit-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .competitive-audit-col--main {
+      grid-column: auto;
+    }
+  }
+
+  /* First/default competitor sub-card — spans cols 2-5 of the grid. */
+  .competitive-audit-col--main {
+    grid-column: 2 / span 4;
+    position: relative;
+  }
+  /* Slice 8 (item 4): the Add button now lives INSIDE the socials
+     row, inline with the Socials: label and the four checkbox
+     pairs. It used to sit on its own row beneath the card. We keep
+     this class around (and empty) so any JS that still references it
+     doesn't 404 — the real styling for the button now lives on
+     .competitive-audit-socials .btn[data-competitive-audit-add]. */
+  .competitive-audit-col__add-row {
+    /* Deprecated in slice 8 — Add button no longer renders here. */
+    display: none;
+  }
+
+  /* Slice 7 items 5-6: internal 2-col sub-grid inside the FIRST
+     competitor sub-card (and any added clone). brand_name sits in
+     sub-col 1 (left half), home_url in sub-col 2 (right half). The
+     outer card still spans the page-level cols 2-5. */
+  .competitive-audit-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+  @media (max-width: 700px) {
+    /* Narrow viewports: stack the two fields full-width rather than
+       squeeze them into ~50% of an already-narrow card. */
+    .competitive-audit-fields-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  /* Items 7-10: top-align the label + input inside each row so they
+     all hug the top edge of the row (no baseline-anchored middle
+     alignment now that brand_name and home_url sit side-by-side). */
+  .competitive-audit-fields-grid .competitive-audit-row {
+    align-items: flex-start;
+  }
+  .competitive-audit-fields-grid .competitive-audit-row > label,
+  .competitive-audit-fields-grid .competitive-audit-row > input {
+    align-self: flex-start;
+  }
+
+  /* Container for ADDED competitor sub-cards (cloned by JS on Add).
+     Slice 8 (item 8): each clone should span cols 2-5 of the same
+     5-column grid the default competitor card sits in, so the
+     left/right edges of every competitor card line up vertically
+     (col 1 = the Client card; cols 2-5 = all competitor sub-cards).
+     We make the container itself a 5-column grid; each child col
+     then spans 2 / span 4 to match the default card. */
+  .competitive-audit-extra-cards {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+  }
+  .competitive-audit-extra-cards .competitive-audit-col {
+    grid-column: 2 / span 4;
+  }
+  @media (max-width: 1100px) {
+    /* Mirror the grid breakpoint so the extra cards line up with
+       the default card after the page collapses to 2 columns. */
+    .competitive-audit-extra-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .competitive-audit-extra-cards .competitive-audit-col {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 600px) {
+    /* And again for the single-column <600px breakpoint. */
+    .competitive-audit-extra-cards {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .competitive-audit-extra-cards .competitive-audit-col {
+      grid-column: auto;
+    }
+  }
+  .competitive-audit-extra-cards .competitive-audit-col__remove-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--space-2);
+  }
+
+  .competitive-audit-col {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--client-radius);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .competitive-audit-col__title {
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    font-weight: 700;
+    margin: 0 0 var(--space-2) 0;
+  }
+
+  .competitive-audit-row {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+  .competitive-audit-row > label {
+    /* Slice 8 (item 2): "Brand Name:" / "Brand Home Page URL:" —
+       non-bold (font-weight: 400). Same as the socials row labels.
+       The Client / Competitor N titles live on
+       .competitive-audit-col__title which keeps font-weight: 700. */
+    font-weight: 400;
+    font-size: var(--text-sm);
+  }
+  .competitive-audit-row > input[type="text"] {
+    flex: 1 1 100%;
+    min-width: 0;
+    font: inherit;
+    /* Slice 8 (item 3): pin entry text to non-bold. Inputs default
+       to font-weight: 400 in most browsers; pin explicitly so a
+       global rule change can't accidentally bold them. */
+    font-weight: 400;
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: calc(var(--client-radius) / 2);
+    background: var(--color-bg);
+    pointer-events: auto;
+  }
+
+  /* Slice 7 items 11-14: socials label + four (label + checkbox)
+     pairs all sit on ONE inline row, evenly spaced. Labels are
+     un-bolded (400), the trailing colons on the checkbox labels are
+     gone, and the gap between each label and its checkbox is
+     tightened to ~16px (about a checkbox-width). */
+  .competitive-audit-socials {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+  .competitive-audit-socials__label {
+    /* Slice 8 (item 2): the spec calls for "all other labels" to
+       be non-bold. "Socials:" is currently a <div> styled like a
+       label, not a real <label for="..."> — treat it the same way
+       per the spec's strict interpretation. */
+    font-weight: 400;
+    font-size: var(--text-sm);
+  }
+  .competitive-audit-socials > .competitive-audit-social {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .competitive-audit-social > label {
+    font-weight: 400;
+    font-size: var(--text-sm);
+  }
+  /* Slice 8 (item 4): the Add button is now a flex child of the
+     socials row. Push it to the right edge so it lines up with the
+     far-right side of the competitor sub-card. On narrow viewports
+     (<700px) it can wrap to its own line — the flex-wrap on the
+     parent row handles that without further rules. */
+  .competitive-audit-socials > [data-competitive-audit-add] {
+    margin-left: auto;
+  }
+
+  /* First-visit "Start New Audit" card — Quinn (item 1): LEFT-
+     justified text, NOT centered. */
+  .competitive-audit-start-card {
+    display: block;
+    text-align: left;
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--client-radius);
+    font-weight: 700;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+  .competitive-audit-start-card:hover {
+    color: var(--color-accent, var(--client-accent));
+    background: var(--color-surface);
+  }
+
+  /* Form actions row — Quinn (items 7+8): primary submit plus two
+     greyscale future-affordance buttons (Edit / Duplicate). The
+     greyscale pair is disabled for now — visible affordance, no
+     behavior. NOTE: CSS comments are rendered into the response
+     body inside <style>, so the literal button labels do NOT appear
+     here — that would leak into the empty-render GET.
+
+     Slice 8 (item 5): actions now live in col 1 of the grid (under
+     the Client card), stacked vertically (flex-direction: column).
+     They are no longer a full-width row at the bottom of the form. */
+  .competitive-audit-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: stretch;
+    /* No margin-top here — the parent .competitive-audit-col uses
+       flex-direction: column with its own gap so actions sit
+       visually just under the client_name input. */
+    margin-top: 0;
+  }
+  .competitive-audit-actions .btn {
+    /* Slice 7 item 15: bump the action-button font size from the
+       inherited ~14px to ~16px so the primary CTA reads stronger.
+       Scoped to .competitive-audit-actions so we don't widen the
+       global .btn rule. */
+    font-size: 1rem;
+    width: 100%;
+    text-align: center;
+  }
+  .competitive-audit-actions .btn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.55;
+    background: var(--color-border);
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+  }
+
+  /* Collapsed card (slice 8 item 9): mirrors .competitive-audit-start-card
+     but uses ">" as the leading character. Same white surface,
+     border, radius, and D&A display font. */
+  .competitive-audit-collapsed-card {
+    display: block;
+    text-align: left;
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--client-radius);
+    font-weight: 700;
+    color: var(--color-text);
+    text-decoration: none;
+  }
+  .competitive-audit-collapsed-card:hover {
+    color: var(--color-accent, var(--client-accent));
+    background: var(--color-surface);
+  }
+  /* Stacked collapsed card + start card — Quinn wants a small gap
+     between them so the two cards don't visually merge. */
+  .competitive-audit-collapsed-card + .competitive-audit-start-card {
+    margin-top: var(--space-4);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="portal-page drift-and-anchor drift-and-anchor-competitive-audit">
+
+  <div class="container section-stack">
+
+    {# Banner — same portal-banner block as the D&A landing. #}
+    {% if client.banner_url %}
+      <div class="portal-banner">
+        <img class="portal-banner__img" src="{{ client.banner_url }}" alt="{{ client.name }} banner">
+      </div>
+    {% endif %}
+
+    {# Tagline — page-scoped override above makes this bold + non-italic. #}
+    <p class="portal__tagline portal__tagline--hero">Competitive Audit Requests</p>
+
+    {# Intentionally NO portal-welcome block on this page. #}
+
+    {# First-visit CTA, OR the form when ?new=1 / ?edit=<id> / ?fork=<id> / POST failure,
+       OR the collapsed state after a successful POST. Slice 8 (items 9-11). #}
+    {% if collapsed_audit %}
+      {# Slice 8 item 9: collapsed view shown after a successful Run Audit POST.
+         The leading character is ">", the title text is the saved client_name
+         (fall back to "Untitled Audit" if empty), and the click re-expands
+         the audit via the existing ?edit=<id> route. The "+ Start New Audit"
+         card sits below it (slice 8 item 11). #}
+      <a class="competitive-audit-collapsed-card"
+         href="{{ url_for('portal.drift_and_anchor_competitive_audit') }}?edit={{ collapsed_audit.id }}">
+        &gt; {{ collapsed_audit.form_data.get('client_name') or 'Untitled Audit' }}
+      </a>
+      <a class="competitive-audit-start-card" href="{{ url_for('portal.drift_and_anchor_competitive_audit', _anchor=None) }}?new=1">
+        + Start New Audit
+      </a>
+    {% elif not show_form %}
+      <a class="competitive-audit-start-card" href="{{ url_for('portal.drift_and_anchor_competitive_audit', _anchor=None) }}?new=1">
+        + Start New Audit
+      </a>
+    {% else %}
+      {# Slice 8 (item 10): edit_mode is true whenever the user is editing or
+         forking an existing submission. In edit mode Run Audit is greyed
+         out (you don't "run" an existing audit, you just re-save it), and
+         Edit + Duplicate become real links back to the ?edit and ?fork
+         routes for that submission. Outside edit mode they're greyed out
+         visible-affordance only (slice 7 items 7+8). #}
+      {% set edit_mode = edit_target is not none %}
+      <form method="post" action="{{ url_for('portal.drift_and_anchor_competitive_audit') }}" class="competitive-audit-form-card card">
+
+        {# Edit-in-place / fork carry-forward — submitted hidden. #}
+        {% if edit_target %}
+          <input type="hidden" name="submission_id" value="{{ edit_target.id }}">
+        {% endif %}
+        {% if fork_source %}
+          <input type="hidden" name="forked_from_id" value="{{ fork_source.id }}">
+        {% endif %}
+
+        <div class="competitive-audit-grid">
+
+          {# Column 1: Client Name + the vertically-stacked action buttons.
+              Slice 8 (item 5): actions now live INSIDE col 1, just below
+              the client_name input. Vertical stack via
+              .competitive-audit-actions { flex-direction: column }. #}
+          <div class="competitive-audit-col">
+            <div class="competitive-audit-col__title">Client</div>
+            <div class="competitive-audit-row">
+              <input type="text" id="client_name" name="client_name"
+                     value="{{ form_data.client_name or '' }}"
+                     required>
+            </div>
+            <div class="competitive-audit-actions">
+              <button type="submit" class="btn btn--primary"
+                      {% if edit_mode %}disabled
+                      aria-label="Run Audit (greyed — edit in place instead)"{% endif %}>
+                Run Audit
+              </button>
+              {% if edit_mode %}
+                <a class="btn" href="{{ url_for('portal.drift_and_anchor_competitive_audit') }}?edit={{ edit_target.id }}">
+                  Edit Audit
+                </a>
+                <a class="btn" href="{{ url_for('portal.drift_and_anchor_competitive_audit') }}?fork={{ edit_target.id }}">
+                  Duplicate Audit
+                </a>
+              {% else %}
+                <button type="button" class="btn" disabled
+                        aria-label="Edit Audit (not yet wired)">
+                  Edit Audit
+                </button>
+                <button type="button" class="btn" disabled
+                        aria-label="Duplicate Audit (not yet wired)">
+                  Duplicate Audit
+                </button>
+              {% endif %}
+            </div>
+          </div>
+
+          {# Columns 2-5: the FIRST (default) competitor sub-card.
+              Spans 4 columns. Slice 8 (item 4): Add button now sits
+              INLINE on the socials row (not on its own row below). #}
+          {% set comp = form_data['competitor_1'] %}
+           <div class="competitive-audit-col competitive-audit-col--main"
+                data-competitive-audit-card data-card-index="1"
+                data-server-rendered="1">
+            <div class="competitive-audit-col__title">Competitor 1</div>
+
+            {# Slice 7 items 5-6: brand_name + URL now live in an internal
+               2-col sub-grid (left half = brand, right half = URL). The
+               outer competitor card still spans cols 2-5 of the page-
+               level 5-column grid. #}
+            <div class="competitive-audit-fields-grid">
+              <div class="competitive-audit-row">
+                <label for="competitor_1_brand_name">Brand Name:</label>
+                <input type="text" id="competitor_1_brand_name"
+                       name="competitor_1_brand_name"
+                       value="{{ (comp.brand_name if comp else '') or '' }}">
+              </div>
+
+              <div class="competitive-audit-row">
+                <label for="competitor_1_home_url">Brand Home Page URL:</label>
+                <input type="text" id="competitor_1_home_url"
+                       name="competitor_1_home_url"
+                       value="{{ (comp.home_url if comp else '') or '' }}">
+              </div>
+            </div>
+
+{# Slice 7 items 11-14: socials label + all four (label + checkbox)
+               pairs on ONE inline row. Labels un-bolded, colons stripped
+               from the checkbox labels (the "Socials:" label keeps its
+               colon), gap between label and checkbox tightened to ~16px.
+
+               Slice 8 (item 4): the Add button now lives inside this same
+               row, pushed to the far right via margin-left: auto on the
+               button's CSS rule (see the .competitive-audit-socials
+               selector above). #}
+            <div class="competitive-audit-socials">
+              {% set socials = comp.include_socials if comp and comp.include_socials else {} %}
+              <div class="competitive-audit-socials__label">Socials:</div>
+              <div class="competitive-audit-social">
+                <input type="checkbox" id="competitor_1_include_x"
+                       name="competitor_1_include_x"
+                       {% if socials.get('x', True) %}checked{% endif %}>
+                <label for="competitor_1_include_x">X</label>
+              </div>
+              <div class="competitive-audit-social">
+                <input type="checkbox" id="competitor_1_include_facebook"
+                       name="competitor_1_include_facebook"
+                       {% if socials.get('facebook', True) %}checked{% endif %}>
+                <label for="competitor_1_include_facebook">Facebook</label>
+              </div>
+              <div class="competitive-audit-social">
+                <input type="checkbox" id="competitor_1_include_instagram"
+                       name="competitor_1_include_instagram"
+                       {% if socials.get('instagram', True) %}checked{% endif %}>
+                <label for="competitor_1_include_instagram">Instagram</label>
+              </div>
+              <div class="competitive-audit-social">
+                <input type="checkbox" id="competitor_1_include_youtube"
+                       name="competitor_1_include_youtube"
+                       {% if socials.get('youtube', True) %}checked{% endif %}>
+                <label for="competitor_1_include_youtube">YouTube</label>
+              </div>
+              <button type="button" class="btn"
+                      data-competitive-audit-add
+                      aria-label="Add another competitor">
+                Add
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        {# Container for ADDED competitor sub-cards. The default
+           render ships with this empty; the JS in the script block
+           below clones .competitive-audit-col--main into here on
+           each Add click, re-indexing ids/names so the form posts
+           competitor_2, competitor_3, ... #}
+        <div class="competitive-audit-extra-cards"
+             data-competitive-audit-extra-cards></div>
+
+      </form>
+    {% endif %}
+
+  </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    // Quinn (item 5): clone the default competitor sub-card into the
+    // extra-cards container on each "Add" click. NO upper bound for
+    // now — Quinn flagged that a cap may be added later. Each clone
+    // gets a fresh competitor_N index by scanning the existing DOM,
+    // so even server-rendered competitor_2..N (from a fork/edit) get
+    // re-counted correctly.
+    var form = document.querySelector('.competitive-audit-form-card');
+    if (!form) return;
+
+    var defaultCard = form.querySelector(
+      '[data-competitive-audit-card][data-card-index="1"]'
+    );
+    var addBtn = form.querySelector('[data-competitive-audit-add]');
+    var extraContainer = form.querySelector(
+      '[data-competitive-audit-extra-cards]'
+    );
+    if (!defaultCard || !addBtn || !extraContainer) return;
+
+    function nextIndex() {
+      var cards = form.querySelectorAll('[data-competitive-audit-card]');
+      var max = 0;
+      cards.forEach(function (c) {
+        var n = parseInt(c.getAttribute('data-card-index'), 10);
+        if (!isNaN(n) && n > max) max = n;
+      });
+      return max + 1;
+    }
+
+    function reindex(srcHtml, newIndex) {
+      // Replace every occurrence of competitor_1_, id="competitor_1_,
+      // and for="competitor_1_ with the new index. Also rename the
+      // card-index attribute itself.
+      //
+      // Slice 8 (item 7): the title DOM element on the cloned card is
+      // `<div class="competitive-audit-col__title">Competitor 1</div>`.
+      // Rewrite that literal text to "Competitor N" so the cloned card
+      // visually matches its re-indexed form field names. We anchor on
+      // the className + closing </div> so we don't false-positive on
+      // any other "Competitor 1" string in the template.
+      var html = srcHtml
+        .replace(/competitor_1_/g, 'competitor_' + newIndex + '_')
+        .replace(/id="competitor_1_/g, 'id="competitor_' + newIndex + '_')
+        .replace(/for="competitor_1_/g, 'for="competitor_' + newIndex + '_')
+        .replace(/data-card-index="1"/, 'data-card-index="' + newIndex + '"')
+        .replace(
+          'class="competitive-audit-col__title">Competitor 1<',
+          'class="competitive-audit-col__title">Competitor ' + newIndex + '<'
+        );
+      // Reset all input values inside the clone — the cloned card
+      // starts blank, pre-fill only lives on the default card.
+      return html.replace(
+        /(<input\b[^>]*?)(?:\s+value="[^"]*")?(\s*\/?>)/g,
+        function (_match, head, tail) {
+          if (/type="checkbox"/.test(head)) {
+            // Default-checked on clones matches the empty-form UX.
+            return head + ' checked' + tail;
+          }
+          return head + ' value=""' + tail;
+        }
+      );
+    }
+
+    function makeRemoveButton(newIndex) {
+      var row = document.createElement('div');
+      row.className = 'competitive-audit-col__remove-row';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn';
+      btn.setAttribute('data-competitive-audit-remove', '');
+      btn.setAttribute('aria-label', 'Remove competitor ' + newIndex);
+      btn.textContent = 'Remove';
+      btn.addEventListener('click', function () {
+        var card = btn.closest('[data-competitive-audit-card]');
+        if (card && card !== defaultCard) card.remove();
+      });
+      row.appendChild(btn);
+      return row;
+    }
+
+    addBtn.addEventListener('click', function () {
+      var newIndex = nextIndex();
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = reindex(defaultCard.outerHTML, newIndex);
+      var newCard = wrapper.firstElementChild;
+      if (!newCard) return;
+      // Append a Remove row (the default card's Remove row is omitted
+      // — Quinn didn't ask for it on the primary card; it stays
+      // until the form is submitted or the user backs out).
+      newCard.appendChild(makeRemoveButton(newIndex));
+      extraContainer.appendChild(newCard);
+    });
+  })();
+</script>
+{% endblock %}

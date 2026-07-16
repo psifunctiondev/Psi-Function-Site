@@ -69,6 +69,10 @@ def create_app(config_name: str | None = None) -> Flask:
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
+    # Eager model imports so every db.Model subclass registers with
+    # db.metadata before db.create_all() runs (tests) or before Alembic
+    # autogenerate walks the metadata (deploys).
+    from . import models  # noqa: F401  (side-effect import)
     from .blueprints.admin.routes import admin_bp
     from .blueprints.api.routes import api_bp
     from .blueprints.auth.routes import auth_bp

@@ -17,6 +17,7 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.models.client import Client, ClientResource
+from app.models.competitive_audit import CompetitiveAuditSubmission
 from app.models.user import User
 
 portal_bp = Blueprint('portal', __name__)
@@ -234,3 +235,228 @@ def invite_user_submit(slug):
     flash(f'Invite sent to {email}.', 'success')
     # TODO: Send invite email via AgentMail
     return redirect(url_for('portal.client_dashboard', slug=slug))
+
+
+# ---------- Drift & Anchor: Competitive Audit Requests (R1+R2) ---------- #
+
+# Empty form_data shape — used for both the GET empty-state render and
+# POST failure re-render. The template ships with ONE competitor
+# sub-card by default (slice 6, Quinn review pass: items 3-5); users
+# can add more via the JS "Add" button. The parser below discovers
+# the actual number of sub-cards from the submitted form keys, so
+# there's no fixed upper bound.
+_EMPTY_FORM_DATA = {
+    'client_name': '',
+    'competitor_1': None,
+}
+
+
+def _discover_competitor_indices(form):
+    """Return the sorted list of competitor sub-card indices in a POSTed form.
+
+    Walks the form's keys for ``competitor_<i>_brand_name`` /
+    ``competitor_<i>_home_url`` patterns and collects the unique ``<i>``
+    values. Used by ``_parse_competitive_audit_form`` so the parser
+    works for an arbitrary number of sub-cards (added client-side via
+    the "Add" button — Quinn slice 6 item 5: no upper bound yet).
+    """
+    import re
+    indices = set()
+    pattern = re.compile(r'^competitor_(\d+)_(?:brand_name|home_url)$')
+    for key in form.keys():
+        m = pattern.match(key)
+        if m:
+            indices.add(int(m.group(1)))
+    return sorted(indices)
+
+
+def _parse_competitive_audit_form(form):
+    """Pull form_data + metadata out of a POSTed WTForms-ish form.
+
+    Empty competitor sub-cards (no fields filled in) land as ``None``
+    in the stored JSON, not as empty dicts — keeps the shape
+    predictable for the R2 back-end pipeline.
+
+    The number of sub-cards is discovered from the form keys rather
+    than a hard-coded 1..4 range, so the dynamic "Add" button
+    (slice 6, Quinn review pass) works without an upper bound.
+    """
+    form_data = {'client_name': ''}
+    form_data['client_name'] = (form.get('client_name') or '').strip()
+
+    indices = _discover_competitor_indices(form)
+    # Always include index 1 even if not present in form — the
+    # template always renders one card and the parser should not
+    # surprise-delete it on an empty submission.
+    if not indices:
+        indices = [1]
+    else:
+        indices = sorted(set(indices) | {1})
+
+    for i in indices:
+        prefix = f'competitor_{i}_'
+        brand_name = (form.get(f'{prefix}brand_name') or '').strip()
+        home_url = (form.get(f'{prefix}home_url') or '').strip()
+
+        # Sub-card is empty iff both fields are blank. Toggles default
+        # to checked, so the absence of a checkbox submission is
+        # itself a signal — but for the empty case we short-circuit
+        # to None and ignore toggle data entirely.
+        if not brand_name and not home_url:
+            form_data[f'competitor_{i}'] = None
+            continue
+
+        form_data[f'competitor_{i}'] = {
+            'brand_name': brand_name or None,
+            'home_url': home_url,
+            'include_socials': {
+                'x': form.get(f'{prefix}include_x') == 'on',
+                'facebook': form.get(f'{prefix}include_facebook') == 'on',
+                'instagram': form.get(f'{prefix}include_instagram') == 'on',
+                'youtube': form.get(f'{prefix}include_youtube') == 'on',
+            },
+        }
+    return form_data
+
+
+def _fetch_drift_and_anchor_submission(client_id, submission_id):
+    """Look up a submission scoped to the D&A client, 404 otherwise.
+
+    Spec: cross-client id access must 404, NOT 403, so existence
+    isn't leaked through the status code.
+    """
+    sub = CompetitiveAuditSubmission.query.filter_by(
+        id=submission_id, client_id=client_id,
+    ).first()
+    if sub is None:
+        abort(404)
+    return sub
+
+
+@portal_bp.route(
+    '/p/drift-and-anchor/competitive-audit/',
+    methods=['GET', 'POST'],
+)
+@login_required
+def drift_and_anchor_competitive_audit():
+    """Drift & Anchor competitive-audit intake (R1).
+
+    GET renders the form (empty, pre-filled via ``?edit=<id>`` or
+    ``?fork=<id>``) plus a history list of past submissions for this
+    client. POST validates ``client_name`` is non-empty, then either
+    updates an existing row (if ``submission_id`` present in the form)
+    or creates a new one (carrying ``forked_from_id`` when present).
+
+    Access mirrors the Drift & Anchor landing: own-client user OR site
+    admin. Cross-client ``?edit=<id>`` access returns 404 so the
+    existence of other clients' audits is not leaked.
+    """
+    client = Client.query.filter_by(
+        slug='drift-and-anchor', is_active=True,
+    ).first_or_404()
+
+    if not current_user.is_admin and (
+        not current_user.client or current_user.client.id != client.id
+    ):
+        abort(403)
+
+    history = (
+        CompetitiveAuditSubmission.query
+        .filter_by(client_id=client.id)
+        .order_by(CompetitiveAuditSubmission.created_at.desc())
+        .all()
+    )
+
+    edit_id = request.values.get('edit', type=int)
+    fork_id = request.values.get('fork', type=int)
+
+    edit_target = None
+    fork_source = None
+    if edit_id:
+        edit_target = _fetch_drift_and_anchor_submission(client.id, edit_id)
+    if fork_id:
+        fork_source = _fetch_drift_and_anchor_submission(client.id, fork_id)
+
+    if request.method == 'POST':
+        form_data = _parse_competitive_audit_form(request.form)
+        if not form_data['client_name']:
+            flash('Client name is required.', 'error')
+            return render_template(
+                'portal/drift_and_anchor_competitive_audit.html',
+                client=client,
+                user=current_user,
+                history=history,
+                form_data=form_data,
+                edit_target=None,
+                fork_source=None,
+                show_form=True,
+                collapsed_audit=None,
+            )
+
+        submission_id = request.form.get('submission_id', type=int)
+        forked_from_id = request.form.get('forked_from_id', type=int)
+
+        if submission_id:
+            # Update in place. Re-scope the lookup to this client so
+            # the 404 leak-protection holds on POST as well as GET.
+            sub = _fetch_drift_and_anchor_submission(
+                client.id, submission_id,
+            )
+            sub.form_data = form_data
+        else:
+            sub = CompetitiveAuditSubmission(
+                client_id=client.id,
+                author_id=current_user.id,
+                status=CompetitiveAuditSubmission.STATUS_SUBMITTED,
+                form_data=form_data,
+                forked_from_id=forked_from_id,
+            )
+            db.session.add(sub)
+
+        db.session.commit()
+        # Slice 8 (item 9): instead of PRG-redirecting back to the
+        # empty form, re-render the same page in the collapsed state
+        # with the just-saved submission. This is server-rendered so
+        # it's pytest-testable and browser-back-safe; the collapsed
+        # card title text is the saved client_name (fallback to
+        # "Untitled Audit"), and clicking it re-expands via the
+        # existing ?edit=<id> route.
+        flash('Saved.', 'success')
+        return render_template(
+            'portal/drift_and_anchor_competitive_audit.html',
+            client=client,
+            user=current_user,
+            history=history,
+            form_data=dict(_EMPTY_FORM_DATA),
+            edit_target=None,
+            fork_source=None,
+            show_form=False,
+            collapsed_audit=sub,
+        )
+
+    # GET — choose the form's prefill source.
+    if edit_target is not None:
+        # ?edit: prefill from the row; no carry-forward of forked_from_id
+        # because the user is editing in place.
+        form_data = dict(edit_target.form_data)
+        show_form = True
+    elif fork_source is not None:
+        # ?fork: copy the row's form_data; template renders the
+        # hidden forked_from_id so submit creates a new linked row.
+        form_data = dict(fork_source.form_data)
+        show_form = True
+    else:
+        form_data = dict(_EMPTY_FORM_DATA)
+        show_form = bool(request.values.get('new'))
+
+    return render_template(
+        'portal/drift_and_anchor_competitive_audit.html',
+        client=client,
+        user=current_user,
+        history=history,
+        form_data=form_data,
+        edit_target=edit_target,
+        fork_source=fork_source,
+        show_form=show_form,
+        collapsed_audit=None,
+    )
