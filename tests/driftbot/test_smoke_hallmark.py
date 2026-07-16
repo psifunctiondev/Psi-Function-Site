@@ -19,6 +19,8 @@ Portal pipeline extension (2026-07-15, spec §7):
 import json
 from pathlib import Path
 
+import pytest
+
 from agents.driftbot.renderer_slides import (
     DA_ACCENT,
     DA_NEUTRAL_DARK,
@@ -51,6 +53,24 @@ FIXTURE_ROOT = (
     _VAULT_ROOT
     / "vaults/shared/Shared Obsidian/psi-function/clients/drift-and-anchor"
     / "audit/_input/test-fixtures/hallmark"
+)
+
+# The Hallmark fixture is a synthetic D&A test asset that lives in
+# Quinn's Obsidian vault (synced via Seafile, NOT committed to the
+# repo). When the vault isn't mounted — e.g. on the GitHub CI runner —
+# these tests skip with a clear message instead of failing with a
+# misleading "Missing client.json" assertion. Local runs on Belel see
+# the vault via the Seafile sync, so the tests run normally there.
+# To intentionally run on a system without the vault, mount or copy the
+# fixture tree to FIXTURE_ROOT before invoking pytest.
+_FIXTURES_AVAILABLE = FIXTURE_ROOT.is_dir() and (FIXTURE_ROOT / "client.json").exists()
+pytestmark = pytest.mark.skipif(
+    not _FIXTURES_AVAILABLE,
+    reason=(
+        f"Vault fixtures not present at {FIXTURE_ROOT}. "
+        "These tests require the Obsidian vault to be synced locally. "
+        "On CI (no Seafile mount) they are intentionally skipped."
+    ),
 )
 
 
