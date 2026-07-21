@@ -75,7 +75,7 @@ def test_title_slide_translates_to_create_plus_two_text_boxes():
     # Title element
     title_shape = reqs[1]
     assert title_shape['createShape']['objectId'] == 'slide-title_title'
-    assert title_shape['createShape']['elementProperties']['size']['width']['magnitude'] == _LAYOUT_POSITIONS['TITLE']['TITLE'][2]
+    assert title_shape['createShape']['elementProperties']['size']['width']['magnitude'] == _LAYOUT_POSITIONS['TITLE']['TITLE'][2]  # noqa: E501
     assert reqs[2]['insertText']['text'] == 'Acme — Competitive Audit Draft'
     assert reqs[2]['insertText']['objectId'] == 'slide-title_title'
     # Subtitle element

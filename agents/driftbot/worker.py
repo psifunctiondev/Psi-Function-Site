@@ -464,17 +464,24 @@ def _run_one(session: Session, CompetitiveAuditSubmission, submission_row) -> No
             'submission_id': submission_row.id,
         })
 
-        # Save via the active strategy. Currently LocalPickupStrategy
-        # only; DriveSaveStrategy slots in here when auth lands.
-        run_dir = save_audit(draft, slides_spec, request_id=submission_row.id)
+        # Save via the active strategy. LocalPickupStrategy writes to
+        # /tmp/drifterbot-pickup/<run>/; DriveSaveStrategy pushes the
+        # deck into the BrandSight Client Output Drive folder. Both
+        # return a SaveResult dataclass with location / presentation_id
+        # / web_url fields — worker has one shape to log.
+        save_result = save_audit(draft, slides_spec, request_id=submission_row.id)
 
         # Lifecycle: success
         submission_row.status = CompetitiveAuditSubmission.STATUS_COMPLETE
         submission_row.audit_id = draft.audit_id
         submission_row.completed_at = datetime.now(UTC)
         logger.info(
-            'worker: completed submission id=%s audit_id=%s run_dir=%s',
-            submission_row.id, draft.audit_id, run_dir,
+            'worker: completed submission id=%s audit_id=%s save_location=%s '
+            'presentation_id=%s web_url=%s',
+            submission_row.id, draft.audit_id,
+            save_result.location,
+            save_result.presentation_id,
+            save_result.web_url,
         )
 
     except Exception as exc:

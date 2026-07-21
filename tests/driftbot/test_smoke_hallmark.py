@@ -71,7 +71,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _hydrate_runner_inputs_from_portal_request(portal_req: dict) -> tuple[ClientConfig, list[CompetitorConfig]]:
+def _hydrate_runner_inputs_from_portal_request(portal_req: dict) -> tuple[ClientConfig, list[CompetitorConfig]]:  # noqa: E501
     """Adapter mirroring spec §5 `_audit_request_to_client`.
 
     The portal-request.json shape differs from client.json/competitors.json:
@@ -101,7 +101,7 @@ def _hydrate_runner_inputs_from_portal_request(portal_req: dict) -> tuple[Client
 def test_fixture_files_exist():
     """Fixtures must be staged in the vault before the build test can run."""
     assert (FIXTURE_ROOT / "client.json").exists(), f"Missing client.json at {FIXTURE_ROOT}"
-    assert (FIXTURE_ROOT / "competitors.json").exists(), f"Missing competitors.json at {FIXTURE_ROOT}"
+    assert (FIXTURE_ROOT / "competitors.json").exists(), f"Missing competitors.json at {FIXTURE_ROOT}"  # noqa: E501
     assert (FIXTURE_ROOT / "portal-request.json").exists(), (
         f"Missing portal-request.json at {FIXTURE_ROOT}"
     )
@@ -147,7 +147,7 @@ def test_hallmark_smoke_produces_audit_draft(tmp_path):
     out = tmp_path / "audit-draft.md"
     out.write_text(md, encoding="utf-8")
     assert out.exists()
-    assert out.stat().st_size > 5000, f"Audit draft too small ({out.stat().st_size} bytes) — likely a stub"
+    assert out.stat().st_size > 5000, f"Audit draft too small ({out.stat().st_size} bytes) — likely a stub"  # noqa: E501
 
     # Print summary for human review
     print("\n=== Smoke test passed ===")
