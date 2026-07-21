@@ -82,11 +82,11 @@ def _competitor_cards_slide(draft: AuditDraft) -> list[dict]:
         # Strip markdown header lines, keep body
         lines = card_md.splitlines()
         title = next(
-            (line.replace('#', '').replace('*', '').strip()
-             for line in lines if line.startswith('### ')),
+            (l.replace('#', '').replace('*', '').strip()
+             for l in lines if l.startswith('### ')),
             f'Competitor {i}',
         )
-        body = '\n'.join(line for line in lines if not line.startswith('#'))
+        body = '\n'.join(l for l in lines if not l.startswith('#'))
         slides.append({
             'slideId': slide_id,
             'layout': 'TITLE_AND_BODY',
@@ -114,8 +114,8 @@ def _provocation_slides(draft: AuditDraft) -> list[dict]:
         slide_id = f'slide-prov-{i}'
         # Body is everything except top-level title
         body = '\n'.join(
-            line for line in chapter_md.splitlines()
-            if not line.startswith('# ')
+            l for l in chapter_md.splitlines()
+            if not l.startswith('# ')
         ).strip()
         slides.append({
             'slideId': slide_id,
