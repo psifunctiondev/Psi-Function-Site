@@ -183,13 +183,23 @@ _LAYOUT_POSITIONS = {
 }
 
 
-def _shape_request(object_id: str, text: str, x: int, y: int, w: int, h: int) -> dict:
-    """Build a CreateShapeRequest for a single text box."""
+def _shape_request(
+    object_id: str, page_object_id: str, text: str,
+    x: int, y: int, w: int, h: int,
+) -> dict:
+    """Build a CreateShapeRequest for a single text box.
+
+    ``page_object_id`` is the parent slide (page) the shape belongs to.
+    Without it the Slides API returns 400 ``The page () could not be
+    found`` — caught us on the first DriveSaveStrategy smoke
+    (2026-07-21).
+    """
     return {
         'createShape': {
             'objectId': object_id,
             'shapeType': 'TEXT_BOX',
             'elementProperties': {
+                'pageObjectId': page_object_id,
                 'transform': {
                     'translateX': x,
                     'translateY': y,
@@ -275,7 +285,9 @@ def _intent_slide_to_wire_requests(slide: dict, insertion_index: int) -> list[di
             # Unknown placeholder on a known layout — fall back to a
             # body-sized box near bottom of slide.
             x, y, w, h = positions.get('BODY', (685_800, 3_200_400, 10_820_400, 3_200_400))
-        requests.append(_shape_request(element_object_id, text, x, y, w, h))
+        requests.append(_shape_request(
+            element_object_id, slide['slideId'], text, x, y, w, h,
+        ))
         requests.append(_insert_text_request(element_object_id, text))
 
     return requests
