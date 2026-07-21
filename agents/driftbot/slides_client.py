@@ -389,59 +389,54 @@ class SlidesClient:
                 )
         return presentation_id
 
-    def move_to_folder(
-        self,
-        presentation_id: str,
-        folder_id: str,
-        name: str,
-    ) -> str:
-        """Step 3: PATCH Drive file to rename (Drive uses ``name``, not
-        Slides' title) and move into the output folder.
+    def export_to_pptx(self, presentation_id: str) -> bytes:
+        """Step 3: export the rendered presentation to PPTX bytes.
 
-        Returns the ``webViewLink`` for the file.
+        Drive's ``files.export`` endpoint serves Google-native formats
+        (Slides, Docs, Sheets) as downloadable bytes in a chosen
+        external format. We pick ``application/vnd.openxmlformats-
+        officedocument.presentationml.presentation`` (the modern PPTX
+        MIME) so a real file lands on disk for the rclone mount.
+
+        The file is owned by the impersonated workspace user (the
+        Slides API write grant in step 1 set that). The SA-based
+        Drive export call uses the same JWT — fine because exports
+        don't transfer ownership, they just serialize.
+
+        Returns the PPTX content as ``bytes``.
+
+        Raises:
+            httpx.HTTPError: transport failure
+            DriveAuthError: non-200 status from files.export
         """
-        url = f'https://www.googleapis.com/drive/v3/files/{presentation_id}'
-        params = {'fields': 'id,name,webViewLink'}
-        body = {
-            'name': name,
-            # Note: families-modify-style. Drive actually expects
-            # ``addParents`` + ``removeParents`` query params for moves;
-            # for the v1 audit flow we set parents via update with the
-            # full parent list. ``parents`` in body is accepted by
-            # Drive v3 only for the initial create; for update use the
-            # ``addParents`` query parameter pattern. (See TODO below
-            # for switching to that — kept simple for now.)
-            'description': (
-                f'BrandSight Competitive Audit for {name} — '
-                f'created by DrifterBot.'
+        url = (
+            f'https://www.googleapis.com/drive/v3/files/'
+            f'{presentation_id}/export'
+        )
+        params = {
+            'mimeType': (
+                'application/vnd.openxmlformats-officedocument'
+                '.presentationml.presentation'
             ),
         }
         try:
-            resp = self._http.patch(
-                url, headers=self._auth_headers(),
-                params=params, json=body,
+            resp = self._http.get(
+                url,
+                headers=self._auth_headers(),
+                params=params,
+                timeout=60,
             )
         except httpx.HTTPError as exc:
-            raise DriveFolderAccessError(
-                f'files.patch transport error for {presentation_id}: '
-                f'{exc}'
+            raise DriveAuthError(
+                f'files.export transport error for '
+                f'{presentation_id}: {exc}'
             ) from exc
-        if resp.status_code == 404:
-            raise DriveFolderAccessError(
-                f'files.patch 404 — folder_id={folder_id!r} not visible '
-                f'to the impersonated subject. Check folder exists and '
-                f'the workspace user has at least Viewer access.'
-            )
-        if resp.status_code == 403:
-            raise DriveFolderAccessError(
-                f'files.patch 403 — subject cannot modify files in '
-                f'folder_id={folder_id!r}. Likely permission gap on the '
-                f'BrandSight Output folder or the presentation was '
-                f'created in a different drive than expected.'
-            )
         if resp.status_code != 200:
-            raise DriveFolderAccessError(
-                f'files.patch failed: HTTP {resp.status_code} '
+            # Note: Google sometimes 404s here if the presentation
+            # hasn't finished propagating. Caller can retry; we
+            # surface the error so the worker treats it as fatal.
+            raise DriveAuthError(
+                f'files.export failed: HTTP {resp.status_code} '
                 f'{resp.text[:500]}'
             )
-        return resp.json().get('webViewLink', '')
+        return resp.content

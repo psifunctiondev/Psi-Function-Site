@@ -103,11 +103,6 @@ class LocalPickupStrategy(SaveStrategy):
 # ---------------------------------------------------------------------------
 
 
-# Default folder is `brandsight-output` per vaults/doxa/brandsight-mount-ids.md
-# (the BrandSight Client Output subfolder). Override via env on droplet.
-DEFAULT_OUTPUT_FOLDER_ID = '1rrVimH-UB3qn0FJ0rBuZ9FoTTydSMdIS'
-
-
 def _build_drive_filename(draft: AuditDraft) -> str:
     """{Client Name} - Competitive Audit - {YYYY-MM-DD-HH}
 
@@ -123,9 +118,10 @@ def _build_drive_url(presentation_id: str) -> str:
 
 
 class DriveSaveStrategy(SaveStrategy):
-    """Pushes the audit slides into the D&A BrandSight Output Drive folder.
+    """Pushes the audit slides into the D&A BrandSight Output Drive folder
+    via the rclone FUSE mount on the droplet.
 
-    Workflow:
+    Workflow (B2 architecture — mount-based write):
         1. JWT grant against ``DRIFTERBOT_SLIDEMAKER_JSON`` (service
            account), impersonating the workspace user ``subject=`` so
            the created presentation is owned by D&A, not the service
@@ -135,23 +131,28 @@ class DriveSaveStrategy(SaveStrategy):
            step 3.
         3. POST ``/v1/presentations/{id}:batchUpdate`` to insert the
            actual slides + elements from the spec.
-        4. PATCH ``/drive/v3/files/{id}`` to set the *filename* (Drive
-           UI uses filename, not Slides title) and ``parents`` to the
-           output folder.
-        5. Return a ``SaveResult`` with the presentation ID + edit URL.
+        4. GET ``/drive/v3/files/{id}/export?mimeType=...pptx`` to
+           serialize the rendered Slides presentation into PPTX bytes
+           (we don't write a Google-native file to disk — we want
+           a real .pptx so rclone through the FUSE mount can serve
+           it).
+        5. Write bytes to ``BRANDSIGHT_OUTPUT_PATH/<sanitized-name>.pptx``
+           — the rclone mount auto-propagates to the workspace
+           Shared Drive "DrifterBot" → ``BrandSight Client Output/``.
 
     Environment:
-        DRIFTERBOT_SA_JSON_PATH: path to service-account JSON key
-                                  (default ``/opt/.../secrets/
-                                  drifterbot-slidemaker.json``).
-        DRIFTERBOT_SUBJECT:       workspace user to impersonate
-                                  (e.g. ``drifterbot@drift-and-anchor.com``).
-        DRANDSIGHT_OUTPUT_FOLDER_ID:  override the output folder ID;
-                                       defaults to ``brandsight-output``.
-        DRIFTERBOT_OUTPUT_FOLDER_ID:  fallback env var name if the
-                                       spec above is wrong (not used by
-                                       default — env alias kept for
-                                       future flexibility).
+        DRIFTERBOT_SA_JSON_PATH:      path to service-account JSON key
+                                       (default ``/opt/.../secrets/
+                                       drifterbot-slidemaker.json``).
+        DRIFTERBOT_SUBJECT:            workspace user to impersonate
+                                       (e.g. ``drifterbot@drift-and-anchor.com``).
+        BRANDSIGHT_OUTPUT_PATH:        absolute filesystem path; the
+                                       droplet's rclone mount
+                                       (``/mnt/brandsight-output/``)
+                                       makes writes auto-propagate to
+                                       the workspace Shared Drive.
+                                       Defaults to
+                                       ``/mnt/brandsight-output``.
     """
 
     def __init__(
@@ -159,7 +160,7 @@ class DriveSaveStrategy(SaveStrategy):
         *,
         service_account_json_path: Path | None = None,
         subject: str | None = None,
-        output_folder_id: str | None = None,
+        output_path: Path | None = None,
         slides_client=None,  # dependency injection seam for tests
     ) -> None:
         self.service_account_json_path = (
@@ -173,14 +174,10 @@ class DriveSaveStrategy(SaveStrategy):
             )
         )
         self.subject = subject or os.environ.get('DRIFTERBOT_SUBJECT', '')
-        self.output_folder_id = (
-            output_folder_id
-            or os.environ.get(
-                'BRANDSIGHT_OUTPUT_FOLDER_ID',
-                os.environ.get(
-                    'DRIFTERBOT_OUTPUT_FOLDER_ID',
-                    DEFAULT_OUTPUT_FOLDER_ID,
-                ),
+        self.output_path = (
+            output_path
+            or Path(
+                os.environ.get('BRANDSIGHT_OUTPUT_PATH', '/mnt/brandsight-output')
             )
         )
         # Lazy import + dependency injection so tests can swap a fake.
@@ -194,11 +191,6 @@ class DriveSaveStrategy(SaveStrategy):
             self._slides_client = slides_client
 
     def save(self, draft: AuditDraft, slides_spec: dict) -> SaveResult:
-        if not self.output_folder_id:
-            raise RuntimeError(
-                'DriveSaveStrategy: no output folder configured '
-                '(set BRANDSIGHT_OUTPUT_FOLDER_ID or pass output_folder_id=)'
-            )
         if not self.subject:
             raise RuntimeError(
                 'DriveSaveStrategy: no subject configured '
@@ -207,42 +199,75 @@ class DriveSaveStrategy(SaveStrategy):
             )
 
         filename = _build_drive_filename(draft)
-        # Drive filenames omit the extension; Slides gets title == name.
+        # Slides API takes title == filename without extension.
         title = filename
+        # On-disk PPTX file gets a .pptx extension; mount strips it.
+        on_disk_name = f"{filename}.pptx"
 
         try:
             presentation_id = self._slides_client.create_presentation(
                 title=title,
                 slides_spec=slides_spec,
             )
-            self._slides_client.move_to_folder(
-                presentation_id=presentation_id,
-                folder_id=self.output_folder_id,
-                name=filename,
-            )
         except Exception:
             logger.exception(
-                'DriveSaveStrategy: failed for audit_id=%s client=%s',
+                'DriveSaveStrategy: create_presentation failed for '
+                'audit_id=%s client=%s — no on-disk artifact yet',
                 draft.audit_id, draft.client.id,
             )
-            # If the presentation was created but the move failed, we
-            # have an orphan in the workspace user's root — log loud,
-            # re-raise. Worker treats any exception as fatal.
             raise
+
+        try:
+            pptx_bytes = self._slides_client.export_to_pptx(presentation_id)
+        except Exception:
+            # Orphan presentation exists in the workspace user's Drive
+            # by this point. Log loudly; worker treats any exception
+            # as fatal. (Future: cleanup PR deletes the orphan.)
+            logger.exception(
+                'DriveSaveStrategy: export_to_pptx failed for '
+                'audit_id=%s client=%s — orphan presentation '
+                'id=%s in workspace user Drive',
+                draft.audit_id, draft.client.id, presentation_id,
+            )
+            raise
+
+        # Write PPTX bytes through the rclone mount. mount handles
+        # upload to the Shared Drive asynchronously.
+        try:
+            self.output_path.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logger.exception(
+                'DriveSaveStrategy: mkdir failed for output_path=%s',
+                self.output_path,
+            )
+            raise RuntimeError(
+                f'cannot create output dir {self.output_path}: {exc}'
+            ) from exc
+
+        target = self.output_path / on_disk_name
+        try:
+            target.write_bytes(pptx_bytes)
+        except OSError as exc:
+            logger.exception(
+                'DriveSaveStrategy: write failed for target=%s',
+                target,
+            )
+            raise RuntimeError(
+                f'cannot write pptx to {target}: {exc}'
+            ) from exc
 
         web_url = _build_drive_url(presentation_id)
         logger.info(
-            'DriveSaveStrategy: created presentation_id=%s url=%s '
-            'client=%s audit_id=%s',
-            presentation_id, web_url, draft.client.id, draft.audit_id,
+            'DriveSaveStrategy: wrote pptx=%s presentation_id=%s url=%s '
+            'client=%s audit_id=%s bytes=%d',
+            target, presentation_id, web_url,
+            draft.client.id, draft.audit_id, len(pptx_bytes),
         )
         return SaveResult(
-            location=web_url,
+            location=target,
             presentation_id=presentation_id,
             web_url=web_url,
         )
-
-
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
