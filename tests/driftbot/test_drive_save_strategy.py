@@ -1,12 +1,13 @@
 """
-Unit tests for DriveSaveStrategy (B2 architecture).
+Unit tests for DriveSaveStrategy (Path A-corrected: native Slides in Drive,
+no on-disk artifact).
 
-Mocks SlidesClient + filesystem; never hits Google or rclone. Verifies:
-    - output path resolution (env / kwarg / default)
+Mocks SlidesClient; never hits Google. Verifies:
     - subject resolution (env / kwarg / error)
-    - filename pattern (incl. .pptx extension on disk)
-    - file written to disk with the bytes the SlidesClient exported
-    - SaveResult returned with file path (not Drive URL) for location
+    - folder_id resolution (env / kwarg / default constant)
+    - filename pattern passed to Slides API title arg
+    - create + move invoked in order with correct args
+    - SaveResult returned with all three fields populated
     - failure propagation at each step
 """
 
@@ -20,6 +21,7 @@ from agents.driftbot.runner import (
     CompetitorConfig,
 )
 from agents.driftbot.save_strategy import (
+    DEFAULT_OUTPUT_FOLDER_ID,
     DriveSaveStrategy,
     SaveResult,
     _build_drive_filename,
@@ -79,16 +81,17 @@ class FakeSlidesClient:
     def __init__(
         self, *,
         create_returns: str = 'PRES-ID-1234',
-        export_returns: bytes = b'FAKE-PPTX-BYTES',
+        move_returns: str = 'https://docs.google.com/presentation/d/PRES-ID-1234/edit',
         create_raises: Exception | None = None,
-        export_raises: Exception | None = None,
+        move_raises: Exception | None = None,
     ):
         self.create_calls = []
+        self.move_calls = []
         self.export_calls = []
         self._create_returns = create_returns
-        self._export_returns = export_returns
+        self._move_returns = move_returns
         self._create_raises = create_raises
-        self._export_raises = export_raises
+        self._move_raises = move_raises
 
     def create_presentation(self, title, slides_spec):
         self.create_calls.append((title, slides_spec))
@@ -96,32 +99,11 @@ class FakeSlidesClient:
             raise self._create_raises
         return self._create_returns
 
-    def export_to_pptx(self, presentation_id):
-        self.export_calls.append(presentation_id)
-        if self._export_raises is not None:
-            raise self._export_raises
-        return self._export_returns
-
-
-def make_strategy(
-    *, output_path=None, subject=None,
-    fake_client=None, monkeypatch=None,
-):
-    if monkeypatch is not None:
-        if output_path is None:
-            monkeypatch.delenv('BRANDSIGHT_OUTPUT_PATH', raising=False)
-        else:
-            monkeypatch.setenv('BRANDSIGHT_OUTPUT_PATH', str(output_path))
-        if subject is None:
-            monkeypatch.delenv('DRIFTERBOT_SUBJECT', raising=False)
-        else:
-            monkeypatch.setenv('DRIFTERBOT_SUBJECT', subject)
-    return DriveSaveStrategy(
-        service_account_json_path='/tmp/fake-sa.json',
-        subject=subject,
-        output_path=output_path,
-        slides_client=fake_client,
-    )
+    def move_to_folder(self, presentation_id, folder_id, name):
+        self.move_calls.append((presentation_id, folder_id, name))
+        if self._move_raises is not None:
+            raise self._move_raises
+        return self._move_returns
 
 
 # ------------------------------------------------------------------
@@ -135,22 +117,20 @@ def test_drive_filename_pattern(draft):
     tail = name[len('Acme Health - Competitive Audit - '):]
     assert len(tail) == 13
     assert '—' not in name
-    assert ' ' in name
 
 
 # ------------------------------------------------------------------
-# Output path / subject validation
+# Output folder + subject validation
 # ------------------------------------------------------------------
 
 
-def test_drive_save_strategy_requires_subject(monkeypatch, draft, slides_spec, tmp_path):
-    monkeypatch.setenv('BRANDSIGHT_OUTPUT_PATH', str(tmp_path))
+def test_drive_save_strategy_requires_subject(monkeypatch, draft, slides_spec):
+    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-ID')
     monkeypatch.delenv('DRIFTERBOT_SUBJECT', raising=False)
     client = FakeSlidesClient()
     strategy = DriveSaveStrategy(
         service_account_json_path='/tmp/x.json',
         subject='',
-        output_path=tmp_path,
         slides_client=client,
     )
     with pytest.raises(RuntimeError, match='no subject'):
@@ -158,104 +138,103 @@ def test_drive_save_strategy_requires_subject(monkeypatch, draft, slides_spec, t
     assert client.create_calls == []
 
 
+def test_default_output_folder_id():
+    """Sanity check: default constant points at the BrandSight Client
+    Output subfolder inside the DrifterBot Shared Drive.
+    """
+    assert DEFAULT_OUTPUT_FOLDER_ID == '1rrVimH-UB3qn0FJ0rBuZ9FoTTydSMdIS'
+
+
+def test_env_var_overrides_default_folder_id(monkeypatch):
+    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'ENV-FOLDER-ID')
+    monkeypatch.delenv('DRANDSIGHT_OUTPUT_FOLDER_ID', raising=False)
+    strategy = DriveSaveStrategy(
+        service_account_json_path='/tmp/x.json',
+        subject='who@where.com',
+        slides_client=FakeSlidesClient(),
+    )
+    assert strategy.output_folder_id == 'ENV-FOLDER-ID'
+
+
+def test_kwarg_overrides_env_folder_id(monkeypatch):
+    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'ENV-FOLDER-ID')
+    strategy = DriveSaveStrategy(
+        service_account_json_path='/tmp/x.json',
+        subject='who@where.com',
+        output_folder_id='KWARG-FOLDER-ID',
+        slides_client=FakeSlidesClient(),
+    )
+    assert strategy.output_folder_id == 'KWARG-FOLDER-ID'
+
+
+def test_default_folder_used_when_neither_set(monkeypatch):
+    monkeypatch.delenv('BRANDSIGHT_OUTPUT_FOLDER_ID', raising=False)
+    strategy = DriveSaveStrategy(
+        service_account_json_path='/tmp/x.json',
+        subject='who@where.com',
+        slides_client=FakeSlidesClient(),
+    )
+    assert strategy.output_folder_id == DEFAULT_OUTPUT_FOLDER_ID
+
+
 # ------------------------------------------------------------------
-# Happy path — file written to disk
+# Happy path
 # ------------------------------------------------------------------
 
 
-def test_drive_save_strategy_happy_path_writes_pptx(
-    draft, slides_spec, tmp_path, monkeypatch,
+def test_drive_save_strategy_happy_path_invokes_create_then_move(
+    draft, slides_spec, monkeypatch,
 ):
-    monkeypatch.setenv('BRANDSIGHT_OUTPUT_PATH', str(tmp_path))
+    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-XYZ')
     monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'drifterbot@drift-and-anchor.com')
     client = FakeSlidesClient(
         create_returns='PRES-ABCD',
-        export_returns=b'PK\x03\x04FAKE-PPTX-CONTENT',
+        move_returns='https://docs.google.com/presentation/d/PRES-ABCD/edit',
     )
     strategy = DriveSaveStrategy(
         service_account_json_path='/tmp/x.json',
         subject='drifterbot@drift-and-anchor.com',
-        output_path=tmp_path,
+        output_folder_id='FOLDER-XYZ',
         slides_client=client,
     )
     result = strategy.save(draft, slides_spec)
 
     assert isinstance(result, SaveResult)
     assert result.presentation_id == 'PRES-ABCD'
-    assert result.web_url == 'https://docs.google.com/presentation/d/PRES-ABCD/edit'
+    assert result.web_url == (
+        'https://docs.google.com/presentation/d/PRES-ABCD/edit'
+    )
+    assert result.location == (
+        'https://drive.google.com/drive/folders/FOLDER-XYZ'
+    )
 
-    from pathlib import Path as PathlibPath
-    assert isinstance(result.location, PathlibPath)
-
-    expected_filename = _build_drive_filename(draft) + '.pptx'
-    expected_path = tmp_path / expected_filename
-    assert result.location == expected_path
-    assert expected_path.exists()
-    assert expected_path.read_bytes() == b'PK\x03\x04FAKE-PPTX-CONTENT'
-
+    # create was called first, with the filename as title
     assert len(client.create_calls) == 1
-    title_arg = client.create_calls[0][0]
+    title_arg, spec_arg = client.create_calls[0]
     assert title_arg.startswith('Acme Health - Competitive Audit - 2026-07-21-')
-    assert client.create_calls[0][1] == slides_spec
-    assert client.export_calls == ['PRES-ABCD']
+    assert spec_arg == slides_spec
+
+    # move was called second, with the right IDs and filename
+    assert client.move_calls == [
+        ('PRES-ABCD', 'FOLDER-XYZ', title_arg),
+    ]
 
 
-def test_drive_save_strategy_creates_output_dir_if_missing(
-    draft, slides_spec, tmp_path, monkeypatch,
+def test_no_export_or_write_call_in_save(
+    draft, slides_spec, monkeypatch,
 ):
-    nested = tmp_path / 'deep' / 'nest' / 'here'
-    assert not nested.exists()
-    monkeypatch.setenv('BRANDSIGHT_OUTPUT_PATH', str(nested))
-    monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'someone@example.com')
+    """Path A-corrected never calls files.export or writes a file."""
+    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-XYZ')
+    monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'who@where.com')
     client = FakeSlidesClient()
     strategy = DriveSaveStrategy(
         service_account_json_path='/tmp/x.json',
-        subject='someone@example.com',
-        output_path=nested,
+        subject='who@where.com',
+        output_folder_id='FOLDER-XYZ',
         slides_client=client,
     )
     strategy.save(draft, slides_spec)
-    assert nested.is_dir()
-    files = list(nested.iterdir())
-    assert len(files) == 1
-    assert files[0].suffix == '.pptx'
-
-
-# ------------------------------------------------------------------
-# Default output path
-# ------------------------------------------------------------------
-
-
-def test_default_output_path_used_when_no_env(monkeypatch):
-    monkeypatch.delenv('BRANDSIGHT_OUTPUT_PATH', raising=False)
-    strategy = DriveSaveStrategy(
-        service_account_json_path='/tmp/x.json',
-        subject='who@where.com',
-        slides_client=FakeSlidesClient(),
-    )
-    assert str(strategy.output_path) == '/mnt/brandsight-output'
-
-
-def test_env_var_overrides_default_output_path(monkeypatch, tmp_path):
-    monkeypatch.setenv('BRANDSIGHT_OUTPUT_PATH', str(tmp_path))
-    strategy = DriveSaveStrategy(
-        service_account_json_path='/tmp/x.json',
-        subject='who@where.com',
-        slides_client=FakeSlidesClient(),
-    )
-    assert strategy.output_path == tmp_path
-
-
-def test_kwarg_overrides_env_output_path(monkeypatch, tmp_path):
-    other = tmp_path / 'other'
-    monkeypatch.setenv('BRANDSIGHT_OUTPUT_PATH', str(tmp_path))
-    strategy = DriveSaveStrategy(
-        service_account_json_path='/tmp/x.json',
-        subject='who@where.com',
-        output_path=other,
-        slides_client=FakeSlidesClient(),
-    )
-    assert strategy.output_path == other
+    assert client.export_calls == []
 
 
 # ------------------------------------------------------------------
@@ -263,34 +242,35 @@ def test_kwarg_overrides_env_output_path(monkeypatch, tmp_path):
 # ------------------------------------------------------------------
 
 
-def test_drive_save_strategy_propagates_export_failure(
-    draft, slides_spec, tmp_path, monkeypatch,
+def test_drive_save_strategy_propagates_move_failure(
+    draft, slides_spec, monkeypatch,
 ):
-    from agents.driftbot.slides_client import DriveAuthError
-    monkeypatch.setenv('BRANDSIGHT_OUTPUT_PATH', str(tmp_path))
+    """Create succeeded, move failed → orphan in Drive, no SaveResult."""
+    from agents.driftbot.slides_client import DriveFolderAccessError
+    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-XYZ')
     monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'who@where.com')
     client = FakeSlidesClient(
         create_returns='PRES-ORPHAN',
-        export_raises=DriveAuthError('simulated 500'),
+        move_raises=DriveFolderAccessError('files.patch 404'),
     )
     strategy = DriveSaveStrategy(
         service_account_json_path='/tmp/x.json',
         subject='who@where.com',
-        output_path=tmp_path,
+        output_folder_id='FOLDER-XYZ',
         slides_client=client,
     )
-    with pytest.raises(DriveAuthError, match='simulated 500'):
+    with pytest.raises(DriveFolderAccessError, match='files.patch 404'):
         strategy.save(draft, slides_spec)
-    assert list(tmp_path.iterdir()) == []
     assert len(client.create_calls) == 1
-    assert client.export_calls == ['PRES-ORPHAN']
+    assert len(client.move_calls) == 1
 
 
 def test_drive_save_strategy_propagates_create_failure(
-    draft, slides_spec, tmp_path, monkeypatch,
+    draft, slides_spec, monkeypatch,
 ):
+    """Create failed → no move, no SaveResult."""
     from agents.driftbot.slides_client import DriveAuthError
-    monkeypatch.setenv('BRANDSIGHT_OUTPUT_PATH', str(tmp_path))
+    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-XYZ')
     monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'who@where.com')
 
     def _raise(title, slides_spec):
@@ -301,34 +281,12 @@ def test_drive_save_strategy_propagates_create_failure(
     strategy = DriveSaveStrategy(
         service_account_json_path='/tmp/x.json',
         subject='who@where.com',
-        output_path=tmp_path,
+        output_folder_id='FOLDER-XYZ',
         slides_client=client,
     )
     with pytest.raises(DriveAuthError, match='token grant failed'):
         strategy.save(draft, slides_spec)
-    assert list(tmp_path.iterdir()) == []
-    assert client.export_calls == []
-
-
-def test_drive_save_strategy_propagates_write_failure(
-    draft, slides_spec, tmp_path, monkeypatch,
-):
-    monkeypatch.setenv('BRANDSIGHT_OUTPUT_PATH', str(tmp_path))
-    monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'who@where.com')
-    client = FakeSlidesClient(create_returns='PRES-OK')
-    strategy = DriveSaveStrategy(
-        service_account_json_path='/tmp/x.json',
-        subject='who@where.com',
-        output_path=tmp_path,
-        slides_client=client,
-    )
-    from unittest.mock import patch
-    with patch.object(
-        type(strategy.output_path / 'x.pptx'), 'write_bytes',
-        side_effect=OSError('disk full'),
-    ):
-        with pytest.raises(RuntimeError, match='cannot write pptx'):
-            strategy.save(draft, slides_spec)
+    assert client.move_calls == []
 
 
 # ------------------------------------------------------------------
@@ -341,19 +299,20 @@ def test_drive_save_strategy_is_save_strategy_subclass():
     s = DriveSaveStrategy(
         service_account_json_path='/tmp/x.json',
         subject='who@where.com',
+        output_folder_id='FOLDER',
         slides_client=FakeSlidesClient(),
     )
     assert isinstance(s, SaveStrategy)
 
 
-def test_get_save_strategy_factory_returns_drive(monkeypatch, tmp_path):
+def test_get_save_strategy_factory_returns_drive(monkeypatch):
     monkeypatch.setenv('DRIFTERBOT_SAVE_STRATEGY', 'drive')
-    monkeypatch.setenv('BRANDSIGHT_OUTPUT_PATH', str(tmp_path))
+    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-FACTORY')
     monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'sub@example.com')
     from agents.driftbot.save_strategy import get_save_strategy
     s = get_save_strategy()
     assert isinstance(s, DriveSaveStrategy)
-    assert s.output_path == tmp_path
+    assert s.output_folder_id == 'FOLDER-FACTORY'
     assert s.subject == 'sub@example.com'
 
 
