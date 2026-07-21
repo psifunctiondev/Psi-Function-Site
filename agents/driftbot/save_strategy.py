@@ -129,10 +129,11 @@ class DriveSaveStrategy(SaveStrategy):
     in Drive, no on-disk artifact).
 
     Workflow:
-        1. JWT grant against ``DRIFTERBOT_SLIDEMAKER_JSON`` (service
-           account), impersonating the workspace user ``subject=``
-           so the created presentation is owned by D&A, not the
-           service account.
+        1. JWT grant against the service-account JSON at
+           ``DRIFTERBOT_SERVICE_ACCOUNT_JSON_PATH``, impersonating
+           the workspace user ``subject=`` so the created
+           presentation is owned by D&A, not the service
+           account.
         2. POST ``/v1/presentations`` with ``{"title":  ..}``.
         3. POST ``/v1/presentations/{id}:batchUpdate`` to insert the
            slides + elements.
@@ -142,8 +143,9 @@ class DriveSaveStrategy(SaveStrategy):
            no orphan in My Drive.
 
     Environment:
-        DRIFTERBOT_SA_JSON_PATH:  path to service-account JSON key
-                                   (default ``/opt/.../secrets/
+        DRIFTERBOT_SERVICE_ACCOUNT_JSON_PATH:  path to
+                                   service-account JSON key (default
+                                   ``/opt/.../secrets/
                                    drifterbot-slidemaker.json``).
         DRIFTERBOT_SUBJECT:        workspace user to impersonate
                                    (e.g. ``drifterbot@drift-and-anchor.com``).
@@ -166,7 +168,7 @@ class DriveSaveStrategy(SaveStrategy):
             service_account_json_path
             or Path(
                 os.environ.get(
-                    'DRIFTERBOT_SA_JSON_PATH',
+                    'DRIFTERBOT_SERVICE_ACCOUNT_JSON_PATH',
                     '/opt/consulting-site/production/shared/secrets/'
                     'drifterbot-slidemaker.json',
                 )
