@@ -21,7 +21,7 @@ set -Eeuo pipefail
 
 usage() {
   cat >&2 <<'EOF'
-Usage: $0 <staging|production> [--apply]
+Usage: $0 <testing|staging|production> [--apply]
 
 By default, runs in dry-run mode (prints [DRY-RUN] plan, exits 0).
 Pass --apply to actually install the unit and reload systemd.
@@ -54,7 +54,7 @@ done
 [ -n "$ENVIRONMENT" ] || usage
 
 case "$ENVIRONMENT" in
-  staging|production) ;;
+  testing|staging|production) ;;
   *)
     echo "Invalid environment: $ENVIRONMENT" >&2
     usage

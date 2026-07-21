@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 usage() {
-  echo "Usage: $0 <staging|production>" >&2
+  echo "Usage: $0 <testing|staging|production>" >&2
   exit 1
 }
 
@@ -10,7 +10,7 @@ ENVIRONMENT="${1:-}"
 [ -n "$ENVIRONMENT" ] || usage
 
 case "$ENVIRONMENT" in
-  staging|production) ;;
+  testing|staging|production) ;;
   *)
     echo "Invalid environment: $ENVIRONMENT" >&2
     usage
