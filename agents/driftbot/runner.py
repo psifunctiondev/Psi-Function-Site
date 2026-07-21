@@ -126,8 +126,7 @@ def _synthesize_sea_of_sameness(client: ClientConfig, competitors: list[Competit
     findings = (
         f"Across the {len(competitors)} competitors audited — "
         f"{', '.join(comp_names[:-1])}, and {comp_names[-1]} — "
-        f"we found {len(unique_positions)} distinct category position"
-        f"{'s' if len(unique_positions) != 1 else ''}, "
+        f"we found {len(unique_positions)} distinct category position{'s' if len(unique_positions) != 1 else ''}, "  # noqa: E501
         f"but the language used to express them is nearly interchangeable. "
         f"Every player claims efficiency, speed, and scale. "
         f"None have found a position that rises above the category conversation."
@@ -137,8 +136,7 @@ def _synthesize_sea_of_sameness(client: ClientConfig, competitors: list[Competit
         f"with limited ability to evaluate functional differences between vendors. "
         f"When the language is the same, the default selection criterion becomes price — "
         f"a race to the bottom that benefits no one. "
-        f"{client.name}'s position statement — "
-        f"'{client.positioning_inputs.get('position_statement', '')}' — "
+        f"{client.name}'s position statement — '{client.positioning_inputs.get('position_statement', '')}' — "  # noqa: E501
         f"is a genuine departure. The category hasn't found it yet."
     )
     implications = (
@@ -147,11 +145,7 @@ def _synthesize_sea_of_sameness(client: ClientConfig, competitors: list[Competit
         f"The audit's central recommendation is that {client.name} lean hard into this white space "
         f"before a competitor realizes it exists."
     )
-    return {
-        "sea_of_sameness_findings": findings,
-        "why_it_matters": why,
-        "implications": implications,
-    }
+    return {"sea_of_sameness_findings": findings, "why_it_matters": why, "implications": implications}  # noqa: E501
 
 
 def _synthesize_logo_bingo(client: ClientConfig, competitors: list[CompetitorConfig]) -> dict:
@@ -171,17 +165,14 @@ def _synthesize_logo_bingo(client: ClientConfig, competitors: list[CompetitorCon
         f"The visual identity should say so before a word is read."
     )
     implications = (
-        f"A deliberate departure from the category's visual conventions "
-        f"is available to {client.name}. "
+        f"A deliberate departure from the category's visual conventions is available to {client.name}. "  # noqa: E501
         f"That departure does not need to be radical — it needs to be consistent, "
         f"ownable, and recognizably not the same as everyone else."
     )
     return {"logo_bingo_findings": findings, "why_it_matters": why, "implications": implications}
 
 
-def _synthesize_audience_record_scratch(
-    client: ClientConfig, competitors: list[CompetitorConfig]
-) -> dict:
+def _synthesize_audience_record_scratch(client: ClientConfig, competitors: list[CompetitorConfig]) -> dict:  # noqa: E501
     audiences = client.audiences
     findings = (
         f"Competitor communications in {client.category} address a generic 'decision-maker' — "
@@ -197,8 +188,7 @@ def _synthesize_audience_record_scratch(
         f"As decisions move further down the funnel, buyers stop asking 'what can it do?' "
         f"and start asking 'what could go wrong?' "
         f"The category's messaging does not address this shift. "
-        f"{client.name}'s differentiators — especially empathy-driven "
-        f"implementation — directly answer it."
+        f"{client.name}'s differentiators — especially empathy-driven implementation — directly answer it."  # noqa: E501
     )
     implications = (
         f"{client.name} should build a segment-specific messaging architecture: "
@@ -213,12 +203,9 @@ def _synthesize_audience_record_scratch(
     }
 
 
-def _synthesize_tone_deaf(
-    client: ClientConfig, competitors: list[CompetitorConfig]
-) -> dict:
+def _synthesize_tone_deaf(client: ClientConfig, competitors: list[CompetitorConfig]) -> dict:
     findings = (
-        f"The dominant tone in {client.category} competitor "
-        f"communications is aspirational-generic: "
+        f"The dominant tone in {client.category} competitor communications is aspirational-generic: "  # noqa: E501
         f"confident claims delivered without acknowledgment of the pressures buyers actually face. "
         f"For {client.audiences[0]}s evaluating a new platform, this register lands as noise. "
         f"For {client.audiences[-1]}s — who feel the operational consequences most directly — "
@@ -267,11 +254,7 @@ def _synthesize_brief_in_context(client: ClientConfig, competitors: list[Competi
         f"The answers are different, but they all come from the same anchor point. "
         f"That is the mark of a durable positioning strategy."
     )
-    return {
-        "brief_in_context_findings": findings,
-        "why_it_matters": why,
-        "implications": implications,
-    }
+    return {"brief_in_context_findings": findings, "why_it_matters": why, "implications": implications}  # noqa: E501
 
 
 _SYNTHESIZERS = {
@@ -293,11 +276,9 @@ def generate_competitor_card(client: ClientConfig, competitor: CompetitorConfig)
     diffs = client.positioning_inputs.get("key_differentiators", [])
     position = client.positioning_inputs.get("position_statement", "")
 
-    _pos_parts = competitor.category_position.split()
-    pos_first = _pos_parts[0] if _pos_parts else ''
-    pos_last = _pos_parts[-1] if len(_pos_parts) > 1 else 'generic claims'
     differentiation = (
-        f"Where {competitor.name} {pos_first}s on {pos_last}, "
+        f"Where {competitor.name} {competitor.category_position.split()[0]}s on "
+        f"{competitor.category_position.split()[-1] if len(competitor.category_position.split()) > 1 else 'generic claims'}, "  # noqa: E501
         f"{client.name} anchors on what that approach cannot claim: "
         f"{', '.join(diffs[:2])}. "
         f"'{position}' is not a feature comparison. It is a category redefinition."
@@ -516,18 +497,14 @@ def main() -> None:
     voice = check_voice(out_path.read_text(encoding="utf-8"))
     word_count = len(out_path.read_text(encoding="utf-8").split())
 
-    anti_patterns = voice['anti_patterns_found'] or 'none ✓'
-    lexicon_preview = ', '.join(voice['lexicon_hits'][:5])
-    if len(voice['lexicon_hits']) > 5:
-        lexicon_preview += '...'
     print("\n=== DrifterBot audit complete ===")
     print(f"  Audit ID:       {draft.audit_id}")
     print(f"  Output:         {out_path}")
     print(f"  Word count:     {word_count}")
     print(f"  Competitors:    {len(competitors)}")
     print(f"  Chapters:       {len(draft.provocation_chapters)}")
-    print(f"  Anti-patterns:  {anti_patterns}")
-    print(f"  Lexicon hits:   {len(voice['lexicon_hits'])} ({lexicon_preview})")
+    print(f"  Anti-patterns:  {voice['anti_patterns_found'] or 'none ✓'}")
+    print(f"  Lexicon hits:   {len(voice['lexicon_hits'])} ({', '.join(voice['lexicon_hits'][:5])}{'...' if len(voice['lexicon_hits']) > 5 else ''})")  # noqa: E501
 
 
 if __name__ == "__main__":

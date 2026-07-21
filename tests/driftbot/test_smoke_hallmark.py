@@ -43,26 +43,23 @@ from agents.driftbot.save_strategy import (
 )
 from agents.driftbot.voice import D_AND_A_LEXICON
 
-# Path to vault test fixtures (relative to workspace root).
-# The test lives at Psi-Function-Site/tests/driftbot/...
-# parents[3] from there is /Users/doxa/.openclaw/workspace — same as
-# the brandsight version reached with parents[4] (brandsight's tree
-# was two levels shallower than the new tests/driftbot/ layout).
-_VAULT_ROOT = Path(__file__).parents[3]  # tests/driftbot/.. → workspace root
+# Path to vault test fixtures. Path C moved the tests under tests/driftbot/
+# of the Psi-Function-Site repo (one less parent than the original
+# brandsight/agents/driftbot/tests/ location), so parents[2] lands us at
+# the workspace root which is where vaults/ is mounted.
+_VAULT_ROOT = Path(__file__).parents[2]
 FIXTURE_ROOT = (
     _VAULT_ROOT
     / "vaults/shared/Shared Obsidian/psi-function/clients/drift-and-anchor"
     / "audit/_input/test-fixtures/hallmark"
 )
 
-# The Hallmark fixture is a synthetic D&A test asset that lives in
-# Quinn's Obsidian vault (synced via Seafile, NOT committed to the
-# repo). When the vault isn't mounted — e.g. on the GitHub CI runner —
-# these tests skip with a clear message instead of failing with a
-# misleading "Missing client.json" assertion. Local runs on Belel see
-# the vault via the Seafile sync, so the tests run normally there.
-# To intentionally run on a system without the vault, mount or copy the
-# fixture tree to FIXTURE_ROOT before invoking pytest.
+# The Hallmark fixture is a synthetic D&A test asset that lives in Quinn's
+# Obsidian vault (synced via Seafile, NOT committed to the repo). When the
+# vault isn't mounted — e.g. on the GitHub CI runner — these tests skip
+# with a clear message instead of failing with a misleading "Missing
+# client.json" assertion. Local runs on Belel see the vault via the
+# Seafile sync, so the tests run normally there.
 _FIXTURES_AVAILABLE = FIXTURE_ROOT.is_dir() and (FIXTURE_ROOT / "client.json").exists()
 pytestmark = pytest.mark.skipif(
     not _FIXTURES_AVAILABLE,
@@ -74,9 +71,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _hydrate_runner_inputs_from_portal_request(
-    portal_req: dict,
-) -> tuple[ClientConfig, list[CompetitorConfig]]:
+def _hydrate_runner_inputs_from_portal_request(portal_req: dict) -> tuple[ClientConfig, list[CompetitorConfig]]:  # noqa: E501
     """Adapter mirroring spec §5 `_audit_request_to_client`.
 
     The portal-request.json shape differs from client.json/competitors.json:
@@ -106,10 +101,7 @@ def _hydrate_runner_inputs_from_portal_request(
 def test_fixture_files_exist():
     """Fixtures must be staged in the vault before the build test can run."""
     assert (FIXTURE_ROOT / "client.json").exists(), f"Missing client.json at {FIXTURE_ROOT}"
-    competitors_fixture = FIXTURE_ROOT / "competitors.json"
-    assert competitors_fixture.exists(), (
-        f"Missing competitors.json at {FIXTURE_ROOT}"
-    )
+    assert (FIXTURE_ROOT / "competitors.json").exists(), f"Missing competitors.json at {FIXTURE_ROOT}"  # noqa: E501
     assert (FIXTURE_ROOT / "portal-request.json").exists(), (
         f"Missing portal-request.json at {FIXTURE_ROOT}"
     )
@@ -155,9 +147,7 @@ def test_hallmark_smoke_produces_audit_draft(tmp_path):
     out = tmp_path / "audit-draft.md"
     out.write_text(md, encoding="utf-8")
     assert out.exists()
-    assert out.stat().st_size > 5000, (
-        f"Audit draft too small ({out.stat().st_size} bytes) — likely a stub"
-    )
+    assert out.stat().st_size > 5000, f"Audit draft too small ({out.stat().st_size} bytes) — likely a stub"  # noqa: E501
 
     # Print summary for human review
     print("\n=== Smoke test passed ===")
@@ -242,9 +232,13 @@ def test_portal_pipeline_renders_slides_and_saves(tmp_path):
 
     # ----- Save strategy: write to tmp -----
     strategy = LocalPickupStrategy(root=tmp_path)
-    run_dir = strategy.save(draft, spec)
-    assert run_dir.exists()
-    assert run_dir.is_dir()
+    result = strategy.save(draft, spec)
+    run_dir = result.location  # Path for LocalPickup, URL for Drive
+    assert run_dir.exists() if hasattr(run_dir, 'exists') else True
+    assert run_dir.is_dir() if hasattr(run_dir, 'is_dir') else False
+    # LocalPickup doesn't produce Drive-side identifiers
+    assert result.presentation_id is None
+    assert result.web_url is None
 
     # slides-spec.json exists, is well-formed JSON, contains brand colors
     spec_path = run_dir / "slides-spec.json"

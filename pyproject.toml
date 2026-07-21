@@ -17,6 +17,10 @@ dependencies = [
   "redis>=5.0",
   "gunicorn>=23.0",
   "python-dotenv>=1.0",
+  # DrifterBot DriveSaveStrategy — Google Slides + Drive APIs (DriveSaveStrategy, JWT-grant auth)
+  "httpx==0.28.1",
+  "PyJWT==2.13.0",
+  "cryptography==49.0.0",
 ]
 
 [project.optional-dependencies]
