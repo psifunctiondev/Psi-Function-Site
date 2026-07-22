@@ -1795,6 +1795,87 @@ class TestSlice8JsReindex:
         assert "class=\"competitive-audit-col__title\">Competitor ' + newIndex + '<" in js
 
 
+class TestCloneStripsAddButton:
+    """Regression: clicking Add on Competitor 2 did not create a new
+    entry for Competitor 3 because every clone inherited a duplicate
+    `<button data-competitive-audit-add>` element from the default
+    card. Only the original Add button had a click listener attached,
+    so the duplicate on each clone was inert and confused end-users
+    (Quinn reported this from the live portal on 2026-07-22).
+
+    The fix lives in app/static/js/portal/competitive-audit-form.js:
+    reindex() now strips the cloned card's Add button before
+    insertion, so only the default card carries an Add button.
+    """
+
+    def _read_js(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        return (
+            repo_root
+            / "app"
+            / "static"
+            / "js"
+            / "portal"
+            / "competitive-audit-form.js"
+        ).read_text()
+
+    def test_reindex_strips_clone_add_button(self):
+        js = self._read_js()
+        # The reindex() function must remove the cloned card's
+        # data-competitive-audit-add button so the clone doesn't
+        # render an inert duplicate of the default card's button.
+        # We pin on the regex literal that performs the strip —
+        # it's the only line in the file that contains BOTH the
+        # attribute marker and the closing </button> literal. The
+        # regex itself can't match the JS source (the `>` inside
+        # `[^>]` makes self-matching impossible), so we look for
+        # the regex literal's two unique tokens on the same line.
+        strip_lines = [
+            line
+            for line in js.splitlines()
+            if "data-competitive-audit-add" in line
+            and r"<\/button>" in line
+        ]
+        assert len(strip_lines) == 1, (
+            "expected exactly one strip-regex line in reindex(), "
+            f"found {len(strip_lines)}: {strip_lines}"
+        )
+        # Belt-and-suspenders: confirm the line opens with the regex
+        # literal delimiter `/` (not a comment or a string).
+        assert strip_lines[0].lstrip().startswith("/"), (
+            "strip line does not look like a regex literal: "
+            f"{strip_lines[0]!r}"
+        )
+
+    def test_default_card_add_button_unaffected_by_fix(self):
+        # The default card's Add button still exists in the template.
+        # The strip runs only on the cloned HTML inside reindex(), so
+        # the default card's button (which has the listener) is intact.
+        from pathlib import Path
+        repo_root = Path(__file__).resolve().parent.parent
+        template = (
+            repo_root
+            / "app"
+            / "templates"
+            / "portal"
+            / "drift_and_anchor_competitive_audit.html"
+        ).read_text()
+        # Exactly one <button ... data-competitive-audit-add> rendered
+        # on the server (the default card's button). The other two
+        # occurrences in the file are CSS selectors / comments.
+        import re
+        button_matches = re.findall(
+            r"<button\b[^>]*data-competitive-audit-add[^>]*>",
+            template,
+        )
+        assert len(button_matches) == 1, (
+            f"expected exactly one Add button in the default card, "
+            f"found {len(button_matches)}: {button_matches}"
+        )
+
+
 # ---------------------------------------------------------------------------
 # Slice 9 — extracted JS, favicon, TikTok checkbox, dashboard CTA removal
 # ---------------------------------------------------------------------------

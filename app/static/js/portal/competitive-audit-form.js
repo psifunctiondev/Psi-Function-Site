@@ -15,6 +15,10 @@
  *     `competitor_N_` so the form posts competitor_2, competitor_3, ...
  *   - Rewrite the cloned card's title text "Competitor 1" → "Competitor N".
  *   - Reset all cloned input values to empty (text) or checked (checkbox).
+ *   - Strip the cloned card's "Add" button so only the default card
+ *     carries an Add button. (The default card's Add button has the
+ *     click listener attached; clones would render an inert duplicate
+ *     that confused end-users — see fix/competitive-audit-add-clone-strip.)
  *   - Append a "Remove" row to each clone; the default card stays put.
  *
  * No upper bound on clones — Quinn flagged that a cap may be added later.
@@ -57,7 +61,7 @@
       );
     // Reset all input values inside the clone — the cloned card
     // starts blank, pre-fill only lives on the default card.
-    return html.replace(
+    html = html.replace(
       /(<input\b[^>]*?)(?:\s+value="[^"]*")?(\s*\/?>)/g,
       function (_match, head, tail) {
         if (/type="checkbox"/.test(head)) {
@@ -67,6 +71,15 @@
         return head + ' value=""' + tail;
       }
     );
+    // Strip the cloned card's Add button — only the default card
+    // carries an Add button (which has the click listener). Without
+    // this strip, every clone renders a duplicate Add button that
+    // does nothing when clicked.
+    html = html.replace(
+      /\s*<button\b[^>]*data-competitive-audit-add[^>]*>[\s\S]*?<\/button>/,
+      ''
+    );
+    return html;
   }
 
   function makeRemoveButton(newIndex) {
