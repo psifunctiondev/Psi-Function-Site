@@ -392,7 +392,11 @@ flask client seed-acme-resources
 `deploy/scripts/db_migrate.sh` additionally exposes opt-in `SEED_*` env flags for the rest:
 
 ```bash
-SEED_ACME_DEMO=1   flask client seed-acme-demo + flask client seed-acme-resources
-SEED_TAXONOMY=1    flask seed-taxonomy
-SEED_WORK_DEMO=1   flask seed-work-demo
+SEED_ACME_DEMO=1          flask client seed-acme-demo + flask client seed-acme-resources
+SEED_TAXONOMY=1           flask seed-taxonomy
+SEED_WORK_DEMO=1          flask seed-work-demo
+SEED_DRIFT_AND_ANCHOR=1   flask client seed-drift-and-anchor-resources +
+                          flask client seed-drift-and-anchor-invite
 ```
+
+`deploy/scripts/deploy_release.sh` honors the same env flags when set in the calling shell / systemd unit. By default `SEED_DRIFT_AND_ANCHOR=0` — production deploys never auto-issue invites. Enable per-env via the relevant systemd unit (`/etc/systemd/system/consulting-site@testing.service` etc.) or by exporting the env var in the deploy wrapper.

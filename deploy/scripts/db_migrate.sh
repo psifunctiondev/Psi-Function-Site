@@ -18,16 +18,18 @@ or set individual env vars for selective seeding.
 
 Options:
   --with-seeds        Enable all known seed flows (acme-demo, acme-resources,
-                      taxonomy, work-demo).
+                      taxonomy, work-demo, drift-and-anchor).
   -h, --help          Show this help and exit.
 
 Seeds (each gated on its own env var):
-  SEED_ACME_DEMO=1         flask client seed-acme-demo + seed-acme-resources
-                           (matches deploy_release.sh semantics)
-  SEED_TAXONOMY=1          flask seed-taxonomy
-  SEED_WORK_DEMO=1         flask seed-work-demo
+  SEED_ACME_DEMO=1          flask client seed-acme-demo + seed-acme-resources
+                            (matches deploy_release.sh semantics)
+  SEED_TAXONOMY=1           flask seed-taxonomy
+  SEED_WORK_DEMO=1          flask seed-work-demo
+  SEED_DRIFT_AND_ANCHOR=1   flask client seed-drift-and-anchor-resources +
+                            flask client seed-drift-and-anchor-invite
 
---with-seeds sets all three env vars.
+--with-seeds sets all four env vars.
 
 Seed failures are warned and skipped so a single bad seed does not block
 the others. Migrations run unconditionally and abort the script on failure.
@@ -69,6 +71,7 @@ if [ "$WITH_SEEDS" -eq 1 ]; then
   export SEED_ACME_DEMO=1
   export SEED_TAXONOMY=1
   export SEED_WORK_DEMO=1
+  export SEED_DRIFT_AND_ANCHOR=1
 fi
 
 echo "==> Repository root: $REPO_ROOT"
@@ -97,6 +100,15 @@ fi
 if [ "${SEED_WORK_DEMO:-0}" = "1" ]; then
   echo "==> Seeding: work demo"
   flask seed-work-demo || echo "WARN: seed-work-demo failed; continuing" >&2
+fi
+
+if [ "${SEED_DRIFT_AND_ANCHOR:-0}" = "1" ]; then
+  echo "==> Seeding: Drift & Anchor resources"
+  flask client seed-drift-and-anchor-resources || echo "WARN: seed-drift-and-anchor-resources failed; continuing" >&2
+  echo "==> Seeding: Drift & Anchor invite (Catherine)"
+  flask client seed-drift-and-anchor-invite || echo "WARN: seed-drift-and-anchor-invite failed; continuing" >&2
+else
+  echo "    (Drift & Anchor seed skipped; set SEED_DRIFT_AND_ANCHOR=1 or pass --with-seeds to enable)"
 fi
 
 echo
