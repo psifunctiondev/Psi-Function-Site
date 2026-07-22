@@ -112,10 +112,33 @@ DEFAULT_OUTPUT_FOLDER_ID = '1rrVimH-UB3qn0FJ0rBuZ9FoTTydSMdIS'
 def _build_drive_filename(draft: AuditDraft) -> str:
     """{Client Name} - Competitive Audit - {YYYY-MM-DD-HH}
 
-    24h UTC so two audits same day don't collide; hyphens match the
-    era-agnostic convention in the rest of D&A filenames.
+    Timestamp is sourced from ``draft.generated_at`` so the filename
+    is deterministic per draft, not per process invocation — same-day
+    duplicate drafts don't clobber each other, and re-running a build
+    of an already-saved audit produces the same filename (idempotent).
+    Hyphens match the era-agnostic convention in the rest of D&A
+    filenames.
+
+    Accepts both ISO-8601 (``2026-07-21T09:00:00Z`` — used by tests
+    and the spec) and the legacy space-separated format produced by
+    ``run_audit()`` (``2026-07-21 09 UTC``).
     """
-    ts = datetime.now(UTC).strftime('%Y-%m-%d-%H')
+    raw = draft.generated_at.strip()
+    # ISO-8601: replace trailing Z with explicit UTC offset for fromisoformat
+    iso = raw.replace('Z', '+00:00') if raw.endswith('Z') else raw
+    try:
+        ts = datetime.fromisoformat(iso).strftime('%Y-%m-%d-%H')
+    except ValueError:
+        # Legacy format: 'YYYY-MM-DD HH UTC' — split on whitespace
+        try:
+            date_part = raw.split()[0]
+            hour_part = raw.split()[1]
+            ts = f"{date_part}-{hour_part}"
+        except (IndexError, ValueError):
+            # Last-resort fallback: today's UTC date/hour. Avoids crashing
+            # on malformed input but logs nothing here — caller should
+            # validate generated_at shape upstream.
+            ts = datetime.now(UTC).strftime('%Y-%m-%d-%H')
     return f"{draft.client.name} - Competitive Audit - {ts}"
 
 
