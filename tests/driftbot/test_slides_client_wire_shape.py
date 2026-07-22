@@ -327,69 +327,82 @@ def test_delete_file_204_is_success(client):
 # ------------------------------------------------------------------
 # create_presentation — PR #59 wire-shape assertions
 # ------------------------------------------------------------------
-# Per PR #59, ``SlidesClient.create_presentation()`` sends
-# ``sourcePresentationId`` in the POST body when a brand template
-# is configured. This makes the new presentation inherit the D&A
-# brand template's masters, layouts, theme, and fonts. Without it,
-# the deck reverts to the Google default master and the visual
-# brand collapses.
+# Wire-shape assertions for ``SlidesClient.create_presentation()``.
 #
-# These wire-shape tests would have caught the bug where Quinn said
-# "the deck doesn't look like the reference" — the Slides call
-# silently fell through to the default master because the
-# sourcePresentationId field was never sent.
+# Two paths:
+# - ``source_presentation_id`` set → ``presentations.copy`` endpoint
+#   (POST /v1/presentations/{template_id}:copy). The copy endpoint
+#   clones masters/layouts/theme/fonts into a new presentation.
+# - ``source_presentation_id`` None → ``presentations.create``
+#   endpoint (POST /v1/presentations with {"title": ...}). Blank deck.
+#
+# Historical note (fixed 2026-07-22): the previous implementation
+# sent ``sourcePresentationId`` as a body field on
+# ``POST /v1/presentations``. The Slides API does NOT recognize
+# that field and returned HTTP 400
+# ``Unknown name "sourcePresentationId": Cannot find field.`` on
+# every DriveSaveStrategy run with a brand template configured.
+# Quinn's testing confirmed the failure mode (3 rows in
+# competitive_audit_submission marked 'failed' with that error).
+# The correct shape for "create from template" is the
+# ``presentations.copy`` endpoint, which these tests now assert.
 
 
-def test_create_presentation_sends_source_presentation_id_in_body(client):
-    """Wire-shape regression test: when ``source_presentation_id`` is
-    passed, it MUST be in the POST body, not as a query param, and
-    NOT inside a nested ``presentation`` field. The Slides API
-    rejects anything else with 400.
+def test_create_presentation_with_template_uses_presentations_copy_endpoint(client):
+    """Wire-shape: when ``source_presentation_id`` is passed, the
+    client MUST POST to ``/v1/presentations/{id}:copy`` — NOT to
+    ``/v1/presentations`` with a ``sourcePresentationId`` body
+    field. The Slides API rejects the latter with HTTP 400.
     """
     requests = []
 
-    def create_handler(request: httpx.Request) -> httpx.Response:
-        requests.append(('POST', request))
+    def copy_handler(request: httpx.Request) -> httpx.Response:
+        requests.append(('COPY', request))
         return httpx.Response(
             200,
             content=json.dumps(
-                {'presentationId': 'PRES-NEW-1234'}
+                {'presentationId': 'PRES-COPIED-1234'}
             ).encode(),
         )
 
-    # No batchUpdate requests needed; we exercise just the create step.
-    client.set_next_handlers([create_handler])
+    client.set_next_handlers([copy_handler])
     pid = client.create_presentation(
         title='Acme - Competitive Audit - 2026-07-21',
         slides_spec={'slides': []},  # empty → no batchUpdate
         source_presentation_id='TEMPLATE-BRAND-XYZ',
     )
 
-    assert pid == 'PRES-NEW-1234'
+    assert pid == 'PRES-COPIED-1234'
     assert len(requests) == 1
     method, req = requests[0]
-    assert method == 'POST'
-    assert str(req.url).startswith('https://slides.googleapis.com/v1/presentations')
-    # The body MUST contain sourcePresentationId at the top level.
+    assert method == 'COPY'
+    # The URL must include the template id AND the ``:copy`` suffix.
+    url = str(req.url)
+    assert url == (
+        'https://slides.googleapis.com/v1/presentations/'
+        'TEMPLATE-BRAND-XYZ:copy'
+    )
+    # The body uses ``name`` (presentations.copy field), not title.
     body = json.loads(req.content.decode())
-    assert body['title'] == 'Acme - Competitive Audit - 2026-07-21'
-    assert body['sourcePresentationId'] == 'TEMPLATE-BRAND-XYZ'
-    # And NOT inside any nested field (Slides API ignores nested keys).
-    assert 'presentation' not in body
-    assert 'presentationId' not in body
+    assert body == {'name': 'Acme - Competitive Audit - 2026-07-21'}
+    # Critically: the body MUST NOT contain sourcePresentationId —
+    # that field doesn't exist on presentations.create OR
+    # presentations.copy, and including it confuses readers and
+    # would silently break if the API ever started rejecting
+    # unknown fields.
+    assert 'sourcePresentationId' not in body
+    assert 'title' not in body
 
 
-def test_create_presentation_omits_source_presentation_id_when_none(client):
-    """Wire-shape: when ``source_presentation_id`` is None (legacy
-    behavior), the body should NOT contain ``sourcePresentationId``
-    at all — sending null/empty would still be valid but is
-    unnecessary and might confuse future readers. Regression: the
-    field must be OMITTED, not set to None.
+def test_create_presentation_without_template_uses_presentations_create_endpoint(client):
+    """Wire-shape: when ``source_presentation_id`` is None, the
+    client MUST POST to ``/v1/presentations`` (no ``:copy``
+    suffix) with ``{"title": ...}`` — the legacy blank-deck path.
     """
     requests = []
 
     def create_handler(request: httpx.Request) -> httpx.Response:
-        requests.append(('POST', request))
+        requests.append(('CREATE', request))
         return httpx.Response(
             200,
             content=json.dumps({'presentationId': 'PRES-LEGACY'}).encode(),
@@ -403,14 +416,21 @@ def test_create_presentation_omits_source_presentation_id_when_none(client):
     )
 
     assert pid == 'PRES-LEGACY'
-    body = json.loads(requests[0][1].content.decode())
-    assert 'sourcePresentationId' not in body
-    # Only title should be set.
+    method, req = requests[0]
+    assert method == 'CREATE'
+    url = str(req.url)
+    # Plain /v1/presentations, no :copy suffix.
+    assert url == 'https://slides.googleapis.com/v1/presentations'
+    # The body uses ``title`` (presentations.create field).
+    body = json.loads(req.content.decode())
     assert body == {'title': 'Blank Deck'}
+    # Critically: no sourcePresentationId at all.
+    assert 'sourcePresentationId' not in body
+    assert 'name' not in body
 
 
 def test_create_presentation_with_template_triggers_batch_update_with_template_layouts(client):
-    """End-to-end shape: create-from-template then batchUpdate. Each
+    """End-to-end shape: copy-from-template then batchUpdate. Each
     slide's ``slideLayoutReference`` should use ``layoutObjectId``
     from the template (resolved via ``layout_catalog``), NOT
     ``predefinedLayout``. This is what selects the D&A custom
@@ -420,8 +440,8 @@ def test_create_presentation_with_template_triggers_batch_update_with_template_l
 
     requests = []
 
-    def create_handler(request: httpx.Request) -> httpx.Response:
-        requests.append(('CREATE', request))
+    def copy_handler(request: httpx.Request) -> httpx.Response:
+        requests.append(('COPY', request))
         return httpx.Response(
             200,
             content=json.dumps({'presentationId': 'PRES-TEMPL'}).encode(),
@@ -435,7 +455,7 @@ def test_create_presentation_with_template_triggers_batch_update_with_template_l
             content=json.dumps({'replies': []}).encode(),
         )
 
-    client.set_next_handlers([create_handler, batch_update_handler])
+    client.set_next_handlers([copy_handler, batch_update_handler])
     pid = client.create_presentation(
         title='Templated Deck',
         slides_spec={'slides': [
@@ -449,9 +469,13 @@ def test_create_presentation_with_template_triggers_batch_update_with_template_l
     assert pid == 'PRES-TEMPL'
     assert len(requests) == 2
 
-    # 1. Create body has sourcePresentationId at the top level.
-    create_body = json.loads(requests[0][1].content.decode())
-    assert create_body['sourcePresentationId'] == 'TEMPLATE-ID'
+    # 1. Copy URL has the template id and :copy suffix.
+    method_copy, req_copy = requests[0]
+    assert method_copy == 'COPY'
+    assert '/v1/presentations/TEMPLATE-ID:copy' in str(req_copy.url)
+    # Copy body uses ``name``, NOT ``sourcePresentationId``.
+    copy_body = json.loads(req_copy.content.decode())
+    assert copy_body == {'name': 'Templated Deck'}
 
     # 2. BatchUpdate body has createSlide requests with layoutObjectId.
     batch_body = json.loads(requests[1][1].content.decode())
