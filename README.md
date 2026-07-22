@@ -400,3 +400,24 @@ SEED_DRIFT_AND_ANCHOR=1   flask client seed-drift-and-anchor-resources +
 ```
 
 `deploy/scripts/deploy_release.sh` honors the same env flags when set in the calling shell / systemd unit. By default `SEED_DRIFT_AND_ANCHOR=0` — production deploys never auto-issue invites. Enable per-env via the relevant systemd unit (`/etc/systemd/system/consulting-site@testing.service` etc.) or by exporting the env var in the deploy wrapper.
+
+### Nginx site + snippet sync
+
+`deploy/scripts/deploy_release.sh` calls `deploy/scripts/install_nginx_site.sh` after `flask db upgrade`. That script:
+
+1. Copies `deploy/nginx/${ENV}.conf` -> `/etc/nginx/sites-available/consulting-site-${ENV}`.
+2. Enables the sites-enabled symlink.
+3. **Copies every file in `deploy/nginx/snippets/` -> `/etc/nginx/snippets/`.** This was the deploy gap that bit us on 2026-07-22: the snippet files (`security-headers.conf`, `hardening-common.conf`) were only ever written at original droplet provisioning, never on deploy. Slice-9 CSP changes lived only in the repo, never reached the live server, and the banner image was CSP-blocked even after `systemctl reload nginx` re-read the stale file.
+4. Validates with `nginx -t` and reloads.
+
+`install -m 0644` is content-aware: unchanged source files preserve their mtime, so `nginx reload` is a no-op when nothing has actually changed.
+
+### Manual seed flows need a manual worker restart
+
+If you run a seeder by hand on a live env (e.g. `flask client seed-drift-and-anchor-resources` over SSH), the gunicorn workers were started **before** the seed ran and are holding long-lived DB connection pools. They will not see the new rows until you restart the service:
+
+```bash
+sudo systemctl restart consulting-site@<env>
+```
+
+This is only a concern for **manual** seeds. Deploys already do `systemctl restart` at the end of `deploy_release.sh`, so a deploy-time seed is always visible to the new workers.
