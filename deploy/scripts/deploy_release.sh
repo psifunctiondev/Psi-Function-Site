@@ -245,6 +245,23 @@ else
   log "Skipping ACME showcase seed (set SEED_ACME_DEMO=1 to enable)"
 fi
 
+# Optionally seed the Drift & Anchor client (resources + Catherine's
+# invite). Gated on SEED_DRIFT_AND_ANCHOR=1 so production deploys can
+# opt in/out via env. Both subcommands are idempotent; failures are
+# logged but do not block the deploy. Mirrors the SEED_ACME_DEMO=1
+# pattern. Defaults to OFF — production should never auto-issue
+# invites; testing and staging can enable per-env via systemd unit.
+if [ "${SEED_DRIFT_AND_ANCHOR:-0}" = "1" ]; then
+  log "Seeding Drift & Anchor resources"
+  FLASK_APP=wsgi:app flask client seed-drift-and-anchor-resources || \
+    log "WARN: seed-drift-and-anchor-resources failed; continuing deploy"
+  log "Seeding Drift & Anchor invite (Catherine)"
+  FLASK_APP=wsgi:app flask client seed-drift-and-anchor-invite || \
+    log "WARN: seed-drift-and-anchor-invite failed; continuing deploy"
+else
+  log "Skipping Drift & Anchor seed (set SEED_DRIFT_AND_ANCHOR=1 to enable)"
+fi
+
 log "Running pre-activation validation"
 
 if [ -f "wsgi.py" ]; then
