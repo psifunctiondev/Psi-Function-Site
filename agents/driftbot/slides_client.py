@@ -27,12 +27,20 @@ Two responsibilities:
    shape. This module translates intent to wire format.
 
 API flow for one ``save()`` call:
-    1. ``POST /v1/presentations`` body=``{"title": ...}`` — note that
-       only ``title`` is honored at create time; everything else is
-       ignored (see api.google.com/slides/.../presentations/create).
+    1. ``POST /v1/presentations`` body=
+       ``{"title": ..., "sourcePresentationId": <template_id>}`` —
+       if ``sourcePresentationId`` is set, the new presentation
+       inherits the brand template's masters, layouts, theme, and
+       fonts. If unset, falls back to the Google default master.
+       Only ``title`` and ``sourcePresentationId`` are honored at
+       create time; everything else is ignored (see
+       api.google.com/slides/.../presentations/create).
     2. ``POST /v1/presentations/{id}:batchUpdate`` body=
        ``{"requests": [...CreateSlide + InsertText...]}`` — actually
-       inserts the slides + their text elements.
+       inserts the slides + their text elements. Slide layout
+       references use ``layoutObjectId`` (resolved from the brand
+       template's catalog) so we get the D&A custom layouts, not the
+       built-in ones with the same name.
     3. ``PATCH /drive/v3/files/{id}?fields=id,name,webViewLink`` body=
        ``{"name": ..., "parents": [...]}`` — Drive uses ``name`` (not
        Slides' title) for the filename in the UI, and ``parents`` to
@@ -238,34 +246,55 @@ def _intent_slide_to_wire_requests(slide: dict, insertion_index: int) -> list[di
     Wire shape produced:
         [
           {createSlide: {objectId, insertionIndex,
-                          slideLayoutReference: {predefinedLayout}}},
+                          slideLayoutReference: {layoutObjectId}}},
           ... per-element:
           {createShape: {objectId: <element>, shapeType: TEXT_BOX,
                           elementProperties: {transform, size}}},
           {insertText: {objectId: <element>, insertionIndex: 0, text}},
         ]
 
-    We use CreateShape + InsertText instead of inserting into layout
-    placeholders because reading-back-the-slide to find placeholder
-    objectIds adds a round-trip and we want one POST per save.
-    Element objectIds are derived from slideId + placeholder to stay
-    stable across regenerations.
+    Layout reference uses ``layoutObjectId`` (from the brand template
+    catalog) — NOT ``predefinedLayout`` or ``layoutName`` — because the
+    template has both built-in and D&A custom layouts with identical
+    ``name`` strings ("TITLE", "BLANK", etc.). Object IDs are stable
+    across template edits and unambiguous.
+
+    For the MVP we still use CreateShape + InsertText instead of
+    inserting into layout placeholders, because reading-back-the-slide
+    to find placeholder objectIds adds a round-trip and we want one
+    POST per save. Element objectIds are derived from slideId +
+    placeholder to stay stable across regenerations.
     """
+    # Lazy import to avoid circular dep at module load.
+    from agents.driftbot.layout_catalog import (
+        LayoutName,
+        resolve_layout_object_id,
+    )
+
     layout = slide.get('layout', 'TITLE_AND_BODY')
-    predefined = layout
-    if layout not in _LAYOUT_POSITIONS:
-        # Unknown layout — fall back to a blank title-and-body slide.
-        predefined = 'TITLE_AND_BODY'
-        positions = _LAYOUT_POSITIONS['TITLE_AND_BODY']
-    else:
+    try:
+        # Validate the layout name (raises KeyError if unknown).
+        LayoutName(layout)
+        layout_object_id = resolve_layout_object_id(layout)
+    except (KeyError, ValueError):
+        # Unknown layout — fall back to TITLE_AND_BODY.
+        layout_object_id = resolve_layout_object_id(LayoutName.TITLE_AND_BODY.value)
+        layout = LayoutName.TITLE_AND_BODY.value
+
+    # `_LAYOUT_POSITIONS` is a legacy coordinate table for the
+    # MVP-only CreateShape path. New layouts added to the catalog
+    # without entries here will fall back to TITLE_AND_BODY positions.
+    if layout in _LAYOUT_POSITIONS:
         positions = _LAYOUT_POSITIONS[layout]
+    else:
+        positions = _LAYOUT_POSITIONS[LayoutName.TITLE_AND_BODY.value]
 
     requests: list[dict] = [
         {
             'createSlide': {
                 'objectId': slide['slideId'],
                 'insertionIndex': insertion_index,
-                'slideLayoutReference': {'predefinedLayout': predefined},
+                'slideLayoutReference': {'layoutObjectId': layout_object_id},
             },
         },
     ]
@@ -340,19 +369,36 @@ class SlidesClient:
     # ---- Slides API ---------------------------------------------------
 
     def create_presentation(
-        self, title: str, slides_spec: dict,
+        self,
+        title: str,
+        slides_spec: dict,
+        source_presentation_id: str | None = None,
     ) -> str:
-        """Step 1+2: create blank presentation, then batchUpdate with
-        the slide content. Returns the presentation ID.
+        """Step 1+2: create presentation, then batchUpdate with the
+        slide content. Returns the presentation ID.
+
+        If ``source_presentation_id`` is provided, the new
+        presentation is created FROM that template — inheriting the
+        template's masters, layouts, theme, and fonts. This is how
+        we get BrandSight decks that look like Quinn's reference
+        deck without re-implementing layouts in code.
+
+        If ``source_presentation_id`` is None, falls back to the
+        legacy behavior: build a blank presentation from the Google
+        default master.
 
         Per Google's API: ``presentations.create`` ignores everything
-        except ``title``; actual content goes in batchUpdate.
+        except ``title`` and ``sourcePresentationId``; actual content
+        goes in batchUpdate.
         """
         url = 'https://slides.googleapis.com/v1/presentations'
+        body: dict = {'title': title}
+        if source_presentation_id:
+            body['sourcePresentationId'] = source_presentation_id
         try:
             resp = self._http.post(
                 url, headers=self._auth_headers(),
-                json={'title': title},
+                json=body,
             )
         except httpx.HTTPError as exc:
             raise DriveAuthError(

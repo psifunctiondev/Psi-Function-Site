@@ -322,3 +322,145 @@ def test_delete_file_204_is_success(client):
 
         client.set_next_handlers([delete_handler])
         client.delete_file(f'PRES-{code}')  # should not raise
+
+
+# ------------------------------------------------------------------
+# create_presentation — PR #59 wire-shape assertions
+# ------------------------------------------------------------------
+# Per PR #59, ``SlidesClient.create_presentation()`` sends
+# ``sourcePresentationId`` in the POST body when a brand template
+# is configured. This makes the new presentation inherit the D&A
+# brand template's masters, layouts, theme, and fonts. Without it,
+# the deck reverts to the Google default master and the visual
+# brand collapses.
+#
+# These wire-shape tests would have caught the bug where Quinn said
+# "the deck doesn't look like the reference" — the Slides call
+# silently fell through to the default master because the
+# sourcePresentationId field was never sent.
+
+
+def test_create_presentation_sends_source_presentation_id_in_body(client):
+    """Wire-shape regression test: when ``source_presentation_id`` is
+    passed, it MUST be in the POST body, not as a query param, and
+    NOT inside a nested ``presentation`` field. The Slides API
+    rejects anything else with 400.
+    """
+    requests = []
+
+    def create_handler(request: httpx.Request) -> httpx.Response:
+        requests.append(('POST', request))
+        return httpx.Response(
+            200,
+            content=json.dumps(
+                {'presentationId': 'PRES-NEW-1234'}
+            ).encode(),
+        )
+
+    # No batchUpdate requests needed; we exercise just the create step.
+    client.set_next_handlers([create_handler])
+    pid = client.create_presentation(
+        title='Acme - Competitive Audit - 2026-07-21',
+        slides_spec={'slides': []},  # empty → no batchUpdate
+        source_presentation_id='TEMPLATE-BRAND-XYZ',
+    )
+
+    assert pid == 'PRES-NEW-1234'
+    assert len(requests) == 1
+    method, req = requests[0]
+    assert method == 'POST'
+    assert str(req.url).startswith('https://slides.googleapis.com/v1/presentations')
+    # The body MUST contain sourcePresentationId at the top level.
+    body = json.loads(req.content.decode())
+    assert body['title'] == 'Acme - Competitive Audit - 2026-07-21'
+    assert body['sourcePresentationId'] == 'TEMPLATE-BRAND-XYZ'
+    # And NOT inside any nested field (Slides API ignores nested keys).
+    assert 'presentation' not in body
+    assert 'presentationId' not in body
+
+
+def test_create_presentation_omits_source_presentation_id_when_none(client):
+    """Wire-shape: when ``source_presentation_id`` is None (legacy
+    behavior), the body should NOT contain ``sourcePresentationId``
+    at all — sending null/empty would still be valid but is
+    unnecessary and might confuse future readers. Regression: the
+    field must be OMITTED, not set to None.
+    """
+    requests = []
+
+    def create_handler(request: httpx.Request) -> httpx.Response:
+        requests.append(('POST', request))
+        return httpx.Response(
+            200,
+            content=json.dumps({'presentationId': 'PRES-LEGACY'}).encode(),
+        )
+
+    client.set_next_handlers([create_handler])
+    pid = client.create_presentation(
+        title='Blank Deck',
+        slides_spec={'slides': []},
+        source_presentation_id=None,
+    )
+
+    assert pid == 'PRES-LEGACY'
+    body = json.loads(requests[0][1].content.decode())
+    assert 'sourcePresentationId' not in body
+    # Only title should be set.
+    assert body == {'title': 'Blank Deck'}
+
+
+def test_create_presentation_with_template_triggers_batch_update_with_template_layouts(client):
+    """End-to-end shape: create-from-template then batchUpdate. Each
+    slide's ``slideLayoutReference`` should use ``layoutObjectId``
+    from the template (resolved via ``layout_catalog``), NOT
+    ``predefinedLayout``. This is what selects the D&A custom
+    layouts instead of the built-in ones with the same name.
+    """
+    from agents.driftbot.layout_catalog import LAYOUT_IDS, LayoutName
+
+    requests = []
+
+    def create_handler(request: httpx.Request) -> httpx.Response:
+        requests.append(('CREATE', request))
+        return httpx.Response(
+            200,
+            content=json.dumps({'presentationId': 'PRES-TEMPL'}).encode(),
+        )
+
+    def batch_update_handler(request: httpx.Request) -> httpx.Response:
+        requests.append(('BATCH', request))
+        # Return 200 with empty replies so client doesn't fail.
+        return httpx.Response(
+            200,
+            content=json.dumps({'replies': []}).encode(),
+        )
+
+    client.set_next_handlers([create_handler, batch_update_handler])
+    pid = client.create_presentation(
+        title='Templated Deck',
+        slides_spec={'slides': [
+            {'slideId': 'slide-1', 'layout': LayoutName.TITLE.value,
+             'elements': [{'type': 'text', 'placeholder': 'TITLE', 'text': 'X'}]},
+            {'slideId': 'slide-2', 'layout': LayoutName.TITLE_AND_BODY.value,
+             'elements': [{'type': 'text', 'placeholder': 'BODY', 'text': 'Y'}]},
+        ]},
+        source_presentation_id='TEMPLATE-ID',
+    )
+    assert pid == 'PRES-TEMPL'
+    assert len(requests) == 2
+
+    # 1. Create body has sourcePresentationId at the top level.
+    create_body = json.loads(requests[0][1].content.decode())
+    assert create_body['sourcePresentationId'] == 'TEMPLATE-ID'
+
+    # 2. BatchUpdate body has createSlide requests with layoutObjectId.
+    batch_body = json.loads(requests[1][1].content.decode())
+    requests_list = batch_body['requests']
+    create_slide_reqs = [r for r in requests_list if 'createSlide' in r]
+    assert len(create_slide_reqs) == 2
+    assert create_slide_reqs[0]['createSlide']['slideLayoutReference']['layoutObjectId'] == LAYOUT_IDS['TITLE']  # noqa: E501
+    assert create_slide_reqs[1]['createSlide']['slideLayoutReference']['layoutObjectId'] == LAYOUT_IDS['TITLE_AND_BODY']  # noqa: E501
+    # Critically: NO predefinedLayout anywhere (would silently fall
+    # back to Google built-ins with the same name).
+    for r in create_slide_reqs:
+        assert 'predefinedLayout' not in r['createSlide']['slideLayoutReference']

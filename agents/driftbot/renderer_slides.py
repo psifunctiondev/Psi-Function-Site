@@ -11,11 +11,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from agents.driftbot.layout_catalog import LayoutName
 from agents.driftbot.runner import AuditDraft
 
 # D&A brand palette per BRANDING_PROFILES (drift-and-anchor):
 DA_PRIMARY = '#160E33'   # deep navy/purple
-DA_ACCENT = '#C9A66B'    # warm gold
+DA_ACCENT = '#1470AF'    # brand blue (was '#C9A66B' — corrected 2026-07-22
+                         # against the actual brand template)
 DA_NEUTRAL_LIGHT = '#F5F5F5'
 DA_NEUTRAL_DARK = '#313131'
 
@@ -30,10 +32,10 @@ _PROVOCATIONS = [
 
 
 def _title_slide(draft: AuditDraft) -> dict:
-    """Slide 1: Title slide."""
+    """Slide 1: Title slide (D&A cover layout)."""
     return {
         'slideId': 'slide-title',
-        'layout': 'TITLE',
+        'layout': LayoutName.TITLE.value,
         'elements': [
             {
                 'type': 'text',
@@ -52,13 +54,13 @@ def _title_slide(draft: AuditDraft) -> dict:
 
 
 def _exec_summary_slide(draft: AuditDraft) -> dict:
-    """Slide 2: Executive summary."""
+    """Slide 2: Executive summary (two-column layout)."""
     # Reuse the executive-summary synthesis from runner.
     from agents.driftbot.runner import _synthesize_executive_summary
     summary_text = _synthesize_executive_summary(draft.client, draft.competitors)
     return {
         'slideId': 'slide-exec-summary',
-        'layout': 'TITLE_AND_BODY',
+        'layout': LayoutName.TITLE_AND_TWO_COLUMNS.value,
         'elements': [
             {
                 'type': 'text',
@@ -75,7 +77,7 @@ def _exec_summary_slide(draft: AuditDraft) -> dict:
 
 
 def _competitor_cards_slide(draft: AuditDraft) -> list[dict]:
-    """One slide per competitor."""
+    """One slide per competitor (standard body layout)."""
     slides = []
     for i, card_md in enumerate(draft.competitor_cards, start=1):
         slide_id = f'slide-comp-{i}'
@@ -89,7 +91,7 @@ def _competitor_cards_slide(draft: AuditDraft) -> list[dict]:
         body = '\n'.join(line for line in lines if not line.startswith('#'))
         slides.append({
             'slideId': slide_id,
-            'layout': 'TITLE_AND_BODY',
+            'layout': LayoutName.TITLE_AND_BODY.value,
             'elements': [
                 {
                     'type': 'text',
@@ -107,7 +109,7 @@ def _competitor_cards_slide(draft: AuditDraft) -> list[dict]:
 
 
 def _provocation_slides(draft: AuditDraft) -> list[dict]:
-    """One slide per Provocation chapter."""
+    """One slide per Provocation chapter (standard body layout)."""
     slides = []
     for i, chapter_md in enumerate(draft.provocation_chapters, start=1):
         prov_name = _PROVOCATIONS[i - 1] if (i - 1) < len(_PROVOCATIONS) else f'Provocation {i}'
@@ -119,7 +121,7 @@ def _provocation_slides(draft: AuditDraft) -> list[dict]:
         ).strip()
         slides.append({
             'slideId': slide_id,
-            'layout': 'TITLE_AND_BODY',
+            'layout': LayoutName.TITLE_AND_BODY.value,
             'elements': [
                 {
                     'type': 'text',

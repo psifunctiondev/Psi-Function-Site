@@ -177,6 +177,17 @@ class DriveSaveStrategy(SaveStrategy):
                                      Output" subfolder. Defaults to
                                      ``1rrVimH-UB3qn0FJ0rBuZ9FoTTydSMdIS``
                                      per portal-spec §13.4.
+        DRIFTERBOT_BRAND_TEMPLATE_ID: Drive file ID of the D&A brand
+                                     template (in BrandSight Input
+                                     folder). When set, every audit
+                                     deck is created FROM this template
+                                     via ``sourcePresentationId``,
+                                     inheriting masters/layouts/theme.
+                                     Defaults to the live template ID
+                                     from
+                                     ``agents/driftbot/layout_catalog.py``.
+                                     Set to empty string to disable
+                                     template reuse and build blank.
     """
 
     def __init__(
@@ -185,6 +196,7 @@ class DriveSaveStrategy(SaveStrategy):
         service_account_json_path: Path | None = None,
         subject: str | None = None,
         output_folder_id: str | None = None,
+        brand_template_id: str | None = None,
         slides_client=None,  # dependency injection seam for tests
     ) -> None:
         self.service_account_json_path = (
@@ -203,6 +215,27 @@ class DriveSaveStrategy(SaveStrategy):
             or os.environ.get('BRANDSIGHT_OUTPUT_FOLDER_ID')
             or DEFAULT_OUTPUT_FOLDER_ID
         )
+        # Brand template ID — kwarg wins over env wins over default.
+        # Lazy import to avoid loading layout_catalog at module import.
+        from agents.driftbot.layout_catalog import DEFAULT_BRAND_TEMPLATE_ID
+        env_template = os.environ.get('DRIFTERBOT_BRAND_TEMPLATE_ID')
+        if brand_template_id is not None:
+            # Explicit kwarg takes precedence — including explicit
+            # None to force blank. (Empty-string kwarg treated as
+            # "disable" to match env semantics.)
+            self.brand_template_id = (
+                brand_template_id if brand_template_id != ''
+                else None
+            )
+        elif env_template == '':
+            # Explicit empty string in env disables template reuse
+            # (force blank) — useful for debugging 'why does this
+            # look wrong?' without commenting out code.
+            self.brand_template_id = None
+        elif env_template is not None:
+            self.brand_template_id = env_template
+        else:
+            self.brand_template_id = DEFAULT_BRAND_TEMPLATE_ID
         # Lazy import + dependency injection so tests can swap a fake.
         if slides_client is None:
             from agents.driftbot.slides_client import SlidesClient
@@ -234,6 +267,7 @@ class DriveSaveStrategy(SaveStrategy):
             presentation_id = self._slides_client.create_presentation(
                 title=title,
                 slides_spec=slides_spec,
+                source_presentation_id=self.brand_template_id,
             )
         except Exception:
             logger.exception(
