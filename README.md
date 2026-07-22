@@ -63,39 +63,65 @@ Default DB is the SQLite file at `instance/dev.db`; set `DATABASE_URL` in your s
 
 The three deployed environments live on the deploy host under `/opt/consulting-site/<env>/`. Each has its own `current` symlink to the active release, its own `.venv/` inside that release, and its own `shared/env/app.env` with the env-specific `DATABASE_URL`, `SECRET_KEY`, and `FLASK_ENV_PROFILE`.
 
-The cleanest way to run a CLI command against a deployed environment is to hop onto the host as the `deploy` user and run the command inside that env's `current` release. The release's `.venv` carries the right Python + pinned deps; `shared/env/app.env` (with `DATABASE_URL`, `FLASK_ENV_PROFILE`, `SECRET_KEY`) lives one directory up from `current/` at `/opt/consulting-site/<env>/shared/env/app.env`.
+A `flask` command points at a deployed environment when **all three** line up:
+
+1. `python` comes from the release's `.venv/` (not the local dev venv — pinned deps differ).
+2. `FLASK_APP` (or `--app`) resolves to that release's `wsgi.py`.
+3. The shell has the env's `DATABASE_URL`, `FLASK_ENV_PROFILE`, and `SECRET_KEY` exported — sourced from `<env>/shared/env/app.env`. **Without these, `BaseConfig` falls back to the local SQLite file at `instance/dev.db` and the command will fail with `sqlite3.OperationalError: unable to open database file` (or worse, silently hit the wrong DB).**
+
+`deploy_release.sh` sources `app.env` for its own process during the deploy, but **that does NOT carry into a fresh interactive shell** — the env vars are lost the moment that script exits. You have to source it yourself on every manual invocation. The complete, working pattern:
 
 ```bash
 # As the deploy user on the deploy host:
+ENV=testing                                  # or staging | production
+ENV_FILE="/opt/consulting-site/${ENV}/shared/env/app.env"
+APP_DIR="/opt/consulting-site/${ENV}/current"
+
+# shellcheck disable=SC1090
+set -a; source "$ENV_FILE"; set +a           # export DATABASE_URL + FLASK_ENV_PROFILE + SECRET_KEY
+
+cd "$APP_DIR"
+FLASK_APP=wsgi:app .venv/bin/flask client apply-branding --all
+```
+
+That works from a shell already running as `deploy`. If you're SSHed in as a different user and need to switch, wrap it in `sudo -u deploy -H bash -lc '…'` (the `-l` gives you a login shell so `PATH` and `HOME` are what the deploy user expects). End-to-end example for inviting a portal user from a fresh SSH session:
+
+```bash
 sudo -u deploy -H bash -lc '
-  cd /opt/consulting-site/production/current &&
-  .venv/bin/flask --app wsgi:app client apply-branding --all
+  ENV=testing
+  ENV_FILE="/opt/consulting-site/${ENV}/shared/env/app.env"
+  APP_DIR="/opt/consulting-site/${ENV}/current"
+
+  set -a; source "$ENV_FILE"; set +a
+  cd "$APP_DIR" &&
+  echo "FLASK_ENV_PROFILE=$FLASK_ENV_PROFILE" &&
+  echo "DATABASE_URL=$DATABASE_URL" &&
+  FLASK_APP=wsgi:app .venv/bin/flask user invite \
+    --email drifterbot@psifunction.com \
+    --client drift-and-anchor
 '
 ```
 
-That resolves `FLASK_APP` via the `--app` flag (so you don't need to export it), uses the release's pinned `python` from `.venv/bin/`, and `bash -lc` gives you a login shell so anything the env expects on `PATH` is there. The env's `app.env` (with `DATABASE_URL`, `FLASK_ENV_PROFILE`, etc.) is sourced by `deploy_release.sh` during the deploy — it is NOT automatically inherited by a fresh interactive shell, so on a manual invocation you also need to load it:
+The two `echo`s confirm `app.env` was sourced before any DB-touching command runs — if either comes back empty, stop and re-check `app.env` rather than retrying blind. Swap `ENV=testing` for `staging` or `production` as needed; the rest is parameterised.
 
-```bash
-ENV=production                                # or testing | staging
-ENV_FILE="/opt/consulting-site/${ENV}/shared/env/app.env"
-
-# shellcheck disable=SC1090
-set -a; source "$ENV_FILE"; set +a           # export every var in app.env
-
-cd "/opt/consulting-site/${ENV}/current"
-FLASK_APP=wsgi:app .venv/bin/flask client apply-branding --all
-```
+> **Common failure mode.** If you skip `source "$ENV_FILE"` and just `cd` into `current/` + run `flask`, you'll get `sqlite3.OperationalError: unable to open database file` because SQLAlchemy falls back to the default SQLite path with no parent directory in the release dir. That's the symptom of "I pointed at the right release but the wrong database."
 
 > **Why not just `source` the local `.venv` and run `flask`?** Two reasons. First, the local venv has whatever Python and pip versions you happened to install, which can drift from the release's pinned deps — running through the release venv guarantees parity with what the live app is using. Second, the local shell has whatever env vars are in scope, which almost certainly do not match the deployed environment's `DATABASE_URL` / `SECRET_KEY` / `FLASK_ENV_PROFILE`. Pointing at the release venv + that env's `app.env` removes both ambiguities at once.
 
 > **Always double-check before running mutating commands against `production`.** Read the release's `REVISION` file and echo the resolved config first to confirm you're pointed where you think you are:
 >
 > ```bash
-> cat /opt/consulting-site/production/current/REVISION
-> sudo -u deploy -H bash -lc 'cd /opt/consulting-site/production/current && \
->   set -a; source /opt/consulting-site/production/shared/env/app.env; set +a && \
->   echo "FLASK_ENV_PROFILE=$FLASK_ENV_PROFILE DATABASE_URL=$DATABASE_URL" && \
->   .venv/bin/flask --app wsgi:app client list'
+> ENV=production
+> cat "/opt/consulting-site/${ENV}/current/REVISION"
+> sudo -u deploy -H bash -lc '
+>   ENV_FILE="/opt/consulting-site/${ENV}/shared/env/app.env"
+>   APP_DIR="/opt/consulting-site/${ENV}/current"
+>   set -a; source "$ENV_FILE"; set +a
+>   cd "$APP_DIR" &&
+>   echo "FLASK_ENV_PROFILE=$FLASK_ENV_PROFILE" &&
+>   echo "DATABASE_URL=$DATABASE_URL" &&
+>   FLASK_APP=wsgi:app .venv/bin/flask client list
+> '
 > ```
 
 ### `flask user …` — manage portal users
