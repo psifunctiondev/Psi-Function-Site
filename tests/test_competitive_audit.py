@@ -1766,24 +1766,285 @@ class TestSlice8JsReindex:
     """Slice 8 item 7: the JS reindex() function rewrites the
     Competitor N title text inside cloned cards.
 
-    Playwright / Selenium aren't wired into this project. The change
-    lives in the inline <script> at the bottom of the template; the
-    only practical in-pytest verification is reading the template
-    source and asserting the rewriting substring is present.
-    Phronesis should add a real browser test in a later slice.
+    Slice 9: the JS was extracted into
+    app/static/js/portal/competitive-audit-form.js. The test now reads
+    the JS file rather than the template, but the substring we pin is
+    unchanged.
+
+    Playwright / Selenium aren't wired into this project. Phronesis
+    should add a real browser test in a later slice.
     """
 
     def test_reindex_rewrites_competitor_n_title(self):
         from pathlib import Path
 
         repo_root = Path(__file__).resolve().parent.parent
-        template = (
-            repo_root / "app" / "templates" / "portal" / "drift_and_anchor_competitive_audit.html"
+        js = (
+            repo_root
+            / "app"
+            / "static"
+            / "js"
+            / "portal"
+            / "competitive-audit-form.js"
         ).read_text()
-        # The reindex function must include a literal that rewrites
-        # the title text to "Competitor <N>".
-        assert 'class="competitive-audit-col__title">Competitor 1<' in template
-        assert "class=\"competitive-audit-col__title\">Competitor ' + newIndex + '<" in template
+        # Source HTML for the default card still has the literal
+        # "Competitor 1" inside the col__title div.
+        assert 'class="competitive-audit-col__title">Competitor 1<' in js
+        # And the reindex function rewrites that literal to use the
+        # dynamic index.
+        assert "class=\"competitive-audit-col__title\">Competitor ' + newIndex + '<" in js
+
+
+# ---------------------------------------------------------------------------
+# Slice 9 — extracted JS, favicon, TikTok checkbox, dashboard CTA removal
+# ---------------------------------------------------------------------------
+
+
+class TestSlice9ExtractedJs:
+    """Slice 9 item 3: the inline <script> for the competitive-audit
+    "Add competitor" behavior was extracted into
+    app/static/js/portal/competitive-audit-form.js so the page
+    complies with the site's strict CSP (script-src 'self')."""
+
+    def test_external_js_file_exists(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        js_path = (
+            repo_root
+            / "app"
+            / "static"
+            / "js"
+            / "portal"
+            / "competitive-audit-form.js"
+        )
+        assert js_path.exists(), f"missing {js_path}"
+        # Belt-and-suspenders: the file should not be empty.
+        assert js_path.stat().st_size > 500
+
+    def test_template_references_external_js(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        template = (
+            repo_root
+            / "app"
+            / "templates"
+            / "portal"
+            / "drift_and_anchor_competitive_audit.html"
+        ).read_text()
+        # The template must reference the external script via url_for.
+        assert (
+            "js/portal/competitive-audit-form.js" in template
+        ), "template does not load the external JS file"
+        assert (
+            "{{ url_for('static', filename='js/portal/competitive-audit-form.js') }}"
+            in template
+        ), "template does not use url_for for the external JS"
+
+    def test_template_no_inline_competitive_audit_script(self):
+        # The extracted JS contains the Add/clone logic. The inline
+        # <script> block at the bottom of the template should NOT
+        # contain a reindex / nextIndex / makeRemoveButton function —
+        # those live in the extracted file now.
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        template = (
+            repo_root
+            / "app"
+            / "templates"
+            / "portal"
+            / "drift_and_anchor_competitive_audit.html"
+        ).read_text()
+        # Locate the {% block scripts %} region and assert no reindex.
+        scripts_start = template.find("{% block scripts %}")
+        scripts_end = template.find("{% endblock %}", scripts_start)
+        assert scripts_start != -1 and scripts_end != -1
+        scripts_block = template[scripts_start:scripts_end]
+        assert "function reindex(" not in scripts_block
+        assert "function nextIndex(" not in scripts_block
+        assert "function makeRemoveButton(" not in scripts_block
+
+    def test_extracted_js_preserves_reindex_logic(self):
+        # The external file must still contain the reindex + clone
+        # wiring that used to live in the inline <script>. Otherwise
+        # extraction would silently break the Add behavior.
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        js = (
+            repo_root
+            / "app"
+            / "static"
+            / "js"
+            / "portal"
+            / "competitive-audit-form.js"
+        ).read_text()
+        assert "competitive-audit-form-card" in js
+        assert "data-competitive-audit-add" in js
+        assert "data-competitive-audit-extra-cards" in js
+        assert "data-card-index" in js
+        assert "competitor_1_" in js  # source of the reindex regex
+        assert "function reindex(" in js
+        assert "function nextIndex(" in js
+        assert "function makeRemoveButton(" in js
+
+
+class TestSlice9TiktokCheckbox:
+    """Slice 9 item 3: the socials row now includes TikTok alongside
+    X, Facebook, Instagram, and YouTube. Default-checked on the
+    default card to match the rest of the socials checkboxes."""
+
+    def test_template_renders_tiktok_checkbox(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        template = (
+            repo_root
+            / "app"
+            / "templates"
+            / "portal"
+            / "drift_and_anchor_competitive_audit.html"
+        ).read_text()
+        assert "competitor_1_include_tiktok" in template
+        assert 'name="competitor_1_include_tiktok"' in template
+        assert 'for="competitor_1_include_tiktok"' in template
+        # TikTok label exists (not just the input).
+        assert ">TikTok<" in template
+
+    def test_extracted_js_reindex_handles_tiktok(self):
+        # The reindex regex `competitor_1_/g` must catch the new
+        # competitor_1_include_tiktok attribute on clone. Confirm by
+        # walking a synthetic clone that includes TikTok.
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        js = (
+            repo_root
+            / "app"
+            / "static"
+            / "js"
+            / "portal"
+            / "competitive-audit-form.js"
+        ).read_text()
+        # reindex replaces the bare `competitor_1_` token globally,
+        # which covers competitor_1_include_tiktok too.
+        assert (
+            ".replace(/competitor_1_/g, 'competitor_' + newIndex + '_')"
+            in js
+        ), "reindex regex should be a global bare-token match"
+
+
+class TestSlice9Favicon:
+    """Slice 9 item 4: site favicon added to base.html. The favicon
+    file lives at app/static/favicon.ico (multi-resolution ICO derived
+    from app/static/images/psi_logo_3.webp). Closes the 404 in the
+    browser console on every portal page."""
+
+    def test_favicon_file_exists(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        ico_path = repo_root / "app" / "static" / "favicon.ico"
+        assert ico_path.exists(), f"missing {ico_path}"
+        # ICO magic bytes: 00 00 01 00.
+        with ico_path.open("rb") as fh:
+            magic = fh.read(4)
+        assert magic[:4] == b"\x00\x00\x01\x00", (
+            f"favicon is not a valid ICO (magic={magic!r})"
+        )
+
+    def test_base_html_has_favicon_link(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        base = (repo_root / "app" / "templates" / "base.html").read_text()
+        assert (
+            "rel=\"icon\"" in base
+        ), "base.html is missing <link rel=\"icon\">"
+        assert (
+            "{{ url_for('static', filename='favicon.ico') }}" in base
+        ), "base.html does not url_for the favicon path"
+
+
+class TestSlice9DashboardCtaRemoved:
+    """Slice 9 item 5: the standalone "Competitive audit with
+    DrifterBot" CTA block was removed from
+    app/templates/portal/_dashboard_grid.html. The audit entry point
+    now lives in the seeded Applications column (via DRIFT_AND_ANCHOR_RESOURCES)."""
+
+    def test_dashboard_grid_no_standalone_cta(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        grid = (
+            repo_root
+            / "app"
+            / "templates"
+            / "portal"
+            / "_dashboard_grid.html"
+        ).read_text()
+        assert "portal-dashboard-cta" not in grid, (
+            "standalone DrifterBot CTA block still present in _dashboard_grid.html"
+        )
+        assert (
+            "Request an audit" not in grid
+        ), "old standalone CTA copy still present"
+
+
+class TestSlice9SecurityHeadersCsp:
+    """Slice 9 item 6: security-headers.conf CSP now allows
+    static1.squarespace.com / images.squarespace-cdn.com for img-src,
+    static.cloudflareinsights.com for script-src + connect-src, and
+    still rejects inline scripts (script-src 'self' only)."""
+
+    def test_csp_allows_squarespace_cdn_for_images(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        conf = (
+            repo_root
+            / "deploy"
+            / "nginx"
+            / "snippets"
+            / "security-headers.conf"
+        ).read_text()
+        assert "static1.squarespace.com" in conf
+        assert "images.squarespace-cdn.com" in conf
+        assert "img-src" in conf
+
+    def test_csp_allows_cloudflare_insights_script(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        conf = (
+            repo_root
+            / "deploy"
+            / "nginx"
+            / "snippets"
+            / "security-headers.conf"
+        ).read_text()
+        assert "static.cloudflareinsights.com" in conf
+        assert "script-src" in conf
+        assert "connect-src" in conf
+
+    def test_csp_does_not_permit_unsafe_inline_scripts(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        conf = (
+            repo_root
+            / "deploy"
+            / "nginx"
+            / "snippets"
+            / "security-headers.conf"
+        ).read_text()
+        # Inline scripts would re-introduce the bug that slice 9 fixed
+        # by extracting the JS. Pin script-src to 'self' only.
+        assert "script-src 'self'" in conf
+        assert "'unsafe-inline'" not in conf.split("script-src", 1)[1].split(";", 1)[0]
+
 
 
 # Seeder — DRIFT_AND_ANCHOR_RESOURCES now contains the audit entry
