@@ -157,7 +157,12 @@ class DriveSaveStrategy(SaveStrategy):
            the workspace user ``subject=`` so the created
            presentation is owned by D&A, not the service
            account.
-        2. POST ``/v1/presentations`` with ``{"title":  ..}``.
+        2. Create the presentation:
+           - With brand template → ``POST /v1/presentations/{id}:copy``
+             body=``{"name": <title>}``. Clones the template's
+             masters/layouts/theme/fonts into the new presentation.
+           - Without template → ``POST /v1/presentations``
+             body=``{"title": <title>}``. Blank deck.
         3. POST ``/v1/presentations/{id}:batchUpdate`` to insert the
            slides + elements.
         4. PATCH ``/drive/v3/files/{id}?addParents=<folder_id>
