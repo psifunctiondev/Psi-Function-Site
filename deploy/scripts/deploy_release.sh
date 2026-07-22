@@ -304,6 +304,31 @@ log "Restarting application service"
 sudo systemctl restart "$SERVICE_NAME"
 sudo systemctl is-active --quiet "$SERVICE_NAME" || fail "$SERVICE_NAME failed to start"
 
+# Restart the DrifterBot worker too. Without this, the worker keeps
+# running the on-disk code from the previous release — its loaded
+# bytecode never refreshes, so deploys silently don't reach it.
+# On 2026-07-22 the broken presentations.copy endpoint kept
+# failing every submission even after the fix was deployed, because
+# the systemd-managed worker process hadn't been restarted. Caught
+# when a freshly-submitted row flipped to 'failed' in 3 seconds
+# (the systemd worker's polling interval) despite the just-pushed
+# fix being on disk.
+#
+# The worker is a one-shot loop that polls every few seconds and
+# exits cleanly when idle (Restart= in the unit file handles the
+# re-launch). A `systemctl restart` is a no-op race: systemd stops
+# the unit, the Restart= policy kicks in, and the new process loads
+# the fresh code. If the unit is enabled, the restart succeeds; if
+# not, this is a no-op (best-effort).
+log "Restarting DrifterBot worker service (best-effort)"
+DRIFTERBOT_SERVICE="consulting-site-drifterbot@${ENVIRONMENT}"
+if sudo systemctl is-enabled --quiet "$DRIFTERBOT_SERVICE" 2>/dev/null; then
+  sudo systemctl restart "$DRIFTERBOT_SERVICE" || \
+    log "WARN: $DRIFTERBOT_SERVICE restart failed; continuing deploy"
+else
+  log "DrifterBot unit not enabled in $ENVIRONMENT — skipping restart"
+fi
+
 log "Checking Gunicorn health endpoint over unix socket"
 for i in $(seq 1 "$APP_HEALTH_TIMEOUT"); do
   if [ -S "$SOCKET_PATH" ] && \
