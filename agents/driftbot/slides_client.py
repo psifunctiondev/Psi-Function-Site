@@ -80,7 +80,18 @@ class _SlidesAuth:
     _TOKEN_EXPIRY_BUFFER_S = 300
     _SCOPE = (
         'https://www.googleapis.com/auth/presentations '
-        'https://www.googleapis.com/auth/drive.file'
+        'https://www.googleapis.com/auth/drive.file '
+        # ``presentations.copy`` reads the source template, which is
+        # owned by another user and lives in the DrifterBot Shared
+        # Drive. ``drive.file`` only covers files the user created or
+        # that are explicitly shared — not arbitrary reads — so
+        # ``presentations.copy`` rejects the request with HTTP 400
+        # and an HTML error page (caught on 2026-07-22 smoke test
+        # against the testing DB).
+        # ``drive.readonly`` grants the read access needed for the
+        # copy without expanding the write surface beyond what
+        # ``drive.file`` already grants.
+        'https://www.googleapis.com/auth/drive.readonly'
     )
     _TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
