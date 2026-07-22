@@ -84,6 +84,26 @@ cd "$APP_DIR"
 FLASK_APP=wsgi:app .venv/bin/flask client apply-branding --all
 ```
 
+That works from a shell already running as `deploy`. If you're SSHed in as a different user and need to switch, wrap it in `sudo -u deploy -H bash -lc '…'` (the `-l` gives you a login shell so `PATH` and `HOME` are what the deploy user expects). End-to-end example for inviting a portal user from a fresh SSH session:
+
+```bash
+sudo -u deploy -H bash -lc '
+  ENV=testing
+  ENV_FILE="/opt/consulting-site/${ENV}/shared/env/app.env"
+  APP_DIR="/opt/consulting-site/${ENV}/current"
+
+  set -a; source "$ENV_FILE"; set +a
+  cd "$APP_DIR" &&
+  echo "FLASK_ENV_PROFILE=$FLASK_ENV_PROFILE" &&
+  echo "DATABASE_URL=$DATABASE_URL" &&
+  FLASK_APP=wsgi:app .venv/bin/flask user invite \
+    --email drifterbot@psifunction.com \
+    --client drift-and-anchor
+'
+```
+
+The two `echo`s confirm `app.env` was sourced before any DB-touching command runs — if either comes back empty, stop and re-check `app.env` rather than retrying blind. Swap `ENV=testing` for `staging` or `production` as needed; the rest is parameterised.
+
 > **Common failure mode.** If you skip `source "$ENV_FILE"` and just `cd` into `current/` + run `flask`, you'll get `sqlite3.OperationalError: unable to open database file` because SQLAlchemy falls back to the default SQLite path with no parent directory in the release dir. That's the symptom of "I pointed at the right release but the wrong database."
 
 > **Why not just `source` the local `.venv` and run `flask`?** Two reasons. First, the local venv has whatever Python and pip versions you happened to install, which can drift from the release's pinned deps — running through the release venv guarantees parity with what the live app is using. Second, the local shell has whatever env vars are in scope, which almost certainly do not match the deployed environment's `DATABASE_URL` / `SECRET_KEY` / `FLASK_ENV_PROFILE`. Pointing at the release venv + that env's `app.env` removes both ambiguities at once.
