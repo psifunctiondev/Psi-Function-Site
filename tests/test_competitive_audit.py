@@ -492,11 +492,11 @@ class TestRouteGet:
         assert "competitive-audit-history__row--highlight" not in body
         # Run Audit button text + disabled attribute both present.
         assert "Run Audit" in body
-        # Edit Audit + Duplicate Audit are real <a> links now (not
-        # disabled <button>s), pointing at ?edit= and ?fork= for this
-        # submission.
-        assert f"?edit={sub.id}" in body
-        assert f"?fork={sub.id}" in body
+        # Edit Audit + Duplicate Audit are REMOVED (Quinn 2026-07-22:
+        # not VMP-necessary). Neither real links nor disabled buttons
+        # render anymore.
+        assert "Edit Audit" not in body
+        assert "Duplicate Audit" not in body
         # The Run Audit button is marked disabled.
         assert re.search(
             r"<button[^>]*\bdisabled\b[^>]*>\s*Run Audit\s*</button>",
@@ -1380,31 +1380,58 @@ class TestSlice8LabelAndEntryStyling:
 
 
 class TestSlice8Layout:
-    def test_add_button_inline_on_socials_row(
+    def test_add_button_lives_in_extra_cards_row(
         self,
         app,
         client,
         admin,
         drift_and_anchor_client,
     ):
-        # Slice 8 (item 4): the Add button now lives INSIDE
-        # .competitive-audit-socials, not on its own row below.
+        # UX model B (Quinn, 2026-07-22): the Add button moved from
+        # the socials row (slice 8 item 4) to a dedicated row at the
+        # bottom of .competitive-audit-extra-cards. It's the LAST
+        # child of extra-cards on initial render and stays last
+        # after each clone (the JS inserts each new card before it).
         _login(client, "admin@test.com", "adminpass123")
         resp = client.get(
             "/p/drift-and-anchor/competitive-audit/?new=1",
             follow_redirects=False,
         )
         body = resp.get_data(as_text=True)
-        # Markup: the button appears as a child of
-        # .competitive-audit-socials.
+        # The Add button is inside .competitive-audit-extra-cards,
+        # NOT inside .competitive-audit-socials.
+        assert "data-competitive-audit-add-row" in body, (
+            "expected the Add button's row to live in "
+            ".competitive-audit-extra-cards (UX model B)"
+        )
+        # And the socials row no longer carries the Add button.
         socials_block = re.search(
             r'<div class="competitive-audit-socials">(.*?)</div>\s*</div>\s*</div>',
             body,
             flags=re.S,
         )
         assert socials_block is not None, "socials row not found"
-        inner = socials_block.group(1)
-        assert "data-competitive-audit-add" in inner
+        assert "data-competitive-audit-add" not in socials_block.group(1), (
+            "Add button should not live inside .competitive-audit-socials "
+            "anymore (UX model B puts it at the bottom of extra-cards)"
+        )
+        # The Add button is rendered as the LAST child of
+        # .competitive-audit-extra-cards. This pins the model-B
+        # invariant: new clones get inserted BEFORE the button.
+        extra_block = re.search(
+            r'<div class="competitive-audit-extra-cards"\s+'
+            r'data-competitive-audit-extra-cards>(.*?)</div>\s*</div>',
+            body,
+            flags=re.S,
+        )
+        assert extra_block is not None, "extra-cards container not found"
+        inner = extra_block.group(1)
+        assert inner.rstrip().endswith("</button>") or "</button>" in inner[
+            inner.rfind("data-competitive-audit-add"):inner.rfind("</button>") + len("</button>")
+        ], (
+            "Add button should be the LAST child of extra-cards on "
+            "initial render"
+        )
 
     def test_actions_stack_vertically_inside_col_1(
         self,
@@ -1445,38 +1472,93 @@ class TestSlice8Layout:
         assert "competitive-audit-actions" in inner
         assert "Run Audit" in inner
 
-    def test_btn_uses_page_display_font(
+    def test_only_titles_use_dm_serif_everything_else_uses_montserrat(
         self,
         app,
         client,
         admin,
         drift_and_anchor_client,
     ):
-        # Slice 8 (item 6): the .btn inside the form card inherits
-        # the page's display font (DM Serif Display).
+        # Quinn (2026-07-22): only "Client" and "Competitor N"
+        # titles should be DM Serif Display. Everything else on the
+        # page (body text, labels, inputs, buttons, first-visit /
+        # collapsed cards) should be Montserrat. This replaces the
+        # prior slice-8 rule that cascaded DM Serif Display down to
+        # .btn and the page-level container.
         _login(client, "admin@test.com", "adminpass123")
         resp = client.get(
             "/p/drift-and-anchor/competitive-audit/?new=1",
             follow_redirects=False,
         )
         body = resp.get_data(as_text=True)
-        # The font-family scoped rule lists multiple selectors with
-        # commas; one of them targets .btn inside the form card.
-        # Match across newlines since the template renders each
-        # selector on its own line.
-        scoped_rule = re.search(
+
+        # 1. Title rule: .competitive-audit-col__title uses DM Serif.
+        title_rule = re.search(
             r"\.drift-and-anchor-competitive-audit\s+"
-            r"\.competitive-audit-form-card\s+\.btn\s*[,{]",
+            r"\.competitive-audit-col__title\s*\{[^}]*"
+            r"font-family:\s*'DM Serif Display'",
+            body,
+            flags=re.S,
+        )
+        assert title_rule is not None, (
+            ".competitive-audit-col__title should use DM Serif Display"
+        )
+
+        # 2. Body / button rule: .btn inside the form card uses
+        # Montserrat, NOT DM Serif Display. The CSS has a multi-
+        # selector rule body (one font-family declaration shared
+        # across multiple selectors). We split the check in two:
+        # first find the rule body (between an opening brace and
+        # the matching closing brace that contains 'Montserrat'),
+        # then assert the body contains the .btn-in-form-card
+        # selector and the Montserrat font-family on the same
+        # block.
+        btn_rule_block = re.search(
+            r"(\.drift-and-anchor-competitive-audit\s+"
+            r"\.competitive-audit-form-card[\s\S]*?\{)"
+            r"([^{}]*?)"
+            r"(\})",
             body,
         )
-        assert scoped_rule is not None, ".btn scoped font rule missing"
-        # Find the font-family block (the rule body) and confirm
-        # font-family is set there.
-        body_block = re.search(
-            r"font-family:\s*var\(--client-font-display",
-            body,
+        assert btn_rule_block is not None, (
+            "expected the .competitive-audit-form-card rule body "
+            "in the page CSS"
         )
-        assert body_block is not None
+        body_text = btn_rule_block.group(2)
+        # The .btn-in-form-card selector must be in the selectors
+        # list (before the {).
+        selectors_text = btn_rule_block.group(1)
+        assert (
+            ".drift-and-anchor-competitive-audit .competitive-audit-form-card .btn"
+            in selectors_text
+        ), (
+            ".btn inside the form card should be one of the rule's "
+            "selectors (Quinn 2026-07-22)"
+        )
+        # The body must declare font-family: 'Montserrat'.
+        assert re.search(
+            r"font-family:\s*'Montserrat'",
+            body_text,
+        ), (
+            ".btn-in-form-card rule body should declare "
+            "font-family: 'Montserrat' (Quinn 2026-07-22)"
+        )
+        # Belt-and-suspenders: that rule body must NOT reference
+        # DM Serif Display.
+        assert "DM Serif Display" not in body_text, (
+            ".btn font-family block still references DM Serif Display — "
+            "Quinn wants only titles in DM Serif"
+        )
+
+        # 4. The fonts are loaded via {% block head %} on this page
+        # only — base.html doesn't carry them, so we add them here.
+        assert (
+            "family=DM+Serif+Display" in body
+            and "family=Montserrat" in body
+        ), (
+            "DM Serif Display + Montserrat must be loaded via {% block "
+            "head %} on this page (Quinn 2026-07-22)"
+        )
 
     def test_extra_cards_grid_spans_cols_2_to_5(
         self,
@@ -1666,19 +1748,12 @@ class TestSlice8EditMode:
         )
         assert m is not None, "Run Audit submit button not found"
         assert "disabled" in m.group(0)
-        # Edit Audit + Duplicate Audit are now real links, NOT
-        # disabled buttons.
-        assert re.search(
-            r'<a[^>]*href="[^"]*\?edit=' + str(sub.id) + r'"[^>]*>\s*Edit Audit\s*</a>',
-            body,
-        )
-        assert re.search(
-            r'<a[^>]*href="[^"]*\?fork=' + str(sub.id) + r'"[^>]*>\s*Duplicate Audit\s*</a>',
-            body,
-        )
-        # Negative: no disabled Edit Audit / Duplicate Audit buttons.
-        assert 'aria-label="Edit Audit (not yet wired)"' not in body
-        assert 'aria-label="Duplicate Audit (not yet wired)"' not in body
+        # Edit Audit + Duplicate Audit are REMOVED entirely (Quinn
+        # 2026-07-22: not VMP-necessary, may return in a later
+        # slice). Neither real links nor disabled buttons should
+        # render.
+        assert "Edit Audit" not in body
+        assert "Duplicate Audit" not in body
 
     def test_run_audit_enabled_on_new_form(
         self,
@@ -1702,9 +1777,26 @@ class TestSlice8EditMode:
         )
         assert m is not None
         assert "disabled" not in m.group(0)
-        # Edit Audit + Duplicate Audit are disabled buttons.
-        assert 'aria-label="Edit Audit (not yet wired)"' in body
-        assert 'aria-label="Duplicate Audit (not yet wired)"' in body
+        # Edit Audit + Duplicate Audit are REMOVED (Quinn 2026-07-22:
+        # not VMP-necessary). Neither disabled buttons nor real
+        # links should appear in the markup.
+        assert "Edit Audit" not in body
+        assert "Duplicate Audit" not in body
+        # (Optional) Background button is present below Run Audit
+        # (Quinn 2026-07-22: VMP-needed, wiring deferred).
+        bg_btn = re.search(
+            r'<button[^>]*aria-label="Background \(not yet wired\)"[^>]*>\s*'
+            r'\(Optional\) Background\s*</button>',
+            body,
+        )
+        assert bg_btn is not None, (
+            "(Optional) Background button missing below Run Audit "
+            "(Quinn 2026-07-22)"
+        )
+        assert "disabled" in bg_btn.group(0), (
+            "(Optional) Background button should be disabled until "
+            "Quinn wires it up"
+        )
 
 
 class TestSlice8NoHistorySection:
@@ -1793,6 +1885,120 @@ class TestSlice8JsReindex:
         # And the reindex function rewrites that literal to use the
         # dynamic index.
         assert "class=\"competitive-audit-col__title\">Competitor ' + newIndex + '<" in js
+
+
+class TestCloneModelBAddButton:
+    """UX model B (Quinn, 2026-07-22): the Add button moves out of
+    the default card and into its own row at the bottom of
+    .competitive-audit-extra-cards. Each new clone is inserted BEFORE
+    the Add button via DOM insertBefore(), so the button stays as
+    the last child and always renders next to the newest competitor.
+
+    This replaces the prior model (slice 8 item 4) where the Add
+    button lived inline on the socials row of the default card.
+    That model caused Quinn to see what looked like a working Add
+    button on every cloned competitor (because the default card's
+    Add was duplicated into each clone) but only the first one
+    actually fired the listener. The fix on this branch moves the
+    button to its own row and inserts clones before it, so there's
+    exactly one Add button visible at all times and it always sits
+    next to the last competitor.
+    """
+
+    def _read_js(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        return (
+            repo_root
+            / "app"
+            / "static"
+            / "js"
+            / "portal"
+            / "competitive-audit-form.js"
+        ).read_text()
+
+    def _read_template(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        return (
+            repo_root
+            / "app"
+            / "templates"
+            / "portal"
+            / "drift_and_anchor_competitive_audit.html"
+        ).read_text()
+
+    def test_default_card_has_no_add_button(self):
+        # UX model B: the default card no longer carries the Add
+        # button. The button moved to a dedicated row in extra-cards.
+        template = self._read_template()
+        # Slice out the default card's outerHTML to confirm no Add
+        # button lives inside it.
+        import re
+        card_match = re.search(
+            r'<div class="competitive-audit-col competitive-audit-col--main"'
+            r"[\s\S]*?</div>\s*</div>\s*</div>",
+            template,
+        )
+        assert card_match is not None, "default card not found in template"
+        card_html = card_match.group(0)
+        assert "data-competitive-audit-add" not in card_html, (
+            "default card still carries the Add button — UX model B "
+            "should have moved it to .competitive-audit-extra-cards"
+        )
+
+    def test_add_button_inside_extra_cards_row(self):
+        # The Add button lives in .competitive-audit-extra-cards,
+        # inside the [data-competitive-audit-add-row] wrapper.
+        template = self._read_template()
+        import re
+        # Find the .competitive-audit-extra-cards container and
+        # confirm it contains the Add button.
+        extra_match = re.search(
+            r'<div class="competitive-audit-extra-cards"[^>]*>([\s\S]*?)</div>\s*</div>',
+            template,
+        )
+        assert extra_match is not None, "extra-cards container not found"
+        inner = extra_match.group(1)
+        assert "data-competitive-audit-add-row" in inner, (
+            "extra-cards container missing the Add button's wrapper row"
+        )
+        assert "data-competitive-audit-add" in inner, (
+            "extra-cards container missing the Add button itself"
+        )
+
+    def test_js_inserts_clone_before_add_button(self):
+        # The click handler must call insertBefore(newCard, addRow),
+        # NOT appendChild(newCard), so the Add button stays last.
+        js = self._read_js()
+        assert "insertBefore(newCard, addRow)" in js, (
+            "Add click handler must use insertBefore(newCard, addRow) "
+            "to keep the Add button as the last child of extra-cards "
+            "(UX model B)"
+        )
+        assert "extraContainer.appendChild(newCard)" not in js, (
+            "Add click handler still uses appendChild — should be "
+            "insertBefore so the Add button stays at the bottom"
+        )
+
+    def test_js_no_longer_strips_add_button_from_clones(self):
+        # UX model B removes the need to strip the Add button from
+        # clones (the default card doesn't carry one anymore). The
+        # strip regex should be GONE from the JS file.
+        js = self._read_js()
+        strip_lines = [
+            line
+            for line in js.splitlines()
+            if "data-competitive-audit-add" in line
+            and r"<\/button>" in line
+        ]
+        assert len(strip_lines) == 0, (
+            "Add-button strip regex should be removed in UX model B "
+            f"(the default card no longer carries an Add button). "
+            f"Found: {strip_lines}"
+        )
 
 
 # ---------------------------------------------------------------------------

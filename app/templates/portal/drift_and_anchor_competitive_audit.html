@@ -2,8 +2,29 @@
 
 {% block title %}Competitive Audit Requests — {{ client.name }}{% endblock %}
 
+{% block head %}
+{# Drift & Anchor page-scoped fonts (Quinn, 2026-07-22). Loaded only
+   on the competitive-audit page via the head block override so
+   they don't leak to other client pages. base.html already preconnects
+   to fonts.googleapis.com / fonts.gstatic.com, so we only need the
+   single link for the two families. DM Serif Display for the
+   Client / Competitor N titles; Montserrat for everything else on
+   the page. #}
+<link
+  href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Montserrat:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+>
+{% endblock %}
+
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+{# Drift & Anchor page-scoped fonts (Quinn, 2026-07-22):
+     - DM Serif Display: titles only (Client, Competitor N).
+     - Montserrat: everything else on this page (body text, labels,
+       buttons, inputs).
+   Loaded via the head block above (single link per font) so
+   they only get fetched on the competitive-audit page, not site-
+   wide. #}
 {% if client.font_url %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,28 +68,37 @@
   }
 
   /* ----------------------------------------------------------
-     Drift & Anchor brand font — scoped to THIS page only.
-     Quinn: the cards/titles need DM Serif Display applied
-     within the page scope (NOT globally, so it doesn't leak
+     Drift & Anchor brand fonts (Quinn, 2026-07-22):
+       - DM Serif Display: ONLY the Client / Competitor N titles
+         (.competitive-audit-col__title).
+       - Montserrat: everything else on the page (body text, labels,
+         inputs, buttons, first-visit / collapsed cards).
+     Both fonts are loaded via the head block above so they're
+     only fetched on this page (NOT globally, so they don't leak
      to other client pages). Regression-tested below in
      TestTemplate.test_scoped_font_family_applied.
 
-     Slice 8 (item 6): .btn elements inside the form (and the
-     first-visit / collapsed cards) now inherit the page's
-     display font too, so the action buttons match the text-
-     entry labels visually. Scoped to .competitive-audit-form-card
-     / .competitive-audit-start-card / .competitive-audit-collapsed-card
-     so we don't widen the global .btn font rule.
+     This replaces the prior slice-8 rule that cascaded DM Serif
+     Display down to .btn and the page-level container. Quinn
+     wanted "everything else" on Montserrat, not DM Serif.
      ---------------------------------------------------------- */
+  .drift-and-anchor-competitive-audit .competitive-audit-col__title {
+    font-family: 'DM Serif Display', Georgia, serif;
+    /* Quinn (2026-07-22): font is the only thing changing per his
+       spec; dark + bold styling (slice 8 item 1) stays as-is on the
+       unscoped rule below. We re-state font-family here in case a
+       future override removes the unscoped rule. */
+    color: var(--color-text);
+    font-weight: 700;
+  }
   .drift-and-anchor-competitive-audit,
-  .drift-and-anchor-competitive-audit .competitive-audit-col__title,
   .drift-and-anchor-competitive-audit .competitive-audit-start-card,
   .drift-and-anchor-competitive-audit .competitive-audit-collapsed-card,
   .drift-and-anchor-competitive-audit .competitive-audit-form-card,
   .drift-and-anchor-competitive-audit .competitive-audit-form-card .btn,
   .drift-and-anchor-competitive-audit .competitive-audit-start-card .btn,
   .drift-and-anchor-competitive-audit .competitive-audit-collapsed-card .btn {
-    font-family: var(--client-font-display, 'DM Serif Display', serif);
+    font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
   }
 
   /* Page-scoped tagline override — Quinn: bold + non-italic on THIS
@@ -291,13 +321,38 @@
     font-weight: 400;
     font-size: var(--text-sm);
   }
-  /* Slice 8 (item 4): the Add button is now a flex child of the
-     socials row. Push it to the right edge so it lines up with the
-     far-right side of the competitor sub-card. On narrow viewports
-     (<700px) it can wrap to its own line — the flex-wrap on the
-     parent row handles that without further rules. */
+  /* UX model B (Quinn, 2026-07-22): the Add button now lives in
+     .competitive-audit-extra-cards (NOT inside the socials row),
+     always as the LAST child of that container. As the user adds
+     more competitors, the Add button stays put visually — the JS
+     inserts each new clone BEFORE it. The row sits in the same
+     5-column grid as the cloned cards and spans cols 2-5, so the
+     button right-aligns with the far-right edge of every
+     competitor sub-card. */
+  .competitive-audit-extra-cards__add-row {
+    grid-column: 2 / span 4;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--space-3);
+  }
+  /* Mirror the .competitive-audit-extra-cards breakpoints so the
+     Add row lines up with cloned cards after each grid collapse. */
+  @media (max-width: 1100px) {
+    .competitive-audit-extra-cards__add-row {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 600px) {
+    .competitive-audit-extra-cards__add-row {
+      grid-column: auto;
+    }
+  }
+  /* Deprecated in UX model B: Add button no longer renders inside
+     the socials row. Kept as a no-op so any stale selectors don't
+     404 (mirror of the slice-8 .competitive-audit-col__add-row
+     deprecation pattern). */
   .competitive-audit-socials > [data-competitive-audit-add] {
-    margin-left: auto;
+    display: none;
   }
 
   /* First-visit "Start New Audit" card — Quinn (item 1): LEFT-
@@ -455,23 +510,20 @@
                       aria-label="Run Audit (greyed — edit in place instead)"{% endif %}>
                 Run Audit
               </button>
-              {% if edit_mode %}
-                <a class="btn" href="{{ url_for('portal.drift_and_anchor_competitive_audit') }}?edit={{ edit_target.id }}">
-                  Edit Audit
-                </a>
-                <a class="btn" href="{{ url_for('portal.drift_and_anchor_competitive_audit') }}?fork={{ edit_target.id }}">
-                  Duplicate Audit
-                </a>
-              {% else %}
-                <button type="button" class="btn" disabled
-                        aria-label="Edit Audit (not yet wired)">
-                  Edit Audit
-                </button>
-                <button type="button" class="btn" disabled
-                        aria-label="Duplicate Audit (not yet wired)">
-                  Duplicate Audit
-                </button>
-              {% endif %}
+              {# (Optional) Background — Quinn (2026-07-22): this button
+                 lives below client_name + Run Audit and is a VMP-needed
+                 affordance. Wiring deferred to a later slice (no
+                 backend handler yet, hence `disabled`). When Quinn is
+                 ready to wire it, the aria-label and disabled state
+                 both go away. #}
+              <button type="button" class="btn" disabled
+                      aria-label="Background (not yet wired)">
+                (Optional) Background
+              </button>
+              {# Edit Audit / Duplicate Audit removed 2026-07-22 (Quinn):
+                 not VMP-necessary, may return in a later slice. Both
+                 the edit-mode and non-edit-mode branches used to live
+                 here; both are gone. #}
             </div>
           </div>
 
@@ -546,23 +598,30 @@
                        {% if socials.get('tiktok', True) %}checked{% endif %}>
                 <label for="competitor_1_include_tiktok">TikTok</label>
               </div>
-              <button type="button" class="btn"
-                      data-competitive-audit-add
-                      aria-label="Add another competitor">
-                Add
-              </button>
             </div>
           </div>
 
         </div>
 
-        {# Container for ADDED competitor sub-cards. The default
-           render ships with this empty; the JS in the script block
-           below clones .competitive-audit-col--main into here on
-           each Add click, re-indexing ids/names so the form posts
-           competitor_2, competitor_3, ... #}
+        {# Container for ADDED competitor sub-cards + the Add button.
+           The default render ships with NO cloned cards; the JS in
+           competitive-audit-form.js clones .competitive-audit-col--main
+           into here on each Add click, re-indexing ids/names so the
+           form posts competitor_2, competitor_3, ... The Add button
+           lives in this same container, always last — UX model B,
+           Quinn's preference from the 2026-07-22 live portal review:
+           the Add button always sits next to the last competitor. #}
         <div class="competitive-audit-extra-cards"
-             data-competitive-audit-extra-cards></div>
+             data-competitive-audit-extra-cards>
+          <div class="competitive-audit-extra-cards__add-row"
+               data-competitive-audit-add-row>
+            <button type="button" class="btn"
+                    data-competitive-audit-add
+                    aria-label="Add another competitor">
+              Add
+            </button>
+          </div>
+        </div>
 
       </form>
     {% endif %}
