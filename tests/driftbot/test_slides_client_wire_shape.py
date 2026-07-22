@@ -376,9 +376,11 @@ def test_create_presentation_with_template_uses_presentations_copy_endpoint(clie
     assert len(requests) == 1
     method, req = requests[0]
     assert method == 'COPY'
-    # The URL must include the template id AND the ``:copy`` suffix.
+    # The URL must include the template id AND the ``:copy`` suffix
+    # (the supportsAllDrives=true query param is asserted separately
+    # in test_create_presentation_with_template_sends_supports_alldrives_query).
     url = str(req.url)
-    assert url == (
+    assert url.startswith(
         'https://slides.googleapis.com/v1/presentations/'
         'TEMPLATE-BRAND-XYZ:copy'
     )
@@ -392,6 +394,41 @@ def test_create_presentation_with_template_uses_presentations_copy_endpoint(clie
     # unknown fields.
     assert 'sourcePresentationId' not in body
     assert 'title' not in body
+
+
+def test_create_presentation_with_template_sends_supports_alldrives_query(client):
+    """Wire-shape: the template file lives in the DrifterBot Shared
+    Drive. ``presentations.copy`` MUST include
+    ``supportsAllDrives=true`` as a query param, or the Slides API
+    returns HTTP 400 with an HTML error page (caught on 2026-07-22
+    smoke test against testing DB).
+
+    This flag is required for ANY Drive-API call that touches a
+    Shared Drive file — same flag we already use on
+    ``move_to_folder`` and ``delete_file``. Without it the API
+    rejects the request with a generic Google error page rather
+    than a JSON error envelope.
+    """
+    requests = []
+
+    def copy_handler(request: httpx.Request) -> httpx.Response:
+        requests.append(('COPY', request))
+        return httpx.Response(
+            200,
+            content=json.dumps({'presentationId': 'PRES-SD'}).encode(),
+        )
+
+    client.set_next_handlers([copy_handler])
+    client.create_presentation(
+        title='SD Deck',
+        slides_spec={'slides': []},
+        source_presentation_id='TEMPLATE-IN-SHARED-DRIVE',
+    )
+
+    method, req = requests[0]
+    url = str(req.url)
+    # supportsAllDrives=true MUST be a query param on the URL.
+    assert 'supportsAllDrives=true' in url
 
 
 def test_create_presentation_without_template_uses_presentations_create_endpoint(client):
