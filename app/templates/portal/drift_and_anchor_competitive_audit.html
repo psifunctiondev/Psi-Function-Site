@@ -291,13 +291,38 @@
     font-weight: 400;
     font-size: var(--text-sm);
   }
-  /* Slice 8 (item 4): the Add button is now a flex child of the
-     socials row. Push it to the right edge so it lines up with the
-     far-right side of the competitor sub-card. On narrow viewports
-     (<700px) it can wrap to its own line — the flex-wrap on the
-     parent row handles that without further rules. */
+  /* UX model B (Quinn, 2026-07-22): the Add button now lives in
+     .competitive-audit-extra-cards (NOT inside the socials row),
+     always as the LAST child of that container. As the user adds
+     more competitors, the Add button stays put visually — the JS
+     inserts each new clone BEFORE it. The row sits in the same
+     5-column grid as the cloned cards and spans cols 2-5, so the
+     button right-aligns with the far-right edge of every
+     competitor sub-card. */
+  .competitive-audit-extra-cards__add-row {
+    grid-column: 2 / span 4;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--space-3);
+  }
+  /* Mirror the .competitive-audit-extra-cards breakpoints so the
+     Add row lines up with cloned cards after each grid collapse. */
+  @media (max-width: 1100px) {
+    .competitive-audit-extra-cards__add-row {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 600px) {
+    .competitive-audit-extra-cards__add-row {
+      grid-column: auto;
+    }
+  }
+  /* Deprecated in UX model B: Add button no longer renders inside
+     the socials row. Kept as a no-op so any stale selectors don't
+     404 (mirror of the slice-8 .competitive-audit-col__add-row
+     deprecation pattern). */
   .competitive-audit-socials > [data-competitive-audit-add] {
-    margin-left: auto;
+    display: none;
   }
 
   /* First-visit "Start New Audit" card — Quinn (item 1): LEFT-
@@ -546,23 +571,30 @@
                        {% if socials.get('tiktok', True) %}checked{% endif %}>
                 <label for="competitor_1_include_tiktok">TikTok</label>
               </div>
-              <button type="button" class="btn"
-                      data-competitive-audit-add
-                      aria-label="Add another competitor">
-                Add
-              </button>
             </div>
           </div>
 
         </div>
 
-        {# Container for ADDED competitor sub-cards. The default
-           render ships with this empty; the JS in the script block
-           below clones .competitive-audit-col--main into here on
-           each Add click, re-indexing ids/names so the form posts
-           competitor_2, competitor_3, ... #}
+        {# Container for ADDED competitor sub-cards + the Add button.
+           The default render ships with NO cloned cards; the JS in
+           competitive-audit-form.js clones .competitive-audit-col--main
+           into here on each Add click, re-indexing ids/names so the
+           form posts competitor_2, competitor_3, ... The Add button
+           lives in this same container, always last — UX model B,
+           Quinn's preference from the 2026-07-22 live portal review:
+           the Add button always sits next to the last competitor. #}
         <div class="competitive-audit-extra-cards"
-             data-competitive-audit-extra-cards></div>
+             data-competitive-audit-extra-cards>
+          <div class="competitive-audit-extra-cards__add-row"
+               data-competitive-audit-add-row>
+            <button type="button" class="btn"
+                    data-competitive-audit-add
+                    aria-label="Add another competitor">
+              Add
+            </button>
+          </div>
+        </div>
 
       </form>
     {% endif %}
