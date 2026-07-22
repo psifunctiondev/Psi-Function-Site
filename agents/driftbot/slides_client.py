@@ -1,3 +1,15 @@
+from __future__ import annotations
+
+import json
+import logging
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
 """
 Slides client — wraps the Google Slides + Drive API calls needed by
 ``DriveSaveStrategy``.
@@ -28,18 +40,6 @@ API flow for one ``save()`` call:
 
 All HTTP via ``httpx``. Auth retry handled by ``_get_access_token``.
 """
-
-from __future__ import annotations
-
-import json
-import logging
-import time
-from dataclasses import dataclass
-from pathlib import Path
-
-import httpx
-
-logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -474,3 +474,47 @@ class SlidesClient:
                 f'{resp.text[:500]}'
             )
         return resp.json().get('webViewLink', '')
+
+    def delete_file(
+        self,
+        file_id: str,
+        *,
+        swallow_404: bool = True,
+    ) -> None:
+        """Cleanup helper: delete a file from Drive via the Drive v3
+        API. Used by ``DriveSaveStrategy`` to clean up orphan
+        presentations left behind when ``create_presentation`` or
+        ``move_to_folder`` fails partway through.
+
+        Returns silently on 404 (file already gone) when
+        ``swallow_404`` is True, since the goal is just "make sure the
+        orphan is gone" and racing a second delete shouldn't fail the
+        pipeline.
+
+        Raises ``DriveAuthError`` on any other non-2xx so the caller
+        can decide whether to retry.
+        """
+        url = f'https://www.googleapis.com/drive/v3/files/{file_id}'
+        try:
+            resp = self._http.delete(
+                url,
+                headers=self._auth_headers(),
+                params={'supportsAllDrives': 'true'},
+                timeout=30,
+            )
+        except httpx.HTTPError as exc:
+            raise DriveAuthError(
+                f'files.delete transport error for {file_id}: {exc}'
+            ) from exc
+        if resp.status_code in (200, 204):
+            return
+        if resp.status_code == 404 and swallow_404:
+            logger.warning(
+                'files.delete: file_id=%s already gone (404 swallowed)',
+                file_id,
+            )
+            return
+        raise DriveAuthError(
+            f'files.delete failed for {file_id}: '
+            f'HTTP {resp.status_code} {resp.text[:500]}'
+        )

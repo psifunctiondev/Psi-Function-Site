@@ -202,6 +202,11 @@ class DriveSaveStrategy(SaveStrategy):
         # Slides API takes title == filename without extension.
         title = filename
 
+        # Step 1+2: create + batchUpdate. If create fails outright
+        # we have no orphan to clean up. If create succeeds but
+        # batchUpdate fails, the empty presentation is orphaned and
+        # we delete it before surfacing the error.
+        presentation_id: str | None = None
         try:
             presentation_id = self._slides_client.create_presentation(
                 title=title,
@@ -210,11 +215,31 @@ class DriveSaveStrategy(SaveStrategy):
         except Exception:
             logger.exception(
                 'DriveSaveStrategy: create_presentation failed for '
-                'audit_id=%s client=%s — no artifact yet',
+                'audit_id=%s client=%s — no artifact yet, nothing to '
+                'clean up',
                 draft.audit_id, draft.client.id,
             )
             raise
 
+        # If create_presentation succeeded but raised partway through
+        # (e.g. batchUpdate failed after presentations.create already
+        # landed), it returns no presentation_id. Treat any partial
+        # state as needing cleanup.
+        if presentation_id is None:
+            logger.error(
+                'DriveSaveStrategy: create_presentation returned '
+                'None for audit_id=%s client=%s',
+                draft.audit_id, draft.client.id,
+            )
+            raise RuntimeError(
+                'SlidesClient.create_presentation returned no id '
+                '(create may have partially succeeded — check '
+                'workspace user Drive for orphan)'
+            )
+
+        # Step 3: move into target folder. On any failure, delete
+        # the presentation to prevent leaving an orphan in the
+        # impersonated user's My Drive.
         try:
             web_url = self._slides_client.move_to_folder(
                 presentation_id=presentation_id,
@@ -222,15 +247,27 @@ class DriveSaveStrategy(SaveStrategy):
                 name=filename,
             )
         except Exception:
-            # Orphan presentation exists at this point in the
-            # impersonated user's My Drive. Surface the failure with
-            # the file ID so /tmp/cleanup_orphan.py can delete it.
             logger.exception(
                 'DriveSaveStrategy: move_to_folder failed for '
                 'audit_id=%s client=%s — orphan presentation '
-                'id=%s in workspace user Drive',
+                'id=%s in workspace user Drive; cleaning up',
                 draft.audit_id, draft.client.id, presentation_id,
             )
+            try:
+                self._slides_client.delete_file(presentation_id)
+                logger.info(
+                    'DriveSaveStrategy: cleaned up orphan '
+                    'presentation_id=%s audit_id=%s',
+                    presentation_id, draft.audit_id,
+                )
+            except Exception:
+                logger.exception(
+                    'DriveSaveStrategy: cleanup-orphan FAILED for '
+                    'presentation_id=%s — manual cleanup needed '
+                    '(/tmp/cleanup_orphan.py)',
+                    presentation_id,
+                )
+            # Re-raise the original error (not the cleanup failure).
             raise
 
         logger.info(
