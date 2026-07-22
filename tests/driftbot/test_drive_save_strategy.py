@@ -96,8 +96,8 @@ class FakeSlidesClient:
         self._move_raises = move_raises
         self._delete_raises = delete_raises
 
-    def create_presentation(self, title, slides_spec):
-        self.create_calls.append((title, slides_spec))
+    def create_presentation(self, title, slides_spec, source_presentation_id=None):
+        self.create_calls.append((title, slides_spec, source_presentation_id))
         if self._create_raises is not None:
             raise self._create_raises
         return self._create_returns
@@ -165,6 +165,79 @@ def test_env_var_overrides_default_folder_id(monkeypatch):
     assert strategy.output_folder_id == 'ENV-FOLDER-ID'
 
 
+# ------------------------------------------------------------------
+# brand_template_id threading — PR #59
+# ------------------------------------------------------------------
+
+
+def test_drive_save_strategy_default_brand_template_id():
+    """By default, DriveSaveStrategy threads the brand template ID
+    from ``layout_catalog.DEFAULT_BRAND_TEMPLATE_ID`` so every audit
+    deck inherits D&A's masters/layouts/theme. Quinn can disable by
+    setting ``DRIFTERBOT_BRAND_TEMPLATE_ID=''`` (empty string).
+    """
+    from agents.driftbot.layout_catalog import DEFAULT_BRAND_TEMPLATE_ID
+
+    monkeypatch_clear = {
+        'BRANDSIGHT_OUTPUT_FOLDER_ID': 'FOLDER-ID',
+        'DRIFTERBOT_SUBJECT': 'who@where.com',
+    }
+    import os
+    saved = {k: os.environ.get(k) for k in monkeypatch_clear}
+    saved_template = os.environ.get('DRIFTERBOT_BRAND_TEMPLATE_ID')
+    try:
+        for k, v in monkeypatch_clear.items():
+            os.environ[k] = v
+        os.environ.pop('DRIFTERBOT_BRAND_TEMPLATE_ID', None)
+        client = FakeSlidesClient()
+        strategy = DriveSaveStrategy(
+            service_account_json_path='/tmp/x.json',
+            subject='who@where.com',
+            slides_client=client,
+        )
+        assert strategy.brand_template_id == DEFAULT_BRAND_TEMPLATE_ID
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        if saved_template is None:
+            os.environ.pop('DRIFTERBOT_BRAND_TEMPLATE_ID', None)
+        else:
+            os.environ[k] = saved_template
+
+
+def test_drive_save_strategy_empty_env_disables_template(monkeypatch):
+    """Explicit empty string for ``DRIFTERBOT_BRAND_TEMPLATE_ID``
+    disables template reuse and falls back to blank (legacy
+    behavior). Useful for debugging 'why does this look wrong?'
+    without commenting out code.
+    """
+    monkeypatch.setenv('DRIFTERBOT_BRAND_TEMPLATE_ID', '')
+    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-ID')
+    monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'who@where.com')
+    strategy = DriveSaveStrategy(
+        service_account_json_path='/tmp/x.json',
+        subject='who@where.com',
+        slides_client=FakeSlidesClient(),
+    )
+    assert strategy.brand_template_id is None
+
+
+def test_drive_save_strategy_kwarg_overrides_env_template(monkeypatch):
+    monkeypatch.setenv('DRIFTERBOT_BRAND_TEMPLATE_ID', 'ENV-TEMPLATE')
+    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-ID')
+    monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'who@where.com')
+    strategy = DriveSaveStrategy(
+        service_account_json_path='/tmp/x.json',
+        subject='who@where.com',
+        brand_template_id='KWARG-TEMPLATE',
+        slides_client=FakeSlidesClient(),
+    )
+    assert strategy.brand_template_id == 'KWARG-TEMPLATE'
+
+
 def test_kwarg_overrides_env_folder_id(monkeypatch):
     monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'ENV-FOLDER-ID')
     strategy = DriveSaveStrategy(
@@ -219,9 +292,12 @@ def test_drive_save_strategy_happy_path_invokes_create_then_move(
 
     # create was called first, with the filename as title
     assert len(client.create_calls) == 1
-    title_arg, spec_arg = client.create_calls[0]
+    title_arg, spec_arg, template_arg = client.create_calls[0]
     assert title_arg.startswith('Acme Health - Competitive Audit - 2026-07-21-')
     assert spec_arg == slides_spec
+    # source_presentation_id is the brand template ID by default
+    from agents.driftbot.layout_catalog import DEFAULT_BRAND_TEMPLATE_ID
+    assert template_arg == DEFAULT_BRAND_TEMPLATE_ID
 
     # move was called second, with the right IDs and filename
     assert client.move_calls == [
@@ -339,7 +415,7 @@ def test_drive_save_strategy_propagates_create_failure(
     monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-XYZ')
     monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'who@where.com')
 
-    def _raise(title, slides_spec):
+    def _raise(title, slides_spec, source_presentation_id=None):
         raise DriveAuthError('token grant failed')
 
     client = FakeSlidesClient()
