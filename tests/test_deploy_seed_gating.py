@@ -19,6 +19,10 @@ DEPLOY_RELEASE = (
     REPO_ROOT / "deploy" / "scripts" / "deploy_release.sh"
 )
 DB_MIGRATE = REPO_ROOT / "deploy" / "scripts" / "db_migrate.sh"
+INSTALL_NGINX = (
+    REPO_ROOT / "deploy" / "scripts" / "install_nginx_site.sh"
+)
+SNIPPETS_DIR = REPO_ROOT / "deploy" / "nginx" / "snippets"
 
 
 class TestDeployReleaseDriftAndAnchorGating:
@@ -110,3 +114,139 @@ class TestDbMigrateDriftAndAnchorGating:
         text = DB_MIGRATE.read_text()
         assert "Drift & Anchor seed skipped" in text
         assert "SEED_DRIFT_AND_ANCHOR=1" in text
+
+
+# ---------------------------------------------------------------------------
+# Slice 10 — install_nginx_site.sh snippet sync + deploy_release.sh wiring
+# ---------------------------------------------------------------------------
+
+
+class TestInstallNginxSiteScript:
+    """The install_nginx_site.sh script must copy the snippets
+    directory contents to /etc/nginx/snippets/ on every invocation,
+    not just the main site conf. The 2026-07-22 incident was caused
+    by this gap."""
+
+    def test_script_exists(self):
+        assert INSTALL_NGINX.exists()
+
+    def test_accepts_testing_env(self):
+        # The original script only accepted staging|production. The
+        # deploy flow runs for testing too, so the script must accept
+        # it. Find the case statement and assert testing is in the
+        # valid arm.
+        text = INSTALL_NGINX.read_text()
+        case_start = text.find("case")
+        case_end = text.find("esac")
+        assert case_start != -1 and case_end != -1
+        case_block = text[case_start:case_end]
+        # The valid arm must list testing|staging|production.
+        assert "testing|staging|production" in case_block
+        # The default arm (`*)`) must NOT list testing.
+        default_arm = case_block[case_block.rfind("*)"):]
+        assert "testing" not in default_arm
+
+    def test_copies_snippet_files(self):
+        # The script must call `install -m 0644` for each .conf file
+        # in the snippets dir, and the destination must be
+        # /etc/nginx/snippets/. This is the core fix.
+        text = INSTALL_NGINX.read_text()
+        assert "/etc/nginx/snippets" in text
+        assert "install -m 0644" in text
+        # The snippet glob must pull from the source snippets dir.
+        assert "deploy/nginx/snippets" in text or "nginx/snippets/*.conf" in text
+
+    def test_creates_destination_dir_if_missing(self):
+        # If /etc/nginx/snippets doesn't exist on a fresh droplet,
+        # the script must create it. install -d is the standard idiom.
+        text = INSTALL_NGINX.read_text()
+        assert "install -d" in text
+        assert "0755" in text  # sane perms on the snippets dir
+
+    def test_validates_and_reloads_nginx(self):
+        # The script must validate with nginx -t and reload on success.
+        # These are the final two steps and the contract for "deploy
+        # finished, nginx is serving the new config".
+        text = INSTALL_NGINX.read_text()
+        assert "nginx -t" in text
+        assert "systemctl reload nginx" in text
+
+    def test_snippet_dir_has_expected_files(self):
+        # Sanity check on the source tree: the snippets dir must
+        # contain at least security-headers.conf and
+        # hardening-common.conf. If a refactor renames or moves
+        # them, this catches it.
+        assert (SNIPPETS_DIR / "security-headers.conf").exists()
+        assert (SNIPPETS_DIR / "hardening-common.conf").exists()
+
+
+class TestDeployReleaseCallsInstallNginx:
+    """deploy_release.sh must invoke install_nginx_site.sh so the
+    snippet file sync happens on every deploy, not just on
+    provisioning. The call sits after `flask db upgrade` and before
+    the seed flows, with a `|| log WARN` so a failed install doesn't
+    block the deploy."""
+
+    def test_calls_install_nginx_after_migrations(self):
+        text = DEPLOY_RELEASE.read_text()
+        # Find the migrations block and the install_nginx call, then
+        # assert the install_nginx call sits AFTER the migrations.
+        migrations_pos = text.find("flask db upgrade")
+        install_pos = text.find("install_nginx_site.sh")
+        assert migrations_pos != -1
+        assert install_pos != -1
+        assert migrations_pos < install_pos, (
+            "install_nginx_site.sh must run after flask db upgrade"
+        )
+
+    def test_warns_on_failure_does_not_abort(self):
+        # The install call must be guarded with `|| log "WARN..."` so
+        # a transient nginx issue doesn't break the deploy. The
+        # pattern mirrors the apply-branding guard above it.
+        text = DEPLOY_RELEASE.read_text()
+        # Locate the install block. Use a search that finds the
+        # `sudo bash` invocation and asserts the `||` follows within
+        # the next 200 chars.
+        install_idx = text.find("install_nginx_site.sh")
+        assert install_idx != -1
+        block = text[install_idx: install_idx + 400]
+        assert "||" in block, "install_nginx_site.sh call must be guarded with ||"
+        assert "WARN" in block, "|| branch must log a WARN"
+        # And the guard must NOT be at the deploy level (i.e. we
+        # should NOT have `set -e` removed around the call).
+        assert "set -Eeuo pipefail" in text  # sanity: strict mode still on
+
+    def test_uses_source_dir_path(self):
+        # The script must call install_nginx_site.sh from
+        # $SOURCE_DIR (the rsynced source tree), not from the
+        # current release dir. That way the call works during the
+        # release symlink switch.
+        text = DEPLOY_RELEASE.read_text()
+        # The literal "$SOURCE_DIR/deploy/scripts/install_nginx_site.sh"
+        # should appear in the call.
+        assert (
+            "$SOURCE_DIR/deploy/scripts/install_nginx_site.sh" in text
+        ), "install_nginx_site.sh must be invoked from $SOURCE_DIR"
+
+    def test_deploy_release_already_restarts_gunicorn(self):
+        # The gunicorn-restart gap Quinn hit (manual seed => stale
+        # workers => page doesn't show new rows) is already covered
+        # by the unconditional restart at the end of deploy_release.sh.
+        # This test pins that contract so a refactor doesn't drop it.
+        text = DEPLOY_RELEASE.read_text()
+        assert "systemctl restart \"$SERVICE_NAME\"" in text, (
+            "deploy_release.sh must restart the systemd service on every deploy"
+        )
+
+    def test_readme_documents_snippet_sync(self):
+        # README has a section explaining the snippet sync + the
+        # manual-seed restart note. If a docs refactor drops either
+        # paragraph, this catches it.
+        readme = (REPO_ROOT / "README.md").read_text()
+        assert "Nginx site + snippet sync" in readme
+        assert (
+            "deploy/scripts/install_nginx_site.sh" in readme
+        ), "README must reference the install_nginx_site.sh script"
+        assert (
+            "Manual seed flows need a manual worker restart" in readme
+        ), "README must warn about the manual-seed / stale-worker gap"

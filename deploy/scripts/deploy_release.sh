@@ -226,6 +226,18 @@ else
   log "No migrations directory found; skipping database migrations"
 fi
 
+# Re-install nginx site + snippet files from the just-checked-out
+# source tree. The snippet files (security-headers.conf,
+# hardening-common.conf) were the deploy gap that bit us on
+# 2026-07-22: slice-9 CSP changes lived only in the repo, never
+# reached the live /etc/nginx/snippets/, so the banner image was
+# CSP-blocked even after `systemctl reload nginx` re-read the stale
+# file. install_nginx_site.sh is idempotent (install -m 0644 is
+# content-aware) so a no-op deploy is cheap.
+log "Installing nginx site + snippets"
+sudo bash "$SOURCE_DIR/deploy/scripts/install_nginx_site.sh" "$ENVIRONMENT" || \
+  log "WARN: install_nginx_site.sh failed; continuing deploy"
+
 # Re-apply known-good client branding profiles (idempotent).
 # Best-effort: a failure here must not block the release.
 log "Applying client branding profiles"
