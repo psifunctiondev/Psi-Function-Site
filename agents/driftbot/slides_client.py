@@ -389,88 +389,54 @@ class SlidesClient:
                 )
         return presentation_id
 
-    def move_to_folder(
-        self,
-        presentation_id: str,
-        folder_id: str,
-        name: str,
-    ) -> str:
-        """Step 3: PATCH Drive file to rename (Drive uses ``name``, not
-        Slides' ``title``) AND move into the output folder.
+    def export_to_pptx(self, presentation_id: str) -> bytes:
+        """Step 3: export the rendered presentation to PPTX bytes.
 
-        Drive v3 PATCH for parent changes uses ``addParents`` +
-        ``removeParents`` *query* parameters — NOT body fields. We
-        first GET the file's current parents, then PATCH with both
-        lists so the file ends up only in the target folder (not also
-        leaking into the impersonated user's My Drive).
+        Drive's ``files.export`` endpoint serves Google-native formats
+        (Slides, Docs, Sheets) as downloadable bytes in a chosen
+        external format. We pick ``application/vnd.openxmlformats-
+        officedocument.presentationml.presentation`` (the modern PPTX
+        MIME) so a real file lands on disk for the rclone mount.
 
-        Returns the ``webViewLink`` for the file.
+        The file is owned by the impersonated workspace user (the
+        Slides API write grant in step 1 set that). The SA-based
+        Drive export call uses the same JWT — fine because exports
+        don't transfer ownership, they just serialize.
+
+        Returns the PPTX content as ``bytes``.
+
+        Raises:
+            httpx.HTTPError: transport failure
+            DriveAuthError: non-200 status from files.export
         """
-        # Step 3a: read current parents so we can remove them.
-        get_url = f'https://www.googleapis.com/drive/v3/files/{presentation_id}'
-        try:
-            get_resp = self._http.get(
-                get_url,
-                headers=self._auth_headers(),
-                params={'fields': 'id,parents', 'supportsAllDrives': 'true'},
-                timeout=30,
-            )
-        except httpx.HTTPError as exc:
-            raise DriveFolderAccessError(
-                f'files.get (pre-move) transport error for '
-                f'{presentation_id}: {exc}'
-            ) from exc
-        if get_resp.status_code != 200:
-            raise DriveFolderAccessError(
-                f'files.get (pre-move) failed: HTTP {get_resp.status_code} '
-                f'{get_resp.text[:500]}'
-            )
-        current_parents = get_resp.json().get('parents', [])
-
-        # Step 3b: PATCH with addParents + removeParents query params,
-        # plus name + description in body.
-        patch_url = (
-            f'https://www.googleapis.com/drive/v3/files/{presentation_id}'
+        url = (
+            f'https://www.googleapis.com/drive/v3/files/'
+            f'{presentation_id}/export'
         )
         params = {
-            'fields': 'id,name,webViewLink',
-            'addParents': folder_id,
-            'removeParents': ','.join(current_parents) if current_parents else '',
-            'supportsAllDrives': 'true',
-        }
-        body = {
-            'name': name,
-            'description': (
-                f'BrandSight Competitive Audit for {name} — '
-                f'created by DrifterBot.'
+            'mimeType': (
+                'application/vnd.openxmlformats-officedocument'
+                '.presentationml.presentation'
             ),
         }
         try:
-            resp = self._http.patch(
-                patch_url, headers=self._auth_headers(),
-                params=params, json=body,
+            resp = self._http.get(
+                url,
+                headers=self._auth_headers(),
+                params=params,
+                timeout=60,
             )
         except httpx.HTTPError as exc:
-            raise DriveFolderAccessError(
-                f'files.patch transport error for {presentation_id}: '
-                f'{exc}'
+            raise DriveAuthError(
+                f'files.export transport error for '
+                f'{presentation_id}: {exc}'
             ) from exc
-        if resp.status_code == 404:
-            raise DriveFolderAccessError(
-                f'files.patch 404 — folder_id={folder_id!r} not visible '
-                f'to the impersonated subject. Check folder exists and '
-                f'the workspace user has at least Viewer access.'
-            )
-        if resp.status_code == 403:
-            raise DriveFolderAccessError(
-                f'files.patch 403 — subject cannot modify files in '
-                f'folder_id={folder_id!r}. Likely permission gap on the '
-                'BrandSight Output folder or the presentation was '
-                'created in a different drive than expected.'
-            )
         if resp.status_code != 200:
-            raise DriveFolderAccessError(
-                f'files.patch failed: HTTP {resp.status_code} '
+            # Note: Google sometimes 404s here if the presentation
+            # hasn't finished propagating. Caller can retry; we
+            # surface the error so the worker treats it as fatal.
+            raise DriveAuthError(
+                f'files.export failed: HTTP {resp.status_code} '
                 f'{resp.text[:500]}'
             )
-        return resp.json().get('webViewLink', '')
+        return resp.content
