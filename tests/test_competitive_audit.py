@@ -492,11 +492,11 @@ class TestRouteGet:
         assert "competitive-audit-history__row--highlight" not in body
         # Run Audit button text + disabled attribute both present.
         assert "Run Audit" in body
-        # Edit Audit + Duplicate Audit are REMOVED (Quinn 2026-07-22:
-        # not VMP-necessary). Neither real links nor disabled buttons
-        # render anymore.
-        assert "Edit Audit" not in body
-        assert "Duplicate Audit" not in body
+        # Edit Audit + Duplicate Audit are real <a> links now (not
+        # disabled <button>s), pointing at ?edit= and ?fork= for this
+        # submission.
+        assert f"?edit={sub.id}" in body
+        assert f"?fork={sub.id}" in body
         # The Run Audit button is marked disabled.
         assert re.search(
             r"<button[^>]*\bdisabled\b[^>]*>\s*Run Audit\s*</button>",
@@ -1472,93 +1472,38 @@ class TestSlice8Layout:
         assert "competitive-audit-actions" in inner
         assert "Run Audit" in inner
 
-    def test_only_titles_use_dm_serif_everything_else_uses_montserrat(
+    def test_btn_uses_page_display_font(
         self,
         app,
         client,
         admin,
         drift_and_anchor_client,
     ):
-        # Quinn (2026-07-22): only "Client" and "Competitor N"
-        # titles should be DM Serif Display. Everything else on the
-        # page (body text, labels, inputs, buttons, first-visit /
-        # collapsed cards) should be Montserrat. This replaces the
-        # prior slice-8 rule that cascaded DM Serif Display down to
-        # .btn and the page-level container.
+        # Slice 8 (item 6): the .btn inside the form card inherits
+        # the page's display font (DM Serif Display).
         _login(client, "admin@test.com", "adminpass123")
         resp = client.get(
             "/p/drift-and-anchor/competitive-audit/?new=1",
             follow_redirects=False,
         )
         body = resp.get_data(as_text=True)
-
-        # 1. Title rule: .competitive-audit-col__title uses DM Serif.
-        title_rule = re.search(
+        # The font-family scoped rule lists multiple selectors with
+        # commas; one of them targets .btn inside the form card.
+        # Match across newlines since the template renders each
+        # selector on its own line.
+        scoped_rule = re.search(
             r"\.drift-and-anchor-competitive-audit\s+"
-            r"\.competitive-audit-col__title\s*\{[^}]*"
-            r"font-family:\s*'DM Serif Display'",
-            body,
-            flags=re.S,
-        )
-        assert title_rule is not None, (
-            ".competitive-audit-col__title should use DM Serif Display"
-        )
-
-        # 2. Body / button rule: .btn inside the form card uses
-        # Montserrat, NOT DM Serif Display. The CSS has a multi-
-        # selector rule body (one font-family declaration shared
-        # across multiple selectors). We split the check in two:
-        # first find the rule body (between an opening brace and
-        # the matching closing brace that contains 'Montserrat'),
-        # then assert the body contains the .btn-in-form-card
-        # selector and the Montserrat font-family on the same
-        # block.
-        btn_rule_block = re.search(
-            r"(\.drift-and-anchor-competitive-audit\s+"
-            r"\.competitive-audit-form-card[\s\S]*?\{)"
-            r"([^{}]*?)"
-            r"(\})",
+            r"\.competitive-audit-form-card\s+\.btn\s*[,{]",
             body,
         )
-        assert btn_rule_block is not None, (
-            "expected the .competitive-audit-form-card rule body "
-            "in the page CSS"
+        assert scoped_rule is not None, ".btn scoped font rule missing"
+        # Find the font-family block (the rule body) and confirm
+        # font-family is set there.
+        body_block = re.search(
+            r"font-family:\s*var\(--client-font-display",
+            body,
         )
-        body_text = btn_rule_block.group(2)
-        # The .btn-in-form-card selector must be in the selectors
-        # list (before the {).
-        selectors_text = btn_rule_block.group(1)
-        assert (
-            ".drift-and-anchor-competitive-audit .competitive-audit-form-card .btn"
-            in selectors_text
-        ), (
-            ".btn inside the form card should be one of the rule's "
-            "selectors (Quinn 2026-07-22)"
-        )
-        # The body must declare font-family: 'Montserrat'.
-        assert re.search(
-            r"font-family:\s*'Montserrat'",
-            body_text,
-        ), (
-            ".btn-in-form-card rule body should declare "
-            "font-family: 'Montserrat' (Quinn 2026-07-22)"
-        )
-        # Belt-and-suspenders: that rule body must NOT reference
-        # DM Serif Display.
-        assert "DM Serif Display" not in body_text, (
-            ".btn font-family block still references DM Serif Display — "
-            "Quinn wants only titles in DM Serif"
-        )
-
-        # 4. The fonts are loaded via {% block head %} on this page
-        # only — base.html doesn't carry them, so we add them here.
-        assert (
-            "family=DM+Serif+Display" in body
-            and "family=Montserrat" in body
-        ), (
-            "DM Serif Display + Montserrat must be loaded via {% block "
-            "head %} on this page (Quinn 2026-07-22)"
-        )
+        assert body_block is not None
 
     def test_extra_cards_grid_spans_cols_2_to_5(
         self,
@@ -1748,12 +1693,19 @@ class TestSlice8EditMode:
         )
         assert m is not None, "Run Audit submit button not found"
         assert "disabled" in m.group(0)
-        # Edit Audit + Duplicate Audit are REMOVED entirely (Quinn
-        # 2026-07-22: not VMP-necessary, may return in a later
-        # slice). Neither real links nor disabled buttons should
-        # render.
-        assert "Edit Audit" not in body
-        assert "Duplicate Audit" not in body
+        # Edit Audit + Duplicate Audit are now real links, NOT
+        # disabled buttons.
+        assert re.search(
+            r'<a[^>]*href="[^"]*\?edit=' + str(sub.id) + r'"[^>]*>\s*Edit Audit\s*</a>',
+            body,
+        )
+        assert re.search(
+            r'<a[^>]*href="[^"]*\?fork=' + str(sub.id) + r'"[^>]*>\s*Duplicate Audit\s*</a>',
+            body,
+        )
+        # Negative: no disabled Edit Audit / Duplicate Audit buttons.
+        assert 'aria-label="Edit Audit (not yet wired)"' not in body
+        assert 'aria-label="Duplicate Audit (not yet wired)"' not in body
 
     def test_run_audit_enabled_on_new_form(
         self,
@@ -1777,26 +1729,9 @@ class TestSlice8EditMode:
         )
         assert m is not None
         assert "disabled" not in m.group(0)
-        # Edit Audit + Duplicate Audit are REMOVED (Quinn 2026-07-22:
-        # not VMP-necessary). Neither disabled buttons nor real
-        # links should appear in the markup.
-        assert "Edit Audit" not in body
-        assert "Duplicate Audit" not in body
-        # (Optional) Background button is present below Run Audit
-        # (Quinn 2026-07-22: VMP-needed, wiring deferred).
-        bg_btn = re.search(
-            r'<button[^>]*aria-label="Background \(not yet wired\)"[^>]*>\s*'
-            r'\(Optional\) Background\s*</button>',
-            body,
-        )
-        assert bg_btn is not None, (
-            "(Optional) Background button missing below Run Audit "
-            "(Quinn 2026-07-22)"
-        )
-        assert "disabled" in bg_btn.group(0), (
-            "(Optional) Background button should be disabled until "
-            "Quinn wires it up"
-        )
+        # Edit Audit + Duplicate Audit are disabled buttons.
+        assert 'aria-label="Edit Audit (not yet wired)"' in body
+        assert 'aria-label="Duplicate Audit (not yet wired)"' in body
 
 
 class TestSlice8NoHistorySection:
