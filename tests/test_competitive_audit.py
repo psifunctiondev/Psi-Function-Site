@@ -206,13 +206,12 @@ class TestCompetitiveAuditSubmissionModel:
         sub = self._make_row(db_session, drift_and_anchor_client, dna_user)
         assert sub.status == CompetitiveAuditSubmission.STATUS_SUBMITTED
 
-    def test_statuses_constant_lists_all_four(self):
-        # β-3 adds 'failed' for worker error rows.
+    def test_statuses_constant_lists_all_three(self):
+        # R2 will use processing + complete; R1 UI never flips them.
         assert CompetitiveAuditSubmission.STATUSES == (
             "submitted",
             "processing",
             "complete",
-            "failed",
         )
 
     def test_status_chip_class_mapping(self, db_session, drift_and_anchor_client, dna_user):
