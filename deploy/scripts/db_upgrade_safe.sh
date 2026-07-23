@@ -52,12 +52,20 @@
 # Earlier versions of this script used psql directly, but the
 # deploy hosts don't ship the psql binary. The Python interpreter
 # + psycopg (already a runtime dep of the Flask app, installed by
-# deploy_release.sh's pip install step) is always available, so
-# the bridge SQL runs through `python -c "import psycopg; ..."`.
+# deploy_release.sh's pip install step) is always available.
 #
-# Refs: PR #71, PR #72 (wrapper), PR #73 (URL-parsing fix),
-# the 2026-07-23 Drift & Anchor pivot from portal-DB to email
-# intake.
+# Why component-based connect instead of passing the URL
+# -------------------------------------------------------
+# The PostgreSQL password can contain URL-reserved characters
+# (@, /, :, ?, #, [, ], %). psycopg's URL parser (libpq-derived)
+# can't handle those without percent-encoding the password, and
+# bash's ${VAR%%@*} stops at the FIRST @ so we can't reliably
+# split the URL ourselves either. Passing components to psycopg
+# as kwargs bypasses the URL parser entirely.
+#
+# Refs: PR #71, PR #72 (wrapper), PR #73 (URL-parsing fix), #74
+# (psycopg + first subshell bug), #75 (subshell var guard), the
+# 2026-07-23 Drift & Anchor pivot from portal-DB to email intake.
 #
 # Usage: bash deploy/scripts/db_upgrade_safe.sh [env_name]
 #
@@ -144,17 +152,29 @@ fi
 
 echo "[db_upgrade_safe] env=$ENV_NAME python=$PYTHON_BIN"
 
-# Run the bridge SQL through psycopg. We inline a Python heredoc
-# so the script doesn't need a separate .py file in the deploy
-# dir. Captures stdout (the version string) and exits non-zero
-# on any error so set -e + pipefail surface the failure.
+# All DB work goes through Python heredocs. Each takes the
+# connection components as positional args (not the URL) so we
+# bypass both bash and libpq URL parsing — see "Why component-
+# based connect" above.
+#
+# We delegate URL parsing to Python's urllib.parse, which handles
+# percent-encoded passwords and reserved characters correctly.
 read_current_version() {
   "$PYTHON_BIN" - "$DATABASE_URL" <<'PYEOF'
 import sys
 import psycopg
+from urllib.parse import urlparse
 
 url = sys.argv[1]
-with psycopg.connect(url, connect_timeout=10) as conn:
+p = urlparse(url)
+with psycopg.connect(
+    host=p.hostname or "localhost",
+    port=p.port or 5432,
+    user=p.username,
+    password=p.password,
+    dbname=p.path.lstrip("/") if p.path else None,
+    connect_timeout=10,
+) as conn:
     with conn.cursor() as cur:
         cur.execute("SELECT version_num FROM alembic_version")
         row = cur.fetchone()
@@ -170,10 +190,19 @@ stamp_to_version() {
   "$PYTHON_BIN" - "$DATABASE_URL" "$target_version" <<'PYEOF'
 import sys
 import psycopg
+from urllib.parse import urlparse
 
 url = sys.argv[1]
 target = sys.argv[2]
-with psycopg.connect(url, connect_timeout=10) as conn:
+p = urlparse(url)
+with psycopg.connect(
+    host=p.hostname or "localhost",
+    port=p.port or 5432,
+    user=p.username,
+    password=p.password,
+    dbname=p.path.lstrip("/") if p.path else None,
+    connect_timeout=10,
+) as conn:
     with conn.cursor() as cur:
         cur.execute(
             "UPDATE alembic_version SET version_num = %s",
