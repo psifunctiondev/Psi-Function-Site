@@ -6,25 +6,20 @@
  * block on the template in 2026-07 so the page no longer violates the
  * site's strict CSP (script-src 'self').
  *
- * Behavior contract (UX model B, Quinn 2026-07-22):
- *   - The Add button lives OUTSIDE the default card, in its own row
- *     at the bottom of .competitive-audit-extra-cards. It's always
- *     the LAST child of that container.
+ * Behavior contract (slice 8):
  *   - On each "Add" click, clone the default competitor sub-card
- *     (data-competitive-audit-card + data-card-index="1") and insert
- *     it into .competitive-audit-extra-cards, BEFORE the Add button.
+ *     (data-competitive-audit-card + data-card-index="1") into the
+ *     .competitive-audit-extra-cards container.
  *   - Re-index every occurrence of `competitor_1_`, `id="competitor_1_`,
  *     `for="competitor_1_`, and the card-index attribute to a fresh
  *     `competitor_N_` so the form posts competitor_2, competitor_3, ...
  *   - Rewrite the cloned card's title text "Competitor 1" → "Competitor N".
  *   - Reset all cloned input values to empty (text) or checked (checkbox).
+ *   - Strip the cloned card's "Add" button so only the default card
+ *     carries an Add button. (The default card's Add button has the
+ *     click listener attached; clones would render an inert duplicate
+ *     that confused end-users — see fix/competitive-audit-add-clone-strip.)
  *   - Append a "Remove" row to each clone; the default card stays put.
- *
- * UX model B replaces the prior model where the Add button lived
- * inline on the socials row of the default card. Quinn asked for
- * model B after a live portal test on 2026-07-22: the Add button
- * should always sit next to the last competitor, not at the top of
- * the form on Competitor 1.
  *
  * No upper bound on clones — Quinn flagged that a cap may be added later.
  */
@@ -40,11 +35,6 @@
     '[data-competitive-audit-extra-cards]'
   );
   if (!defaultCard || !addBtn || !extraContainer) return;
-
-  // Anchor for new clones: insertBefore() each new card before the
-  // Add button so the button stays as the LAST child of
-  // .competitive-audit-extra-cards (UX model B).
-  var addRow = addBtn.closest('[data-competitive-audit-add-row]') || addBtn;
 
   function nextIndex() {
     var cards = form.querySelectorAll('[data-competitive-audit-card]');
@@ -81,6 +71,14 @@
         return head + ' value=""' + tail;
       }
     );
+    // Strip the cloned card's Add button — only the default card
+    // carries an Add button (which has the click listener). Without
+    // this strip, every clone renders a duplicate Add button that
+    // does nothing when clicked.
+    html = html.replace(
+      /\s*<button\b[^>]*data-competitive-audit-add[^>]*>[\s\S]*?<\/button>/,
+      ''
+    );
     return html;
   }
 
@@ -111,10 +109,6 @@
     // — Quinn didn't ask for it on the primary card; it stays
     // until the form is submitted or the user backs out).
     newCard.appendChild(makeRemoveButton(newIndex));
-    // UX model B: insert the clone BEFORE the Add button so the
-    // button stays as the LAST child of extra-cards. The button
-    // stays visible at the bottom of the list no matter how many
-    // competitors have been added.
-    extraContainer.insertBefore(newCard, addRow);
+    extraContainer.appendChild(newCard);
   });
 })();

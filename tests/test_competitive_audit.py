@@ -1380,58 +1380,31 @@ class TestSlice8LabelAndEntryStyling:
 
 
 class TestSlice8Layout:
-    def test_add_button_lives_in_extra_cards_row(
+    def test_add_button_inline_on_socials_row(
         self,
         app,
         client,
         admin,
         drift_and_anchor_client,
     ):
-        # UX model B (Quinn, 2026-07-22): the Add button moved from
-        # the socials row (slice 8 item 4) to a dedicated row at the
-        # bottom of .competitive-audit-extra-cards. It's the LAST
-        # child of extra-cards on initial render and stays last
-        # after each clone (the JS inserts each new card before it).
+        # Slice 8 (item 4): the Add button now lives INSIDE
+        # .competitive-audit-socials, not on its own row below.
         _login(client, "admin@test.com", "adminpass123")
         resp = client.get(
             "/p/drift-and-anchor/competitive-audit/?new=1",
             follow_redirects=False,
         )
         body = resp.get_data(as_text=True)
-        # The Add button is inside .competitive-audit-extra-cards,
-        # NOT inside .competitive-audit-socials.
-        assert "data-competitive-audit-add-row" in body, (
-            "expected the Add button's row to live in "
-            ".competitive-audit-extra-cards (UX model B)"
-        )
-        # And the socials row no longer carries the Add button.
+        # Markup: the button appears as a child of
+        # .competitive-audit-socials.
         socials_block = re.search(
             r'<div class="competitive-audit-socials">(.*?)</div>\s*</div>\s*</div>',
             body,
             flags=re.S,
         )
         assert socials_block is not None, "socials row not found"
-        assert "data-competitive-audit-add" not in socials_block.group(1), (
-            "Add button should not live inside .competitive-audit-socials "
-            "anymore (UX model B puts it at the bottom of extra-cards)"
-        )
-        # The Add button is rendered as the LAST child of
-        # .competitive-audit-extra-cards. This pins the model-B
-        # invariant: new clones get inserted BEFORE the button.
-        extra_block = re.search(
-            r'<div class="competitive-audit-extra-cards"\s+'
-            r'data-competitive-audit-extra-cards>(.*?)</div>\s*</div>',
-            body,
-            flags=re.S,
-        )
-        assert extra_block is not None, "extra-cards container not found"
-        inner = extra_block.group(1)
-        assert inner.rstrip().endswith("</button>") or "</button>" in inner[
-            inner.rfind("data-competitive-audit-add"):inner.rfind("</button>") + len("</button>")
-        ], (
-            "Add button should be the LAST child of extra-cards on "
-            "initial render"
-        )
+        inner = socials_block.group(1)
+        assert "data-competitive-audit-add" in inner
 
     def test_actions_stack_vertically_inside_col_1(
         self,
@@ -1822,22 +1795,17 @@ class TestSlice8JsReindex:
         assert "class=\"competitive-audit-col__title\">Competitor ' + newIndex + '<" in js
 
 
-class TestCloneModelBAddButton:
-    """UX model B (Quinn, 2026-07-22): the Add button moves out of
-    the default card and into its own row at the bottom of
-    .competitive-audit-extra-cards. Each new clone is inserted BEFORE
-    the Add button via DOM insertBefore(), so the button stays as
-    the last child and always renders next to the newest competitor.
+class TestCloneStripsAddButton:
+    """Regression: clicking Add on Competitor 2 did not create a new
+    entry for Competitor 3 because every clone inherited a duplicate
+    `<button data-competitive-audit-add>` element from the default
+    card. Only the original Add button had a click listener attached,
+    so the duplicate on each clone was inert and confused end-users
+    (Quinn reported this from the live portal on 2026-07-22).
 
-    This replaces the prior model (slice 8 item 4) where the Add
-    button lived inline on the socials row of the default card.
-    That model caused Quinn to see what looked like a working Add
-    button on every cloned competitor (because the default card's
-    Add was duplicated into each clone) but only the first one
-    actually fired the listener. The fix on this branch moves the
-    button to its own row and inserts clones before it, so there's
-    exactly one Add button visible at all times and it always sits
-    next to the last competitor.
+    The fix lives in app/static/js/portal/competitive-audit-form.js:
+    reindex() now strips the cloned card's Add button before
+    insertion, so only the default card carries an Add button.
     """
 
     def _read_js(self):
@@ -1853,86 +1821,58 @@ class TestCloneModelBAddButton:
             / "competitive-audit-form.js"
         ).read_text()
 
-    def _read_template(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        return (
-            repo_root
-            / "app"
-            / "templates"
-            / "portal"
-            / "drift_and_anchor_competitive_audit.html"
-        ).read_text()
-
-    def test_default_card_has_no_add_button(self):
-        # UX model B: the default card no longer carries the Add
-        # button. The button moved to a dedicated row in extra-cards.
-        template = self._read_template()
-        # Slice out the default card's outerHTML to confirm no Add
-        # button lives inside it.
-        import re
-        card_match = re.search(
-            r'<div class="competitive-audit-col competitive-audit-col--main"'
-            r"[\s\S]*?</div>\s*</div>\s*</div>",
-            template,
-        )
-        assert card_match is not None, "default card not found in template"
-        card_html = card_match.group(0)
-        assert "data-competitive-audit-add" not in card_html, (
-            "default card still carries the Add button — UX model B "
-            "should have moved it to .competitive-audit-extra-cards"
-        )
-
-    def test_add_button_inside_extra_cards_row(self):
-        # The Add button lives in .competitive-audit-extra-cards,
-        # inside the [data-competitive-audit-add-row] wrapper.
-        template = self._read_template()
-        import re
-        # Find the .competitive-audit-extra-cards container and
-        # confirm it contains the Add button.
-        extra_match = re.search(
-            r'<div class="competitive-audit-extra-cards"[^>]*>([\s\S]*?)</div>\s*</div>',
-            template,
-        )
-        assert extra_match is not None, "extra-cards container not found"
-        inner = extra_match.group(1)
-        assert "data-competitive-audit-add-row" in inner, (
-            "extra-cards container missing the Add button's wrapper row"
-        )
-        assert "data-competitive-audit-add" in inner, (
-            "extra-cards container missing the Add button itself"
-        )
-
-    def test_js_inserts_clone_before_add_button(self):
-        # The click handler must call insertBefore(newCard, addRow),
-        # NOT appendChild(newCard), so the Add button stays last.
+    def test_reindex_strips_clone_add_button(self):
         js = self._read_js()
-        assert "insertBefore(newCard, addRow)" in js, (
-            "Add click handler must use insertBefore(newCard, addRow) "
-            "to keep the Add button as the last child of extra-cards "
-            "(UX model B)"
-        )
-        assert "extraContainer.appendChild(newCard)" not in js, (
-            "Add click handler still uses appendChild — should be "
-            "insertBefore so the Add button stays at the bottom"
-        )
-
-    def test_js_no_longer_strips_add_button_from_clones(self):
-        # UX model B removes the need to strip the Add button from
-        # clones (the default card doesn't carry one anymore). The
-        # strip regex should be GONE from the JS file.
-        js = self._read_js()
+        # The reindex() function must remove the cloned card's
+        # data-competitive-audit-add button so the clone doesn't
+        # render an inert duplicate of the default card's button.
+        # We pin on the regex literal that performs the strip —
+        # it's the only line in the file that contains BOTH the
+        # attribute marker and the closing </button> literal. The
+        # regex itself can't match the JS source (the `>` inside
+        # `[^>]` makes self-matching impossible), so we look for
+        # the regex literal's two unique tokens on the same line.
         strip_lines = [
             line
             for line in js.splitlines()
             if "data-competitive-audit-add" in line
             and r"<\/button>" in line
         ]
-        assert len(strip_lines) == 0, (
-            "Add-button strip regex should be removed in UX model B "
-            f"(the default card no longer carries an Add button). "
-            f"Found: {strip_lines}"
+        assert len(strip_lines) == 1, (
+            "expected exactly one strip-regex line in reindex(), "
+            f"found {len(strip_lines)}: {strip_lines}"
+        )
+        # Belt-and-suspenders: confirm the line opens with the regex
+        # literal delimiter `/` (not a comment or a string).
+        assert strip_lines[0].lstrip().startswith("/"), (
+            "strip line does not look like a regex literal: "
+            f"{strip_lines[0]!r}"
+        )
+
+    def test_default_card_add_button_unaffected_by_fix(self):
+        # The default card's Add button still exists in the template.
+        # The strip runs only on the cloned HTML inside reindex(), so
+        # the default card's button (which has the listener) is intact.
+        from pathlib import Path
+        repo_root = Path(__file__).resolve().parent.parent
+        template = (
+            repo_root
+            / "app"
+            / "templates"
+            / "portal"
+            / "drift_and_anchor_competitive_audit.html"
+        ).read_text()
+        # Exactly one <button ... data-competitive-audit-add> rendered
+        # on the server (the default card's button). The other two
+        # occurrences in the file are CSS selectors / comments.
+        import re
+        button_matches = re.findall(
+            r"<button\b[^>]*data-competitive-audit-add[^>]*>",
+            template,
+        )
+        assert len(button_matches) == 1, (
+            f"expected exactly one Add button in the default card, "
+            f"found {len(button_matches)}: {button_matches}"
         )
 
 
