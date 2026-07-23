@@ -108,24 +108,27 @@ if [ -z "$PSQL_BIN" ]; then
 fi
 
 # Parse the connection string. We don't try to be clever —
-# the deploy hosts use postgresql://user:pass@host:port/dbname
-# and the testing config matches exactly (see
-# deploy/env/testing.app.env.example). If a future env uses
-# a different shape, update this parsing.
+# the deploy hosts use postgresql://user:pass@host[:port]/dbname
+# (port optional; defaults to 5432) and the testing config
+# matches exactly (see deploy/env/testing.app.env.example).
 DB_URL_NO_SCHEME="${DATABASE_URL#postgresql://}"
 DB_USER_PASS="${DB_URL_NO_SCHEME%%@*}"
 DB_HOST_PORT_DB="${DB_URL_NO_SCHEME#*@}"
 
 DB_USER="${DB_USER_PASS%%:*}"
 DB_PASS="${DB_USER_PASS#*:}"
-DB_HOST_PORT_DB="${DB_HOST_PORT_DB%%/*}"
-DB_HOST="${DB_HOST_PORT_DB%%:*}"
-DB_PORT="${DB_HOST_PORT_DB#*:}"
-DB_PORT="${DB_PORT:-5432}"
-DB_NAME="${DB_URL_NO_SCHEME##*/}"
+DB_HOST_PORT_DB="${DB_HOST_PORT_DB%%/*}"   # drop /dbname and any query string
 
-# Strip query params from db name (rare, but defensive).
-DB_NAME="${DB_NAME%%\?*}"
+if [[ "$DB_HOST_PORT_DB" == *:* ]]; then
+  DB_HOST="${DB_HOST_PORT_DB%%:*}"
+  DB_PORT="${DB_HOST_PORT_DB#*:}"
+else
+  DB_HOST="$DB_HOST_PORT_DB"
+  DB_PORT="5432"
+fi
+
+DB_NAME="${DB_URL_NO_SCHEME##*/}"
+DB_NAME="${DB_NAME%%\?*}"   # strip query params if any
 
 echo "[db_upgrade_safe] env=$ENV_NAME db=$DB_NAME host=$DB_HOST:$DB_PORT"
 
