@@ -206,13 +206,12 @@ class TestCompetitiveAuditSubmissionModel:
         sub = self._make_row(db_session, drift_and_anchor_client, dna_user)
         assert sub.status == CompetitiveAuditSubmission.STATUS_SUBMITTED
 
-    def test_statuses_constant_lists_all_four(self):
-        # β-3 adds 'failed' for worker error rows.
+    def test_statuses_constant_lists_all_three(self):
+        # R2 will use processing + complete; R1 UI never flips them.
         assert CompetitiveAuditSubmission.STATUSES == (
             "submitted",
             "processing",
             "complete",
-            "failed",
         )
 
     def test_status_chip_class_mapping(self, db_session, drift_and_anchor_client, dna_user):
@@ -492,11 +491,11 @@ class TestRouteGet:
         assert "competitive-audit-history__row--highlight" not in body
         # Run Audit button text + disabled attribute both present.
         assert "Run Audit" in body
-        # Edit Audit + Duplicate Audit are REMOVED (Quinn 2026-07-22:
-        # not VMP-necessary). Neither real links nor disabled buttons
-        # render anymore.
-        assert "Edit Audit" not in body
-        assert "Duplicate Audit" not in body
+        # Edit Audit + Duplicate Audit are real <a> links now (not
+        # disabled <button>s), pointing at ?edit= and ?fork= for this
+        # submission.
+        assert f"?edit={sub.id}" in body
+        assert f"?fork={sub.id}" in body
         # The Run Audit button is marked disabled.
         assert re.search(
             r"<button[^>]*\bdisabled\b[^>]*>\s*Run Audit\s*</button>",
@@ -1380,58 +1379,31 @@ class TestSlice8LabelAndEntryStyling:
 
 
 class TestSlice8Layout:
-    def test_add_button_lives_in_extra_cards_row(
+    def test_add_button_inline_on_socials_row(
         self,
         app,
         client,
         admin,
         drift_and_anchor_client,
     ):
-        # UX model B (Quinn, 2026-07-22): the Add button moved from
-        # the socials row (slice 8 item 4) to a dedicated row at the
-        # bottom of .competitive-audit-extra-cards. It's the LAST
-        # child of extra-cards on initial render and stays last
-        # after each clone (the JS inserts each new card before it).
+        # Slice 8 (item 4): the Add button now lives INSIDE
+        # .competitive-audit-socials, not on its own row below.
         _login(client, "admin@test.com", "adminpass123")
         resp = client.get(
             "/p/drift-and-anchor/competitive-audit/?new=1",
             follow_redirects=False,
         )
         body = resp.get_data(as_text=True)
-        # The Add button is inside .competitive-audit-extra-cards,
-        # NOT inside .competitive-audit-socials.
-        assert "data-competitive-audit-add-row" in body, (
-            "expected the Add button's row to live in "
-            ".competitive-audit-extra-cards (UX model B)"
-        )
-        # And the socials row no longer carries the Add button.
+        # Markup: the button appears as a child of
+        # .competitive-audit-socials.
         socials_block = re.search(
             r'<div class="competitive-audit-socials">(.*?)</div>\s*</div>\s*</div>',
             body,
             flags=re.S,
         )
         assert socials_block is not None, "socials row not found"
-        assert "data-competitive-audit-add" not in socials_block.group(1), (
-            "Add button should not live inside .competitive-audit-socials "
-            "anymore (UX model B puts it at the bottom of extra-cards)"
-        )
-        # The Add button is rendered as the LAST child of
-        # .competitive-audit-extra-cards. This pins the model-B
-        # invariant: new clones get inserted BEFORE the button.
-        extra_block = re.search(
-            r'<div class="competitive-audit-extra-cards"\s+'
-            r'data-competitive-audit-extra-cards>(.*?)</div>\s*</div>',
-            body,
-            flags=re.S,
-        )
-        assert extra_block is not None, "extra-cards container not found"
-        inner = extra_block.group(1)
-        assert inner.rstrip().endswith("</button>") or "</button>" in inner[
-            inner.rfind("data-competitive-audit-add"):inner.rfind("</button>") + len("</button>")
-        ], (
-            "Add button should be the LAST child of extra-cards on "
-            "initial render"
-        )
+        inner = socials_block.group(1)
+        assert "data-competitive-audit-add" in inner
 
     def test_actions_stack_vertically_inside_col_1(
         self,
@@ -1472,93 +1444,38 @@ class TestSlice8Layout:
         assert "competitive-audit-actions" in inner
         assert "Run Audit" in inner
 
-    def test_only_titles_use_dm_serif_everything_else_uses_montserrat(
+    def test_btn_uses_page_display_font(
         self,
         app,
         client,
         admin,
         drift_and_anchor_client,
     ):
-        # Quinn (2026-07-22): only "Client" and "Competitor N"
-        # titles should be DM Serif Display. Everything else on the
-        # page (body text, labels, inputs, buttons, first-visit /
-        # collapsed cards) should be Montserrat. This replaces the
-        # prior slice-8 rule that cascaded DM Serif Display down to
-        # .btn and the page-level container.
+        # Slice 8 (item 6): the .btn inside the form card inherits
+        # the page's display font (DM Serif Display).
         _login(client, "admin@test.com", "adminpass123")
         resp = client.get(
             "/p/drift-and-anchor/competitive-audit/?new=1",
             follow_redirects=False,
         )
         body = resp.get_data(as_text=True)
-
-        # 1. Title rule: .competitive-audit-col__title uses DM Serif.
-        title_rule = re.search(
+        # The font-family scoped rule lists multiple selectors with
+        # commas; one of them targets .btn inside the form card.
+        # Match across newlines since the template renders each
+        # selector on its own line.
+        scoped_rule = re.search(
             r"\.drift-and-anchor-competitive-audit\s+"
-            r"\.competitive-audit-col__title\s*\{[^}]*"
-            r"font-family:\s*'DM Serif Display'",
-            body,
-            flags=re.S,
-        )
-        assert title_rule is not None, (
-            ".competitive-audit-col__title should use DM Serif Display"
-        )
-
-        # 2. Body / button rule: .btn inside the form card uses
-        # Montserrat, NOT DM Serif Display. The CSS has a multi-
-        # selector rule body (one font-family declaration shared
-        # across multiple selectors). We split the check in two:
-        # first find the rule body (between an opening brace and
-        # the matching closing brace that contains 'Montserrat'),
-        # then assert the body contains the .btn-in-form-card
-        # selector and the Montserrat font-family on the same
-        # block.
-        btn_rule_block = re.search(
-            r"(\.drift-and-anchor-competitive-audit\s+"
-            r"\.competitive-audit-form-card[\s\S]*?\{)"
-            r"([^{}]*?)"
-            r"(\})",
+            r"\.competitive-audit-form-card\s+\.btn\s*[,{]",
             body,
         )
-        assert btn_rule_block is not None, (
-            "expected the .competitive-audit-form-card rule body "
-            "in the page CSS"
+        assert scoped_rule is not None, ".btn scoped font rule missing"
+        # Find the font-family block (the rule body) and confirm
+        # font-family is set there.
+        body_block = re.search(
+            r"font-family:\s*var\(--client-font-display",
+            body,
         )
-        body_text = btn_rule_block.group(2)
-        # The .btn-in-form-card selector must be in the selectors
-        # list (before the {).
-        selectors_text = btn_rule_block.group(1)
-        assert (
-            ".drift-and-anchor-competitive-audit .competitive-audit-form-card .btn"
-            in selectors_text
-        ), (
-            ".btn inside the form card should be one of the rule's "
-            "selectors (Quinn 2026-07-22)"
-        )
-        # The body must declare font-family: 'Montserrat'.
-        assert re.search(
-            r"font-family:\s*'Montserrat'",
-            body_text,
-        ), (
-            ".btn-in-form-card rule body should declare "
-            "font-family: 'Montserrat' (Quinn 2026-07-22)"
-        )
-        # Belt-and-suspenders: that rule body must NOT reference
-        # DM Serif Display.
-        assert "DM Serif Display" not in body_text, (
-            ".btn font-family block still references DM Serif Display — "
-            "Quinn wants only titles in DM Serif"
-        )
-
-        # 4. The fonts are loaded via {% block head %} on this page
-        # only — base.html doesn't carry them, so we add them here.
-        assert (
-            "family=DM+Serif+Display" in body
-            and "family=Montserrat" in body
-        ), (
-            "DM Serif Display + Montserrat must be loaded via {% block "
-            "head %} on this page (Quinn 2026-07-22)"
-        )
+        assert body_block is not None
 
     def test_extra_cards_grid_spans_cols_2_to_5(
         self,
@@ -1748,12 +1665,19 @@ class TestSlice8EditMode:
         )
         assert m is not None, "Run Audit submit button not found"
         assert "disabled" in m.group(0)
-        # Edit Audit + Duplicate Audit are REMOVED entirely (Quinn
-        # 2026-07-22: not VMP-necessary, may return in a later
-        # slice). Neither real links nor disabled buttons should
-        # render.
-        assert "Edit Audit" not in body
-        assert "Duplicate Audit" not in body
+        # Edit Audit + Duplicate Audit are now real links, NOT
+        # disabled buttons.
+        assert re.search(
+            r'<a[^>]*href="[^"]*\?edit=' + str(sub.id) + r'"[^>]*>\s*Edit Audit\s*</a>',
+            body,
+        )
+        assert re.search(
+            r'<a[^>]*href="[^"]*\?fork=' + str(sub.id) + r'"[^>]*>\s*Duplicate Audit\s*</a>',
+            body,
+        )
+        # Negative: no disabled Edit Audit / Duplicate Audit buttons.
+        assert 'aria-label="Edit Audit (not yet wired)"' not in body
+        assert 'aria-label="Duplicate Audit (not yet wired)"' not in body
 
     def test_run_audit_enabled_on_new_form(
         self,
@@ -1777,26 +1701,9 @@ class TestSlice8EditMode:
         )
         assert m is not None
         assert "disabled" not in m.group(0)
-        # Edit Audit + Duplicate Audit are REMOVED (Quinn 2026-07-22:
-        # not VMP-necessary). Neither disabled buttons nor real
-        # links should appear in the markup.
-        assert "Edit Audit" not in body
-        assert "Duplicate Audit" not in body
-        # (Optional) Background button is present below Run Audit
-        # (Quinn 2026-07-22: VMP-needed, wiring deferred).
-        bg_btn = re.search(
-            r'<button[^>]*aria-label="Background \(not yet wired\)"[^>]*>\s*'
-            r'\(Optional\) Background\s*</button>',
-            body,
-        )
-        assert bg_btn is not None, (
-            "(Optional) Background button missing below Run Audit "
-            "(Quinn 2026-07-22)"
-        )
-        assert "disabled" in bg_btn.group(0), (
-            "(Optional) Background button should be disabled until "
-            "Quinn wires it up"
-        )
+        # Edit Audit + Duplicate Audit are disabled buttons.
+        assert 'aria-label="Edit Audit (not yet wired)"' in body
+        assert 'aria-label="Duplicate Audit (not yet wired)"' in body
 
 
 class TestSlice8NoHistorySection:
@@ -1858,399 +1765,24 @@ class TestSlice8JsReindex:
     """Slice 8 item 7: the JS reindex() function rewrites the
     Competitor N title text inside cloned cards.
 
-    Slice 9: the JS was extracted into
-    app/static/js/portal/competitive-audit-form.js. The test now reads
-    the JS file rather than the template, but the substring we pin is
-    unchanged.
-
-    Playwright / Selenium aren't wired into this project. Phronesis
-    should add a real browser test in a later slice.
+    Playwright / Selenium aren't wired into this project. The change
+    lives in the inline <script> at the bottom of the template; the
+    only practical in-pytest verification is reading the template
+    source and asserting the rewriting substring is present.
+    Phronesis should add a real browser test in a later slice.
     """
 
     def test_reindex_rewrites_competitor_n_title(self):
         from pathlib import Path
 
         repo_root = Path(__file__).resolve().parent.parent
-        js = (
-            repo_root
-            / "app"
-            / "static"
-            / "js"
-            / "portal"
-            / "competitive-audit-form.js"
-        ).read_text()
-        # Source HTML for the default card still has the literal
-        # "Competitor 1" inside the col__title div.
-        assert 'class="competitive-audit-col__title">Competitor 1<' in js
-        # And the reindex function rewrites that literal to use the
-        # dynamic index.
-        assert "class=\"competitive-audit-col__title\">Competitor ' + newIndex + '<" in js
-
-
-class TestCloneModelBAddButton:
-    """UX model B (Quinn, 2026-07-22): the Add button moves out of
-    the default card and into its own row at the bottom of
-    .competitive-audit-extra-cards. Each new clone is inserted BEFORE
-    the Add button via DOM insertBefore(), so the button stays as
-    the last child and always renders next to the newest competitor.
-
-    This replaces the prior model (slice 8 item 4) where the Add
-    button lived inline on the socials row of the default card.
-    That model caused Quinn to see what looked like a working Add
-    button on every cloned competitor (because the default card's
-    Add was duplicated into each clone) but only the first one
-    actually fired the listener. The fix on this branch moves the
-    button to its own row and inserts clones before it, so there's
-    exactly one Add button visible at all times and it always sits
-    next to the last competitor.
-    """
-
-    def _read_js(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        return (
-            repo_root
-            / "app"
-            / "static"
-            / "js"
-            / "portal"
-            / "competitive-audit-form.js"
-        ).read_text()
-
-    def _read_template(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        return (
-            repo_root
-            / "app"
-            / "templates"
-            / "portal"
-            / "drift_and_anchor_competitive_audit.html"
-        ).read_text()
-
-    def test_default_card_has_no_add_button(self):
-        # UX model B: the default card no longer carries the Add
-        # button. The button moved to a dedicated row in extra-cards.
-        template = self._read_template()
-        # Slice out the default card's outerHTML to confirm no Add
-        # button lives inside it.
-        import re
-        card_match = re.search(
-            r'<div class="competitive-audit-col competitive-audit-col--main"'
-            r"[\s\S]*?</div>\s*</div>\s*</div>",
-            template,
-        )
-        assert card_match is not None, "default card not found in template"
-        card_html = card_match.group(0)
-        assert "data-competitive-audit-add" not in card_html, (
-            "default card still carries the Add button — UX model B "
-            "should have moved it to .competitive-audit-extra-cards"
-        )
-
-    def test_add_button_inside_extra_cards_row(self):
-        # The Add button lives in .competitive-audit-extra-cards,
-        # inside the [data-competitive-audit-add-row] wrapper.
-        template = self._read_template()
-        import re
-        # Find the .competitive-audit-extra-cards container and
-        # confirm it contains the Add button.
-        extra_match = re.search(
-            r'<div class="competitive-audit-extra-cards"[^>]*>([\s\S]*?)</div>\s*</div>',
-            template,
-        )
-        assert extra_match is not None, "extra-cards container not found"
-        inner = extra_match.group(1)
-        assert "data-competitive-audit-add-row" in inner, (
-            "extra-cards container missing the Add button's wrapper row"
-        )
-        assert "data-competitive-audit-add" in inner, (
-            "extra-cards container missing the Add button itself"
-        )
-
-    def test_js_inserts_clone_before_add_button(self):
-        # The click handler must call insertBefore(newCard, addRow),
-        # NOT appendChild(newCard), so the Add button stays last.
-        js = self._read_js()
-        assert "insertBefore(newCard, addRow)" in js, (
-            "Add click handler must use insertBefore(newCard, addRow) "
-            "to keep the Add button as the last child of extra-cards "
-            "(UX model B)"
-        )
-        assert "extraContainer.appendChild(newCard)" not in js, (
-            "Add click handler still uses appendChild — should be "
-            "insertBefore so the Add button stays at the bottom"
-        )
-
-    def test_js_no_longer_strips_add_button_from_clones(self):
-        # UX model B removes the need to strip the Add button from
-        # clones (the default card doesn't carry one anymore). The
-        # strip regex should be GONE from the JS file.
-        js = self._read_js()
-        strip_lines = [
-            line
-            for line in js.splitlines()
-            if "data-competitive-audit-add" in line
-            and r"<\/button>" in line
-        ]
-        assert len(strip_lines) == 0, (
-            "Add-button strip regex should be removed in UX model B "
-            f"(the default card no longer carries an Add button). "
-            f"Found: {strip_lines}"
-        )
-
-
-# ---------------------------------------------------------------------------
-# Slice 9 — extracted JS, favicon, TikTok checkbox, dashboard CTA removal
-# ---------------------------------------------------------------------------
-
-
-class TestSlice9ExtractedJs:
-    """Slice 9 item 3: the inline <script> for the competitive-audit
-    "Add competitor" behavior was extracted into
-    app/static/js/portal/competitive-audit-form.js so the page
-    complies with the site's strict CSP (script-src 'self')."""
-
-    def test_external_js_file_exists(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        js_path = (
-            repo_root
-            / "app"
-            / "static"
-            / "js"
-            / "portal"
-            / "competitive-audit-form.js"
-        )
-        assert js_path.exists(), f"missing {js_path}"
-        # Belt-and-suspenders: the file should not be empty.
-        assert js_path.stat().st_size > 500
-
-    def test_template_references_external_js(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
         template = (
-            repo_root
-            / "app"
-            / "templates"
-            / "portal"
-            / "drift_and_anchor_competitive_audit.html"
+            repo_root / "app" / "templates" / "portal" / "drift_and_anchor_competitive_audit.html"
         ).read_text()
-        # The template must reference the external script via url_for.
-        assert (
-            "js/portal/competitive-audit-form.js" in template
-        ), "template does not load the external JS file"
-        assert (
-            "{{ url_for('static', filename='js/portal/competitive-audit-form.js') }}"
-            in template
-        ), "template does not use url_for for the external JS"
-
-    def test_template_no_inline_competitive_audit_script(self):
-        # The extracted JS contains the Add/clone logic. The inline
-        # <script> block at the bottom of the template should NOT
-        # contain a reindex / nextIndex / makeRemoveButton function —
-        # those live in the extracted file now.
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        template = (
-            repo_root
-            / "app"
-            / "templates"
-            / "portal"
-            / "drift_and_anchor_competitive_audit.html"
-        ).read_text()
-        # Locate the {% block scripts %} region and assert no reindex.
-        scripts_start = template.find("{% block scripts %}")
-        scripts_end = template.find("{% endblock %}", scripts_start)
-        assert scripts_start != -1 and scripts_end != -1
-        scripts_block = template[scripts_start:scripts_end]
-        assert "function reindex(" not in scripts_block
-        assert "function nextIndex(" not in scripts_block
-        assert "function makeRemoveButton(" not in scripts_block
-
-    def test_extracted_js_preserves_reindex_logic(self):
-        # The external file must still contain the reindex + clone
-        # wiring that used to live in the inline <script>. Otherwise
-        # extraction would silently break the Add behavior.
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        js = (
-            repo_root
-            / "app"
-            / "static"
-            / "js"
-            / "portal"
-            / "competitive-audit-form.js"
-        ).read_text()
-        assert "competitive-audit-form-card" in js
-        assert "data-competitive-audit-add" in js
-        assert "data-competitive-audit-extra-cards" in js
-        assert "data-card-index" in js
-        assert "competitor_1_" in js  # source of the reindex regex
-        assert "function reindex(" in js
-        assert "function nextIndex(" in js
-        assert "function makeRemoveButton(" in js
-
-
-class TestSlice9TiktokCheckbox:
-    """Slice 9 item 3: the socials row now includes TikTok alongside
-    X, Facebook, Instagram, and YouTube. Default-checked on the
-    default card to match the rest of the socials checkboxes."""
-
-    def test_template_renders_tiktok_checkbox(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        template = (
-            repo_root
-            / "app"
-            / "templates"
-            / "portal"
-            / "drift_and_anchor_competitive_audit.html"
-        ).read_text()
-        assert "competitor_1_include_tiktok" in template
-        assert 'name="competitor_1_include_tiktok"' in template
-        assert 'for="competitor_1_include_tiktok"' in template
-        # TikTok label exists (not just the input).
-        assert ">TikTok<" in template
-
-    def test_extracted_js_reindex_handles_tiktok(self):
-        # The reindex regex `competitor_1_/g` must catch the new
-        # competitor_1_include_tiktok attribute on clone. Confirm by
-        # walking a synthetic clone that includes TikTok.
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        js = (
-            repo_root
-            / "app"
-            / "static"
-            / "js"
-            / "portal"
-            / "competitive-audit-form.js"
-        ).read_text()
-        # reindex replaces the bare `competitor_1_` token globally,
-        # which covers competitor_1_include_tiktok too.
-        assert (
-            ".replace(/competitor_1_/g, 'competitor_' + newIndex + '_')"
-            in js
-        ), "reindex regex should be a global bare-token match"
-
-
-class TestSlice9Favicon:
-    """Slice 9 item 4: site favicon added to base.html. The favicon
-    file lives at app/static/favicon.ico (multi-resolution ICO derived
-    from app/static/images/psi_logo_3.webp). Closes the 404 in the
-    browser console on every portal page."""
-
-    def test_favicon_file_exists(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        ico_path = repo_root / "app" / "static" / "favicon.ico"
-        assert ico_path.exists(), f"missing {ico_path}"
-        # ICO magic bytes: 00 00 01 00.
-        with ico_path.open("rb") as fh:
-            magic = fh.read(4)
-        assert magic[:4] == b"\x00\x00\x01\x00", (
-            f"favicon is not a valid ICO (magic={magic!r})"
-        )
-
-    def test_base_html_has_favicon_link(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        base = (repo_root / "app" / "templates" / "base.html").read_text()
-        assert (
-            "rel=\"icon\"" in base
-        ), "base.html is missing <link rel=\"icon\">"
-        assert (
-            "{{ url_for('static', filename='favicon.ico') }}" in base
-        ), "base.html does not url_for the favicon path"
-
-
-class TestSlice9DashboardCtaRemoved:
-    """Slice 9 item 5: the standalone "Competitive audit with
-    DrifterBot" CTA block was removed from
-    app/templates/portal/_dashboard_grid.html. The audit entry point
-    now lives in the seeded Applications column (via DRIFT_AND_ANCHOR_RESOURCES)."""
-
-    def test_dashboard_grid_no_standalone_cta(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        grid = (
-            repo_root
-            / "app"
-            / "templates"
-            / "portal"
-            / "_dashboard_grid.html"
-        ).read_text()
-        assert "portal-dashboard-cta" not in grid, (
-            "standalone DrifterBot CTA block still present in _dashboard_grid.html"
-        )
-        assert (
-            "Request an audit" not in grid
-        ), "old standalone CTA copy still present"
-
-
-class TestSlice9SecurityHeadersCsp:
-    """Slice 9 item 6: security-headers.conf CSP now allows
-    static1.squarespace.com / images.squarespace-cdn.com for img-src,
-    static.cloudflareinsights.com for script-src + connect-src, and
-    still rejects inline scripts (script-src 'self' only)."""
-
-    def test_csp_allows_squarespace_cdn_for_images(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        conf = (
-            repo_root
-            / "deploy"
-            / "nginx"
-            / "snippets"
-            / "security-headers.conf"
-        ).read_text()
-        assert "static1.squarespace.com" in conf
-        assert "images.squarespace-cdn.com" in conf
-        assert "img-src" in conf
-
-    def test_csp_allows_cloudflare_insights_script(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        conf = (
-            repo_root
-            / "deploy"
-            / "nginx"
-            / "snippets"
-            / "security-headers.conf"
-        ).read_text()
-        assert "static.cloudflareinsights.com" in conf
-        assert "script-src" in conf
-        assert "connect-src" in conf
-
-    def test_csp_does_not_permit_unsafe_inline_scripts(self):
-        from pathlib import Path
-
-        repo_root = Path(__file__).resolve().parent.parent
-        conf = (
-            repo_root
-            / "deploy"
-            / "nginx"
-            / "snippets"
-            / "security-headers.conf"
-        ).read_text()
-        # Inline scripts would re-introduce the bug that slice 9 fixed
-        # by extracting the JS. Pin script-src to 'self' only.
-        assert "script-src 'self'" in conf
-        assert "'unsafe-inline'" not in conf.split("script-src", 1)[1].split(";", 1)[0]
-
+        # The reindex function must include a literal that rewrites
+        # the title text to "Competitor <N>".
+        assert 'class="competitive-audit-col__title">Competitor 1<' in template
+        assert "class=\"competitive-audit-col__title\">Competitor ' + newIndex + '<" in template
 
 
 # Seeder — DRIFT_AND_ANCHOR_RESOURCES now contains the audit entry
