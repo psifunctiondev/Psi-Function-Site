@@ -221,7 +221,20 @@ ln -sfn "$SHARED_DIR/client-content" "$NEW_RELEASE/app/static/client-content"
 
 if [ -d "migrations" ]; then
   log "Running database migrations"
-  FLASK_APP=wsgi:app flask db upgrade
+  # Use db_upgrade_safe.sh (a defensive wrapper around
+  # `flask db upgrade head`) so deploys still succeed when the
+  # recorded alembic_version references a migration that has
+  # since been deleted from the codebase. The case this protects
+  # against: PR #71's revert chain removed e3f4a5b6c7d8
+  # (DrifterBot worker extension), but any DB that had already
+  # applied that migration was left with its version_num in
+  # alembic_version pointing at a non-existent revision. A
+  # straight `flask db upgrade` then fails with "Can't locate
+  # revision identified by 'e3f4a5b6c7d8'" and blocks the
+  # deploy. The wrapper detects this and bridges via a raw
+  # SQL stamp before running the upgrade. See
+  # deploy/scripts/db_upgrade_safe.sh for the full logic.
+  DEPLOY_ENVIRONMENT="$ENVIRONMENT" bash "$SOURCE_DIR/deploy/scripts/db_upgrade_safe.sh"
 else
   log "No migrations directory found; skipping database migrations"
 fi
