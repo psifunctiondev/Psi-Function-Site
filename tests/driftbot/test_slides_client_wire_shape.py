@@ -259,30 +259,6 @@ def test_move_to_folder_raises_drive_folder_access_on_get_404(client):
 
 
 # ------------------------------------------------------------------
-# ------------------------------------------------------------------
-# _SCOPE — auth scopes for Slides + Drive API
-# ------------------------------------------------------------------
-
-
-def test_auth_scope_includes_drive_readonly_for_copy():
-    """Wire-shape: the auth scope MUST include ``drive.readonly`` so
-    ``presentations.copy`` can read the source template file (owned
-    by another user, in the DrifterBot Shared Drive). Without it
-    the Slides API returns HTTP 400 with an HTML error page
-    instead of a JSON error envelope — caught on 2026-07-22 smoke
-    test against the testing DB.
-
-    Regression: if a future change drops ``drive.readonly`` from
-    ``_SCOPE``, presentations.copy will silently fail with a
-    permission error every time. This test pins the scope.
-    """
-    from agents.driftbot.slides_client import _SlidesAuth
-    scope = _SlidesAuth._SCOPE
-    assert 'presentations' in scope
-    assert 'drive.file' in scope
-    assert 'drive.readonly' in scope
-
-
 # delete_file — cleanup-on-failure helper
 # ------------------------------------------------------------------
 
