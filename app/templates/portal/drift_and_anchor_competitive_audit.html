@@ -540,12 +540,6 @@
                        {% if socials.get('youtube', True) %}checked{% endif %}>
                 <label for="competitor_1_include_youtube">YouTube</label>
               </div>
-              <div class="competitive-audit-social">
-                <input type="checkbox" id="competitor_1_include_tiktok"
-                       name="competitor_1_include_tiktok"
-                       {% if socials.get('tiktok', True) %}checked{% endif %}>
-                <label for="competitor_1_include_tiktok">TikTok</label>
-              </div>
               <button type="button" class="btn"
                       data-competitive-audit-add
                       aria-label="Add another competitor">
@@ -574,8 +568,99 @@
 {% endblock %}
 
 {% block scripts %}
-{# Slice 9: extracted from inline <script> so the page complies with
-   the site's strict CSP (script-src 'self'). Logic lives in
-   app/static/js/portal/competitive-audit-form.js. #}
-<script src="{{ url_for('static', filename='js/portal/competitive-audit-form.js') }}" defer></script>
+<script>
+  (function () {
+    // Quinn (item 5): clone the default competitor sub-card into the
+    // extra-cards container on each "Add" click. NO upper bound for
+    // now — Quinn flagged that a cap may be added later. Each clone
+    // gets a fresh competitor_N index by scanning the existing DOM,
+    // so even server-rendered competitor_2..N (from a fork/edit) get
+    // re-counted correctly.
+    var form = document.querySelector('.competitive-audit-form-card');
+    if (!form) return;
+
+    var defaultCard = form.querySelector(
+      '[data-competitive-audit-card][data-card-index="1"]'
+    );
+    var addBtn = form.querySelector('[data-competitive-audit-add]');
+    var extraContainer = form.querySelector(
+      '[data-competitive-audit-extra-cards]'
+    );
+    if (!defaultCard || !addBtn || !extraContainer) return;
+
+    function nextIndex() {
+      var cards = form.querySelectorAll('[data-competitive-audit-card]');
+      var max = 0;
+      cards.forEach(function (c) {
+        var n = parseInt(c.getAttribute('data-card-index'), 10);
+        if (!isNaN(n) && n > max) max = n;
+      });
+      return max + 1;
+    }
+
+    function reindex(srcHtml, newIndex) {
+      // Replace every occurrence of competitor_1_, id="competitor_1_,
+      // and for="competitor_1_ with the new index. Also rename the
+      // card-index attribute itself.
+      //
+      // Slice 8 (item 7): the title DOM element on the cloned card is
+      // `<div class="competitive-audit-col__title">Competitor 1</div>`.
+      // Rewrite that literal text to "Competitor N" so the cloned card
+      // visually matches its re-indexed form field names. We anchor on
+      // the className + closing </div> so we don't false-positive on
+      // any other "Competitor 1" string in the template.
+      var html = srcHtml
+        .replace(/competitor_1_/g, 'competitor_' + newIndex + '_')
+        .replace(/id="competitor_1_/g, 'id="competitor_' + newIndex + '_')
+        .replace(/for="competitor_1_/g, 'for="competitor_' + newIndex + '_')
+        .replace(/data-card-index="1"/, 'data-card-index="' + newIndex + '"')
+        .replace(
+          'class="competitive-audit-col__title">Competitor 1<',
+          'class="competitive-audit-col__title">Competitor ' + newIndex + '<'
+        );
+      // Reset all input values inside the clone — the cloned card
+      // starts blank, pre-fill only lives on the default card.
+      return html.replace(
+        /(<input\b[^>]*?)(?:\s+value="[^"]*")?(\s*\/?>)/g,
+        function (_match, head, tail) {
+          if (/type="checkbox"/.test(head)) {
+            // Default-checked on clones matches the empty-form UX.
+            return head + ' checked' + tail;
+          }
+          return head + ' value=""' + tail;
+        }
+      );
+    }
+
+    function makeRemoveButton(newIndex) {
+      var row = document.createElement('div');
+      row.className = 'competitive-audit-col__remove-row';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn';
+      btn.setAttribute('data-competitive-audit-remove', '');
+      btn.setAttribute('aria-label', 'Remove competitor ' + newIndex);
+      btn.textContent = 'Remove';
+      btn.addEventListener('click', function () {
+        var card = btn.closest('[data-competitive-audit-card]');
+        if (card && card !== defaultCard) card.remove();
+      });
+      row.appendChild(btn);
+      return row;
+    }
+
+    addBtn.addEventListener('click', function () {
+      var newIndex = nextIndex();
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = reindex(defaultCard.outerHTML, newIndex);
+      var newCard = wrapper.firstElementChild;
+      if (!newCard) return;
+      // Append a Remove row (the default card's Remove row is omitted
+      // — Quinn didn't ask for it on the primary card; it stays
+      // until the form is submitted or the user backs out).
+      newCard.appendChild(makeRemoveButton(newIndex));
+      extraContainer.appendChild(newCard);
+    });
+  })();
+</script>
 {% endblock %}

@@ -12,11 +12,6 @@
     rel="stylesheet"
   >
 
-  {# Slice 9: site favicon — multi-resolution ICO derived from
-     app/static/images/psi_logo_3.webp. Fixes the 404 in browser
-     console (sitemenu had no <link rel="icon">). #}
-  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}" sizes="any">
-
   <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
   {% block styles %}{% endblock %}
 
