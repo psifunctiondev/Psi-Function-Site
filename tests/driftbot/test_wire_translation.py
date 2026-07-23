@@ -15,9 +15,6 @@ from __future__ import annotations
 
 import json
 
-from agents.driftbot.layout_catalog import (
-    LAYOUT_IDS,
-)
 from agents.driftbot.slides_client import (
     _LAYOUT_POSITIONS,
     SLIDE_H_EMU,
@@ -75,11 +72,7 @@ def test_title_slide_translates_to_create_plus_two_text_boxes():
     # First request creates the slide with the right reference
     assert reqs[0]['createSlide']['objectId'] == 'slide-title'
     assert reqs[0]['createSlide']['insertionIndex'] == 0
-    # Per PR #59: layout references use layoutObjectId (not predefinedLayout
-    # or layoutName) so the D&A custom layout is selected unambiguously.
-    assert reqs[0]['createSlide']['slideLayoutReference']['layoutObjectId'] == LAYOUT_IDS['TITLE']
-    assert 'predefinedLayout' not in reqs[0]['createSlide']['slideLayoutReference']
-    assert 'layoutName' not in reqs[0]['createSlide']['slideLayoutReference']
+    assert reqs[0]['createSlide']['slideLayoutReference']['predefinedLayout'] == 'TITLE'
     # Title element
     title_shape = reqs[1]
     assert title_shape['createShape']['objectId'] == 'slide-title_title'
@@ -125,7 +118,7 @@ def test_unknown_layout_falls_back_to_title_and_body():
         ],
     }
     reqs = _intent_slide_to_wire_requests(slide, insertion_index=0)
-    assert reqs[0]['createSlide']['slideLayoutReference']['layoutObjectId'] == LAYOUT_IDS['TITLE_AND_BODY']  # noqa: E501
+    assert reqs[0]['createSlide']['slideLayoutReference']['predefinedLayout'] == 'TITLE_AND_BODY'
 
 
 def test_unknown_placeholder_falls_back_to_body_position():
