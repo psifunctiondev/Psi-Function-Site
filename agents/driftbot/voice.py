@@ -50,7 +50,7 @@ D_AND_A_LEXICON = {
         "anchor",
         "drift",
         "cast a wide net",
-        "dive deep",  # allowed in D&A context (their own phrase); blocked in anti-patterns as generic filler  # noqa: E501
+        "dive deep",  # allowed in D&A context (their own phrase); blocked in anti-patterns as generic filler
         "surface",
         "above the noise",
         "above competitive noise",

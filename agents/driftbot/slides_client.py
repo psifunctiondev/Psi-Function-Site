@@ -173,7 +173,7 @@ _LAYOUT_POSITIONS = {
     'TITLE': {
         # Standard big-title slide. Title centered horizontally; subtitle
         # near vertical-center below the title.
-        'TITLE': (914_400, 1_828_800, 10_363_200, 1_524_000),       # ~1" top, full-width-minus-margin, ~1.67" tall, centered horizontally  # noqa: E501
+        'TITLE': (914_400, 1_828_800, 10_363_200, 1_524_000),       # ~1" top, full-width-minus-margin, ~1.67" tall, centered horizontally
         'SUBTITLE': (914_400, 3_657_600, 10_363_200, 914_400),     # ~5" down, half-inch tall
     },
     'TITLE_AND_BODY': {
