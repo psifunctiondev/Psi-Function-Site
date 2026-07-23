@@ -27,18 +27,14 @@ Two responsibilities:
    shape. This module translates intent to wire format.
 
 API flow for one ``save()`` call:
-    1. **Create the presentation:**
-       - With brand template → ``POST /v1/presentations/{template_id}:copy``
-         body=``{"name": <title>}``. The copy endpoint clones the
-         template's masters, layouts, theme, and fonts into a new
-         presentation.
-       - Without template → ``POST /v1/presentations``
-         body=``{"title": <title>}``. Blank deck using the Google
-         default master.
-       Note: there is no ``sourcePresentationId`` body field on
-       ``presentations.create``. The previous implementation sent it
-       and the Slides API rejected every call with HTTP 400
-       ``Unknown name "sourcePresentationId"`` (fixed 2026-07-22).
+    1. ``POST /v1/presentations`` body=
+       ``{"title": ..., "sourcePresentationId": <template_id>}`` —
+       if ``sourcePresentationId`` is set, the new presentation
+       inherits the brand template's masters, layouts, theme, and
+       fonts. If unset, falls back to the Google default master.
+       Only ``title`` and ``sourcePresentationId`` are honored at
+       create time; everything else is ignored (see
+       api.google.com/slides/.../presentations/create).
     2. ``POST /v1/presentations/{id}:batchUpdate`` body=
        ``{"requests": [...CreateSlide + InsertText...]}`` — actually
        inserts the slides + their text elements. Slide layout
@@ -378,55 +374,27 @@ class SlidesClient:
         slides_spec: dict,
         source_presentation_id: str | None = None,
     ) -> str:
-        """Create a new presentation, optionally from a brand template,
-        then batchUpdate with the slide content. Returns the
-        presentation ID.
+        """Step 1+2: create presentation, then batchUpdate with the
+        slide content. Returns the presentation ID.
 
-        Dispatcher for the two underlying endpoints:
-        - ``source_presentation_id`` set → ``presentations.copy``
-          endpoint (``POST /v1/presentations/{template_id}:copy``).
-          The new presentation inherits the template's masters,
-          layouts, theme, and fonts.
-        - ``source_presentation_id`` None → ``presentations.create``
-          (``POST /v1/presentations`` with ``{"title": title}``).
-          Blank deck using Google's default master.
+        If ``source_presentation_id`` is provided, the new
+        presentation is created FROM that template — inheriting the
+        template's masters, layouts, theme, and fonts. This is how
+        we get BrandSight decks that look like Quinn's reference
+        deck without re-implementing layouts in code.
 
-        Then runs ``batchUpdate`` with the rendered slides in either
-        case — the copy endpoint clones masters/layouts, but content
-        (slide pages + text boxes) still needs to be inserted.
+        If ``source_presentation_id`` is None, falls back to the
+        legacy behavior: build a blank presentation from the Google
+        default master.
 
-        Historical note (fixed 2026-07-22): the previous
-        implementation incorrectly sent ``sourcePresentationId`` as a
-        body field on ``POST /v1/presentations``. The Slides API
-        rejects that field with HTTP 400
-        (``Unknown name "sourcePresentationId": Cannot find field.``).
-        The correct shape for "create from template" is the separate
-        ``presentations.copy`` endpoint, which this dispatcher now
-        uses.
-        """
-        if source_presentation_id:
-            return self._create_from_template(
-                template_id=source_presentation_id,
-                title=title,
-                slides_spec=slides_spec,
-            )
-        return self._create_blank(
-            title=title,
-            slides_spec=slides_spec,
-        )
-
-    def _create_blank(
-        self,
-        title: str,
-        slides_spec: dict,
-    ) -> str:
-        """Step 1+2 (blank): POST /v1/presentations, then batchUpdate.
-
-        Creates a presentation with no template (Google default
-        master). Returns the new presentation ID.
+        Per Google's API: ``presentations.create`` ignores everything
+        except ``title`` and ``sourcePresentationId``; actual content
+        goes in batchUpdate.
         """
         url = 'https://slides.googleapis.com/v1/presentations'
         body: dict = {'title': title}
+        if source_presentation_id:
+            body['sourcePresentationId'] = source_presentation_id
         try:
             resp = self._http.post(
                 url, headers=self._auth_headers(),
@@ -442,92 +410,30 @@ class SlidesClient:
                 f'{resp.text[:500]}'
             )
         presentation_id = resp.json()['presentationId']
-        self._apply_batch_update(presentation_id, slides_spec)
-        return presentation_id
 
-    def _create_from_template(
-        self,
-        template_id: str,
-        title: str,
-        slides_spec: dict,
-    ) -> str:
-        """Step 1+2 (template): POST /v1/presentations/{id}:copy.
-
-        ``presentations.copy`` returns a new presentation whose
-        masters/layouts/theme/fonts are cloned from ``template_id``.
-        The Slides API for copy is a separate endpoint from
-        ``presentations.create`` — you can't put
-        ``sourcePresentationId`` in the create body (the field
-        doesn't exist there, despite the local docstring previously
-        claiming otherwise).
-
-        Returns the new presentation ID.
-        """
-        url = (
-            f'https://slides.googleapis.com/v1/presentations/'
-            f'{template_id}:copy'
-        )
-        # Per Google: ``presentations.copy`` body has a single
-        # optional field ``name`` (sets the new deck's title).
-        body: dict = {'name': title}
-        try:
-            resp = self._http.post(
-                url, headers=self._auth_headers(),
-                json=body,
-            )
-        except httpx.HTTPError as exc:
-            raise DriveAuthError(
-                f'presentations.copy transport error: {exc}'
-            ) from exc
-        if resp.status_code != 200:
-            raise DriveAuthError(
-                f'presentations.copy failed for template_id={template_id}: '
-                f'HTTP {resp.status_code} {resp.text[:500]}'
-            )
-        # presentations.copy returns the new presentation resource;
-        # the new id is in the ``presentationId`` field of the response.
-        presentation_id = resp.json()['presentationId']
-        self._apply_batch_update(presentation_id, slides_spec)
-        return presentation_id
-
-    def _apply_batch_update(
-        self,
-        presentation_id: str,
-        slides_spec: dict,
-    ) -> None:
-        """Insert the rendered slides into an existing presentation.
-
-        Shared by ``_create_blank`` and ``_create_from_template``.
-        Slides are added on top of whatever the create/copy produced
-        (blank deck default masters, or cloned masters/layouts from
-        the template). Content goes in via batchUpdate in either
-        case — the copy endpoint clones masters/layouts only, not
-        the actual slide pages.
-
-        On failure, raises ``DriveAuthError`` with the presentation
-        ID so the caller knows an empty/orphan deck exists and can
-        clean up via ``delete_file``.
-        """
+        # Step 2: batchUpdate with the actual slides.
         requests = build_batch_update_requests(slides_spec.get('slides', []))
-        if not requests:
-            return
-        update_url = (
-            f'https://slides.googleapis.com/v1/presentations/'
-            f'{presentation_id}:batchUpdate'
-        )
-        update_resp = self._http.post(
-            update_url, headers=self._auth_headers(),
-            json={'requests': requests},
-        )
-        if update_resp.status_code != 200:
-            raise DriveAuthError(
-                f'presentations.batchUpdate failed after create for '
-                f'presentation_id={presentation_id}: '
-                f'HTTP {update_resp.status_code} '
-                f'{update_resp.text[:500]}. '
-                f'An empty presentation was created — clean up via '
-                f'the Drive UI or call files.delete.'
+        if requests:
+            update_url = (
+                f'https://slides.googleapis.com/v1/presentations/'
+                f'{presentation_id}:batchUpdate'
             )
+            update_resp = self._http.post(
+                update_url, headers=self._auth_headers(),
+                json={'requests': requests},
+            )
+            if update_resp.status_code != 200:
+                # Orphan presentation exists at this point. Surface
+                # the failure with a hint so we can clean up manually.
+                raise DriveAuthError(
+                    f'presentations.batchUpdate failed after create '
+                    f'for presentation_id={presentation_id}: '
+                    f'HTTP {update_resp.status_code} '
+                    f'{update_resp.text[:500]}. '
+                    f'An empty presentation was created — clean up via '
+                    f'the Drive UI or call files.delete.'
+                )
+        return presentation_id
 
     def move_to_folder(
         self,
