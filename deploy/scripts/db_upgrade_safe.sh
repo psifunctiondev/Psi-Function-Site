@@ -47,8 +47,17 @@
 # calling `flask db upgrade` directly. Until then, prefer this
 # wrapper.
 #
-# Refs: PR #71, the 2026-07-23 Drift & Anchor pivot from
-# portal-DB to email intake.
+# Why Python+psycopg instead of psql
+# ----------------------------------
+# Earlier versions of this script used psql directly, but the
+# deploy hosts don't ship the psql binary. The Python interpreter
+# + psycopg (already a runtime dep of the Flask app, installed by
+# deploy_release.sh's pip install step) is always available, so
+# the bridge SQL runs through `python -c "import psycopg; ..."`.
+#
+# Refs: PR #71, PR #72 (wrapper), PR #73 (URL-parsing fix),
+# the 2026-07-23 Drift & Anchor pivot from portal-DB to email
+# intake.
 #
 # Usage: bash deploy/scripts/db_upgrade_safe.sh [env_name]
 #
@@ -100,58 +109,87 @@ fi
 BRIDGE_FROM='e3f4a5b6c7d8'
 BRIDGE_TO='d2e3f4a5b6c7'
 
-# Locate psql. PostgreSQL only — these are Linux deploy hosts.
-PSQL_BIN="$(command -v psql)"
-if [ -z "$PSQL_BIN" ]; then
-  echo "ERROR: psql not found on PATH" >&2
+# Locate Python. deploy_release.sh puts the app's .venv at
+# $NEW_RELEASE/.venv (the release dir for the just-built version).
+# Fall back to whatever python3 is on PATH if that doesn't exist
+# (e.g. local dry-run).
+PYTHON_BIN=""
+for candidate in "$NEW_RELEASE/.venv/bin/python" "$SOURCE_DIR/.venv/bin/python" "$(command -v python3)"; do
+  if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+    PYTHON_BIN="$candidate"
+    break
+  fi
+done
+
+if [ -z "$PYTHON_BIN" ]; then
+  echo "ERROR: no usable python interpreter found" >&2
   exit 1
 fi
 
-# Parse the connection string. We don't try to be clever —
-# the deploy hosts use postgresql://user:pass@host[:port]/dbname
-# (port optional; defaults to 5432) and the testing config
-# matches exactly (see deploy/env/testing.app.env.example).
-DB_URL_NO_SCHEME="${DATABASE_URL#postgresql://}"
-DB_USER_PASS="${DB_URL_NO_SCHEME%%@*}"
-DB_HOST_PORT_DB="${DB_URL_NO_SCHEME#*@}"
-
-DB_USER="${DB_USER_PASS%%:*}"
-DB_PASS="${DB_USER_PASS#*:}"
-DB_HOST_PORT_DB="${DB_HOST_PORT_DB%%/*}"   # drop /dbname and any query string
-
-if [[ "$DB_HOST_PORT_DB" == *:* ]]; then
-  DB_HOST="${DB_HOST_PORT_DB%%:*}"
-  DB_PORT="${DB_HOST_PORT_DB#*:}"
-else
-  DB_HOST="$DB_HOST_PORT_DB"
-  DB_PORT="5432"
+# Verify the chosen Python can import psycopg (the runtime DB
+# driver). If not, fall back to PATH python3 which has the app's
+# site-packages from deploy_release.sh's pip install step.
+if ! "$PYTHON_BIN" -c "import psycopg" 2>/dev/null; then
+  for fallback in "$(command -v python3)" "$(command -v python)"; do
+    if [ -n "$fallback" ] && [ -x "$fallback" ] && "$fallback" -c "import psycopg" 2>/dev/null; then
+      PYTHON_BIN="$fallback"
+      break
+    fi
+  done
 fi
 
-DB_NAME="${DB_URL_NO_SCHEME##*/}"
-DB_NAME="${DB_NAME%%\?*}"   # strip query params if any
+echo "[db_upgrade_safe] env=$ENV_NAME python=$PYTHON_BIN"
 
-echo "[db_upgrade_safe] env=$ENV_NAME db=$DB_NAME host=$DB_HOST:$DB_PORT"
+# Run the bridge SQL through psycopg. We inline a Python heredoc
+# so the script doesn't need a separate .py file in the deploy
+# dir. Captures stdout (the version string) and exits non-zero
+# on any error so set -e + pipefail surface the failure.
+read_current_version() {
+  "$PYTHON_BIN" - "$DATABASE_URL" <<'PYEOF'
+import sys
+import psycopg
 
-# Read current alembic version. Use a single-quoted SQL string
-# with the password passed via PGPASSWORD (cleaner than URL-encoding).
-CURRENT_VERSION="$(
-  PGPASSWORD="$DB_PASS" "$PSQL_BIN" \
-    -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
-    -tA -c "SELECT version_num FROM alembic_version" 2>&1
-)"
+url = sys.argv[1]
+with psycopg.connect(url, connect_timeout=10) as conn:
+    with conn.cursor() as cur:
+        cur.execute("SELECT version_num FROM alembic_version")
+        row = cur.fetchone()
+        if row is None:
+            print("__MISSING__", end="")
+            sys.exit(2)
+        print(row[0], end="")
+PYEOF
+}
 
-if [ -z "$CURRENT_VERSION" ]; then
-  echo "[db_upgrade_safe] ERROR: could not read alembic_version (table missing?)" >&2
+stamp_to_version() {
+  local target_version="$1"
+  "$PYTHON_BIN" - "$DATABASE_URL" "$target_version" <<'PYEOF'
+import sys
+import psycopg
+
+url = sys.argv[1]
+target = sys.argv[2]
+with psycopg.connect(url, connect_timeout=10) as conn:
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE alembic_version SET version_num = %s",
+            (target,),
+        )
+    conn.commit()
+PYEOF
+}
+
+CURRENT_VERSION="$(read_current_version)" || {
+  rc=$?
+  echo "[db_upgrade_safe] ERROR: could not read alembic_version (rc=$rc)" >&2
   exit 1
-fi
+}
 
 echo "[db_upgrade_safe] current alembic_version = $CURRENT_VERSION"
 
 if [ "$CURRENT_VERSION" = "$BRIDGE_FROM" ]; then
   echo "[db_upgrade_safe] DB stuck at deleted $BRIDGE_FROM — stamping to $BRIDGE_TO"
-  PGPASSWORD="$DB_PASS" "$PSQL_BIN" \
-    -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
-    -q -c "UPDATE alembic_version SET version_num = '$BRIDGE_TO'"
+  stamp_to_version "$BRIDGE_TO"
   echo "[db_upgrade_safe] stamped. alembic_version now $BRIDGE_TO"
 else
   echo "[db_upgrade_safe] no bridge needed (current=$CURRENT_VERSION, bridge_from=$BRIDGE_FROM)"
@@ -163,10 +201,10 @@ echo "[db_upgrade_safe] running: $FLASK_APP flask db upgrade head"
 FLASK_APP="$FLASK_APP" flask db upgrade head
 
 # Sanity-check the result.
-NEW_VERSION="$(
-  PGPASSWORD="$DB_PASS" "$PSQL_BIN" \
-    -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
-    -tA -c "SELECT version_num FROM alembic_version"
-)"
+NEW_VERSION="$(read_current_version)" || {
+  rc=$?
+  echo "[db_upgrade_safe] ERROR: could not re-read alembic_version (rc=$rc)" >&2
+  exit 1
+}
 echo "[db_upgrade_safe] new alembic_version = $NEW_VERSION"
 echo "[db_upgrade_safe] OK"
