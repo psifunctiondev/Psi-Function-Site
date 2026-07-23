@@ -473,15 +473,6 @@ class SlidesClient:
         try:
             resp = self._http.post(
                 url, headers=self._auth_headers(),
-                # Template lives in the DrifterBot Shared Drive
-                # (see portal-integration-spec §13.4). Without
-                # ``supportsAllDrives=true`` the Slides API returns
-                # HTTP 400 with an HTML error page (Google's
-                # generic "you can't touch this file from this
-                # context" template, not a JSON error envelope).
-                # Same flag we already use on move_to_folder's
-                # files.patch and delete_file's files.delete.
-                params={'supportsAllDrives': 'true'},
                 json=body,
             )
         except httpx.HTTPError as exc:
