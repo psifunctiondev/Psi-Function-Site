@@ -303,12 +303,7 @@ BRANDING_PROFILES = {
         # than the default CTAI square logo.
         'logo_max_height': '5rem',
         'banner_url': (
-            # HTTPS — testing.psifunction.com is HTTPS, so an HTTP
-            # subresource gets silently blocked as mixed content
-            # (no network request fires, no DevTools "blocked" row;
-            # the image just doesn't appear). Squarespace serves both
-            # schemes — the hero asset is reachable on HTTPS.
-            'https://static1.squarespace.com/static/'
+            'http://static1.squarespace.com/static/'
             '67dec82c885d36503ddeb44e/t/68483d1e11a80855d83d3ffc/'
             '1749564702103/D%26A_social-share.jpg?format=1500w'
         ),
