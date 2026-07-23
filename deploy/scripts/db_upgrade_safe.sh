@@ -113,8 +113,12 @@ BRIDGE_TO='d2e3f4a5b6c7'
 # $NEW_RELEASE/.venv (the release dir for the just-built version).
 # Fall back to whatever python3 is on PATH if that doesn't exist
 # (e.g. local dry-run).
+#
+# NOTE: deploy_release.sh does NOT export $NEW_RELEASE / $SOURCE_DIR
+# into the subshell, so we use ${VAR:-} defaults to keep `set -u`
+# happy on the first reference.
 PYTHON_BIN=""
-for candidate in "$NEW_RELEASE/.venv/bin/python" "$SOURCE_DIR/.venv/bin/python" "$(command -v python3)"; do
+for candidate in "${NEW_RELEASE:-}/.venv/bin/python" "${SOURCE_DIR:-}/.venv/bin/python" "$(command -v python3)"; do
   if [ -n "$candidate" ] && [ -x "$candidate" ]; then
     PYTHON_BIN="$candidate"
     break
