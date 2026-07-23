@@ -31,7 +31,6 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from agents.driftbot.slides_client import (
-    DriveAuthError,
     DriveFolderAccessError,
     SlidesClient,
 )
@@ -256,69 +255,3 @@ def test_move_to_folder_raises_drive_folder_access_on_get_404(client):
     client.set_next_handlers([get_handler])
     with pytest.raises(DriveFolderAccessError, match='files.get .pre-move. failed'):
         client.move_to_folder('PRES-E', 'FOLDER', 'N')
-
-
-# ------------------------------------------------------------------
-# delete_file — cleanup-on-failure helper
-# ------------------------------------------------------------------
-
-
-def test_delete_file_uses_delete_method_with_supports_alldrives(client):
-    """Wire shape for cleanup: DELETE method, supportsAllDrives=true
-    query param. Catches future regressions if the cleanup path
-    diverges from create/move.
-    """
-    requests = []
-
-    def delete_handler(request: httpx.Request) -> httpx.Response:
-        requests.append(('DELETE', request))
-        return httpx.Response(204, content=b'')
-
-    client.set_next_handlers([delete_handler])
-    client.delete_file('PRES-CLEANUP')
-
-    assert len(requests) == 1
-    method, req = requests[0]
-    assert method == 'DELETE'
-    assert '/drive/v3/files/PRES-CLEANUP' in str(req.url)
-    assert 'supportsAllDrives=true' in str(req.url)
-
-
-def test_delete_file_swallows_404(client):
-    """An already-gone file shouldn't fail the cleanup path."""
-    def delete_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(404, content=b'not found')
-
-    client.set_next_handlers([delete_handler])
-    # Should NOT raise
-    client.delete_file('PRES-GONE', swallow_404=True)
-
-
-def test_delete_file_raises_on_500(client):
-    """Server errors should raise so caller can decide to retry or log."""
-    def delete_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500, content=b'{"error":{"message":"oops"}}')
-
-    client.set_next_handlers([delete_handler])
-    with pytest.raises(DriveAuthError, match='files.delete failed'):
-        client.delete_file('PRES-DEAD', swallow_404=True)
-
-
-def test_delete_file_404_unswallowed_raises(client):
-    """If swallow_404=False, a 404 is a real error (caller wants to know)."""
-    def delete_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(404, content=b'gone')
-
-    client.set_next_handlers([delete_handler])
-    with pytest.raises(DriveAuthError, match='files.delete failed'):
-        client.delete_file('PRES-GONE', swallow_404=False)
-
-
-def test_delete_file_204_is_success(client):
-    """Both 200 and 204 are valid Drive success responses."""
-    for code in (200, 204):
-        def delete_handler(request: httpx.Request, code=code) -> httpx.Response:
-            return httpx.Response(code, content=b'')
-
-        client.set_next_handlers([delete_handler])
-        client.delete_file(f'PRES-{code}')  # should not raise

@@ -84,17 +84,14 @@ class FakeSlidesClient:
         move_returns: str = 'https://docs.google.com/presentation/d/PRES-ID-1234/edit',
         create_raises: Exception | None = None,
         move_raises: Exception | None = None,
-        delete_raises: Exception | None = None,
     ):
         self.create_calls = []
         self.move_calls = []
         self.export_calls = []
-        self.delete_calls = []
         self._create_returns = create_returns
         self._move_returns = move_returns
         self._create_raises = create_raises
         self._move_raises = move_raises
-        self._delete_raises = delete_raises
 
     def create_presentation(self, title, slides_spec):
         self.create_calls.append((title, slides_spec))
@@ -107,12 +104,6 @@ class FakeSlidesClient:
         if self._move_raises is not None:
             raise self._move_raises
         return self._move_returns
-
-    def delete_file(self, file_id, *, swallow_404: bool = True):
-        self.delete_calls.append((file_id, swallow_404))
-        if self._delete_raises is not None:
-            raise self._delete_raises
-        return None
 
 
 # ------------------------------------------------------------------
@@ -254,12 +245,7 @@ def test_no_export_or_write_call_in_save(
 def test_drive_save_strategy_propagates_move_failure(
     draft, slides_spec, monkeypatch,
 ):
-    """Create succeeded, move failed → orphan deleted, no SaveResult.
-
-    The cleanup-on-failure path is the headline behavior of this
-    version. Without it, every move-failure leaves a stranded
-    presentation in the impersonated user's My Drive root.
-    """
+    """Create succeeded, move failed → orphan in Drive, no SaveResult."""
     from agents.driftbot.slides_client import DriveFolderAccessError
     monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-XYZ')
     monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'who@where.com')
@@ -277,58 +263,6 @@ def test_drive_save_strategy_propagates_move_failure(
         strategy.save(draft, slides_spec)
     assert len(client.create_calls) == 1
     assert len(client.move_calls) == 1
-    # Cleanup path: delete_file called with the orphan presentation_id
-    assert client.delete_calls == [('PRES-ORPHAN', True)]
-
-
-def test_drive_save_strategy_cleanup_failure_does_not_shadow_original_error(
-    draft, slides_spec, monkeypatch,
-):
-    """If both move fails AND delete fails, the original move error
-    is the one surfaced. Cleanup failure is logged but not raised.
-    Otherwise a transient orphan-cleanup glitch would mask the real
-    cause in logs / DB rows.
-    """
-    from agents.driftbot.slides_client import (
-        DriveAuthError,
-        DriveFolderAccessError,
-    )
-    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-XYZ')
-    monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'who@where.com')
-    client = FakeSlidesClient(
-        create_returns='PRES-ORPHAN',
-        move_raises=DriveFolderAccessError('files.patch 404'),
-        delete_raises=DriveAuthError('files.delete 500'),
-    )
-    strategy = DriveSaveStrategy(
-        service_account_json_path='/tmp/x.json',
-        subject='who@where.com',
-        output_folder_id='FOLDER-XYZ',
-        slides_client=client,
-    )
-    with pytest.raises(DriveFolderAccessError, match='files.patch 404'):
-        strategy.save(draft, slides_spec)
-    # delete was attempted (and raised internally), still recorded
-    assert client.delete_calls == [('PRES-ORPHAN', True)]
-
-
-def test_drive_save_strategy_no_delete_on_success(
-    draft, slides_spec, monkeypatch,
-):
-    """Happy path never calls delete_file. Cleanup is for failure only.
-    """
-    monkeypatch.setenv('BRANDSIGHT_OUTPUT_FOLDER_ID', 'FOLDER-XYZ')
-    monkeypatch.setenv('DRIFTERBOT_SUBJECT', 'who@where.com')
-    client = FakeSlidesClient()
-    strategy = DriveSaveStrategy(
-        service_account_json_path='/tmp/x.json',
-        subject='who@where.com',
-        output_folder_id='FOLDER-XYZ',
-        slides_client=client,
-    )
-    result = strategy.save(draft, slides_spec)
-    assert result.presentation_id == 'PRES-ID-1234'
-    assert client.delete_calls == []
 
 
 def test_drive_save_strategy_propagates_create_failure(
