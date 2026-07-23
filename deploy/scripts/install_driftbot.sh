@@ -13,12 +13,8 @@
 #     the droplet; this script just makes the unit available)
 #
 # --apply gated: by default prints a [DRY-RUN] plan; pass --apply to actually
-# install the unit, reload systemd, enable it, and start it.
-#
-# The unit runs as a long-lived loop (Restart=always in the unit file)
-# that polls every few seconds for new submissions and exits cleanly
-# when idle. After --apply, it stays running; deploy_release.sh
-# restarts it on every deploy to pick up new code.
+# install the unit, reload systemd, and print final state. Never enables
+# or starts the unit — cron will fire it.
 #
 
 set -Eeuo pipefail
@@ -28,9 +24,10 @@ usage() {
 Usage: $0 <testing|staging|production> [--apply]
 
 By default, runs in dry-run mode (prints [DRY-RUN] plan, exits 0).
-Pass --apply to install the unit, reload systemd, enable it, and
-start it. After --apply the worker runs continuously and
-deploy_release.sh restarts it on every deploy.
+Pass --apply to actually install the unit and reload systemd.
+
+The installer never enables or starts the unit — cron on Belel fires
+the worker via SSH to the droplet.
 EOF
   exit 1
 }
@@ -132,12 +129,8 @@ sudo install -m 0644 "$SRC" "$DEST"
 log "Reloading systemd daemon"
 sudo systemctl daemon-reload
 
-log "Enabling and starting $SERVICE_INSTANCE"
-sudo systemctl enable "$SERVICE_INSTANCE"
-sudo systemctl restart "$SERVICE_INSTANCE"
+log "Installed unit (NOT enabled, NOT started — cron will fire it):"
+sudo systemctl cat "$SERVICE_INSTANCE" || true
 
-log "Installed + enabled + started unit:"
-sudo systemctl status "$SERVICE_INSTANCE" --no-pager || true
-
-log "Done. The unit is enabled at $DEST and running. deploy_release.sh"
-log "will restart it on every deploy to pick up new code."
+log "Done. The unit is available at $DEST but not enabled. Cron on Belel"
+log "will fire 'ssh ... $SERVICE_INSTANCE' to run the worker."
