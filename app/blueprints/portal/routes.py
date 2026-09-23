@@ -103,7 +103,20 @@ def admin_overview():
 @portal_bp.get('/p/<slug>')
 @login_required
 def client_dashboard(slug: str):
-    """Client dashboard — shows resources grouped by category, themed per client."""
+    """Client dashboard — shows resources grouped by category, themed per client.
+
+    The "Projects" card is now OpenProject-backed when the client has an
+    ``openproject_master_project_id`` set: it renders one row per OP
+    project (master + direct children) with a link to the per-project
+    summary page. For clients without an OP master (ACME, CTAI today),
+    the card falls back to the legacy ``backlog`` ClientResource list.
+    See ``portal/_projects_card.html``.
+
+    OP fetch errors are non-fatal — the partial renders a polite
+    "temporarily unavailable" message rather than blowing up the
+    dashboard. The portal render path must never raise from an OP
+    read.
+    """
     client = Client.query.filter_by(slug=slug, is_active=True).first_or_404()
 
     # Check access: user must belong to this client or be an admin
@@ -132,6 +145,25 @@ def client_dashboard(slug: str):
         .all()
     )
 
+    # OpenProject project list for the "Projects" card. Only attempt
+    # when the client has a master project wired AND the OP env vars
+    # are configured — otherwise the helper raises and we fall back.
+    op_projects = None
+    op_projects_status = 'unconfigured'
+    if client.openproject_master_project_id is not None:
+        try:
+            from app.services.openproject_config import current_op_client
+            from app.services.openproject_portal import get_client_projects
+
+            op = current_op_client()
+            op_projects = get_client_projects(client, op)
+            op_projects_status = 'ok' if op_projects else 'error'
+        except Exception:  # noqa: BLE001 — render path, swallow + log
+            op_projects_status = 'error'
+            current_app.logger.exception(
+                'OP project fetch failed for client %s', client.slug,
+            )
+
     return render_template(
         'portal/dashboard.html',
         client=client,
@@ -140,6 +172,79 @@ def client_dashboard(slug: str):
         resources_by_cat=grouped,
         categories=ClientResource.CATEGORIES,
         client_users=client_users,
+        op_projects=op_projects,
+        op_projects_status=op_projects_status,
+    )
+
+
+@portal_bp.get('/p/<slug>/projects/<int:op_identifier>')
+@login_required
+def project_summary(slug: str, op_identifier: int):
+    """Project summary page — three read-only tabs (commit 3).
+
+    URL: ``GET /p/<slug>/projects/<op-identifier>?tab=progress|status|backlog``
+
+    Default tab is ``progress`` per the kickoff. The
+    ``<op-identifier>`` is the OP master or child project id; access
+    gating requires the project to belong to the client's OP master
+    tree (master or direct child). Cross-client requests 404 — same
+    leak-protection as the competitive-audit route.
+
+    The page renders server-side via per-tab Jinja partials so tab
+    switches are full-page navigations (bookmarkable, browser back
+    works). SortableJS drag-drop and optimistic-UI writes land in
+    commit 5.
+    """
+    from app.services.openproject_config import (
+        OpenProjectConfigError,
+        current_op_client,
+    )
+    from app.services.openproject_portal import get_client_projects
+
+    client = Client.query.filter_by(slug=slug, is_active=True).first_or_404()
+    if not current_user.is_admin and (
+        not current_user.client or current_user.client.id != client.id
+    ):
+        abort(403)
+
+    # Cross-client guard: the requested op_identifier must be the
+    # client's own master project OR one of its direct children. A
+    # random / other-client id must 404, not 403 — we don't leak
+    # whether other OP projects exist.
+    if client.openproject_master_project_id is None:
+        abort(404)
+
+    try:
+        op = current_op_client()
+        projects = get_client_projects(client, op)
+    except OpenProjectConfigError:
+        abort(503)
+    except Exception:  # noqa: BLE001 — render path, degrade gracefully
+        current_app.logger.exception(
+            'OP project fetch failed for %s/%s', client.slug, op_identifier,
+        )
+        projects = []
+
+    valid_ids = {p['id'] for p in projects if isinstance(p.get('id'), int)}
+    if op_identifier not in valid_ids:
+        abort(404)
+
+    # Find the matching project dict for display
+    project = next((p for p in projects if p.get('id') == op_identifier), None)
+    if project is None:
+        abort(404)
+
+    tab = request.args.get('tab', 'progress')
+    if tab not in ('progress', 'status', 'backlog'):
+        tab = 'progress'
+
+    return render_template(
+        'portal/project_summary.html',
+        client=client,
+        user=current_user,
+        project=project,
+        projects=projects,
+        tab=tab,
     )
 
 

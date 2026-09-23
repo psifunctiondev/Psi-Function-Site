@@ -1,0 +1,81 @@
+{# -----------------------------------------------------------------
+   Projects card — OpenProject-backed with static fallback.
+
+   When the client has an ``openproject_master_project_id`` set, this
+   card renders one row per OP project (master + direct children) with
+   a link to the per-project summary page (/p/<slug>/projects/<id>).
+   Otherwise it falls back to the legacy ``backlog`` ClientResource
+   list so ACME / CTAI / non-OP clients keep their existing projects
+   view untouched.
+
+   Two context vars this partial consumes:
+
+     * op_projects         — list[dict] from
+                             openproject_portal.get_client_projects().
+                             Each row carries ``portal_role`` ('master'
+                             or 'child'). May be None if OP not
+                             configured (the fallback path).
+     * op_projects_status  — str | None. 'ok' = rendered from OP,
+                             'error' = configured but OP failed,
+                             'unconfigured' = no master_project_id.
+
+   Per the kickoff: each row is clickable → summary page. Read-only
+   this commit; drag-drop + status mutation are commit 5.
+   ----------------------------------------------------------------- #}
+
+{% if op_projects_status == 'ok' %}
+  <div class="portal-dashboard-col__items">
+    {% for p in op_projects %}
+      <a class="portal-dashboard-col__item portal-projects-row"
+         href="{{ url_for('portal.project_summary', slug=client.slug, op_identifier=p.id) }}">
+        <span class="portal-projects-row__name">
+          {% if p.portal_role == 'master' %}
+            <strong>{{ p.name }}</strong>
+          {% else %}
+            {{ p.name }}
+          {% endif %}
+        </span>
+        <span class="portal-projects-row__meta">
+          {# OP project status (ON_TRACK / AT_RISK / etc.) comes via
+             _links.status when the OP instance has a project status
+             configured. Until ops wires that, we surface the
+             identifier + last-updated timestamp as honest defaults. #}
+          {% set ps = p.get('_links', {}).get('status', {}).get('title') %}
+          {% if ps %}
+            <span class="portal-projects-row__status">{{ ps }}</span>
+          {% endif %}
+          {% if p.updatedAt %}
+            <span class="portal-projects-row__updated">
+              updated {{ p.updatedAt[:10] }}
+            </span>
+          {% endif %}
+          {% if p.portal_role == 'master' %}
+            <span class="portal-projects-row__role">master</span>
+          {% endif %}
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+
+{% elif op_projects_status == 'error' %}
+  <div class="portal-dashboard-col__items">
+    <span class="portal-dashboard-col__empty">
+      OpenProject temporarily unavailable — try again in a minute.
+    </span>
+  </div>
+
+{% else %}
+  {# Legacy fallback: render the 'backlog' ClientResource rows so
+     clients without an OP master project_id (ACME, CTAI) keep the
+     previous UX. This path disappears once every active client has
+     an OP master project wired up. #}
+  <div class="portal-dashboard-col__items">
+    {% for r in resources_by_cat.get('backlog', []) %}
+      <a class="portal-dashboard-col__item" href="{{ r.external_url or url_for('static', filename=r.file_path) }}" {% if r.external_url %}target="_blank" rel="noopener noreferrer"{% endif %}>
+        {{ r.title }}
+      </a>
+    {% else %}
+      <span class="portal-dashboard-col__empty">No project plans yet</span>
+    {% endfor %}
+  </div>
+{% endif %}

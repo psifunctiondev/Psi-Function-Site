@@ -1,0 +1,54 @@
+{# Status tab — read-only kanban board, 4x4 grid (commit 3 stub).
+   Per client-portal-kanban.excalidraw v0.4:
+   - Top row (active cycle): New · Ready · In progress · In testing
+   - Bottom row (terminal / stuck): Blocked · Rejected · Deployed · Completed
+
+   Read-only this commit. SortableJS drag-drop + status mutation land
+   in commit 5.
+
+   The cards list individual User stories (type filter) sorted by
+   methodos_sequence (customField4). Stories are loaded server-side from
+   OP at render — placeholder counts render when no WPs are fetched
+   yet (the snapshot / WP fetch wiring lands in commit 4). #}
+
+{% set top_statuses = ('New','Ready','In progress','In testing') %}
+{% set bottom_statuses = ('Blocked','Rejected','Deployed','Completed') %}
+
+<div class="portal-kanban">
+
+  <h2 class="portal-kanban__title">{{ project.name }} — kanban board</h2>
+  <p class="portal-kanban__caption">
+    Read-only view · drag-and-drop wiring lands in commit 5.
+  </p>
+
+  <div class="portal-kanban__row">
+    {% for status in top_statuses %}
+      <div class="portal-kanban__col" data-status="{{ status }}">
+        <header class="portal-kanban__col-header">
+          <h3 class="portal-kanban__col-title">{{ status }}</h3>
+          <span class="portal-kanban__col-count">— stories · — pts</span>
+        </header>
+        <div class="portal-kanban__cards">
+          {# Placeholder body — commit 5 wires the WP fetch and
+             renders cards here. #}
+          <p class="portal-kanban__placeholder">Stories render here in commit 5.</p>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="portal-kanban__row portal-kanban__row--terminal">
+    {% for status in bottom_statuses %}
+      <div class="portal-kanban__col" data-status="{{ status }}">
+        <header class="portal-kanban__col-header">
+          <h3 class="portal-kanban__col-title">{{ status }}</h3>
+          <span class="portal-kanban__col-count">— stories · — pts</span>
+        </header>
+        <div class="portal-kanban__cards">
+          <p class="portal-kanban__placeholder">Stories render here in commit 5.</p>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>

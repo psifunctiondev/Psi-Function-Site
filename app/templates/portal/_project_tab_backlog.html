@@ -1,0 +1,37 @@
+{# Backlog tab — prioritized list of OPEN User stories (commit 3 stub).
+   Read-only this commit. SortableJS drag-reorder + priority mutation
+   land in commit 5.
+
+   OPEN = stories in any kanban-top status (New, Ready, In progress,
+   In testing) plus Blocked + Rejected. Excludes Deployed / Completed
+   (terminal — those live on the kanban bottom row only).
+
+   Each row shows: title · current status · target completion week
+   (= OP version end-date, or '—' if unversioned). Sorted by
+   methodos_sequence (customField4) ascending. #}
+
+<div class="portal-backlog">
+  <h2 class="portal-backlog__title">{{ project.name }} — backlog</h2>
+  <p class="portal-backlog__caption">
+    Prioritized list of open user stories · drag-to-reorder wiring
+    lands in commit 5.
+  </p>
+
+  <table class="portal-backlog__table">
+    <thead>
+      <tr>
+        <th scope="col">Title</th>
+        <th scope="col">Status</th>
+        <th scope="col">Target week</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="portal-backlog__placeholder-row">
+        <td colspan="3" class="portal-backlog__placeholder">
+          Backlog rows render here in commit 5 (User-story filtered,
+          sorted by methodos_sequence).
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
