@@ -842,3 +842,122 @@ a.portal-dashboard-col__item:hover {
     padding: var(--space-1) 0;
   }
 }
+
+/* =============================================================
+   Portal kanban (commit 5) — drag-drop affordances + flash banner.
+   Cards live inside .portal-kanban__col[data-status] columns.
+   ============================================================= */
+
+.portal-kanban {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.portal-kanban__flash {
+  padding: var(--space-2) var(--space-3);
+  border-radius: 6px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  margin-block-end: var(--space-2);
+}
+.portal-kanban__flash--error {
+  background: rgba(214, 78, 55, 0.12);
+  color: #8a2f1f;
+  border: 1px solid rgba(214, 78, 55, 0.4);
+}
+.portal-kanban__flash--success {
+  background: rgba(125, 180, 108, 0.15);
+  color: #2f5c2a;
+  border: 1px solid rgba(125, 180, 108, 0.5);
+}
+
+.portal-kanban__card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+  margin-block-end: var(--space-2);
+  cursor: grab;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.portal-kanban__card:last-child {
+  margin-block-end: 0;
+}
+.portal-kanban__card--ghost {
+  opacity: 0.4;
+  background: var(--color-link);
+  color: var(--color-surface);
+}
+.portal-kanban__card--chosen {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+.portal-kanban__card--dragging {
+  cursor: grabbing;
+  transform: rotate(-1deg);
+}
+
+.portal-kanban__card-number {
+  font-family: var(--font-family-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.portal-kanban__card-title {
+  margin: var(--space-1) 0 0 0;
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-heading);
+}
+.portal-kanban__card-meta {
+  margin-block-start: var(--space-1);
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.portal-kanban__col--drop-target {
+  outline: 2px dashed var(--color-link);
+  outline-offset: -2px;
+}
+
+/* =============================================================
+   Portal backlog (commit 5) — sortable row + flash banner.
+   ============================================================= */
+
+.portal-backlog__flash {
+  padding: var(--space-2) var(--space-3);
+  border-radius: 6px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  margin-block-end: var(--space-2);
+}
+.portal-backlog__flash--error {
+  background: rgba(214, 78, 55, 0.12);
+  color: #8a2f1f;
+  border: 1px solid rgba(214, 78, 55, 0.4);
+}
+.portal-backlog__flash--success {
+  background: rgba(125, 180, 108, 0.15);
+  color: #2f5c2a;
+  border: 1px solid rgba(125, 180, 108, 0.5);
+}
+
+.portal-backlog__row {
+  cursor: grab;
+}
+.portal-backlog__row--ghost {
+  opacity: 0.4;
+  background: var(--color-link);
+  color: var(--color-surface);
+}
+.portal-backlog__row--chosen {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+.portal-backlog__row--dragging {
+  cursor: grabbing;
+}
+
+.portal-backlog__row td {
+  padding-block: var(--space-2);
+}
