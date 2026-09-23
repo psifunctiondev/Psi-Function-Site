@@ -14,6 +14,15 @@ Error mapping (see :func:`_raise_for_status`):
     * 409        -> :class:`OpenProjectConcurrencyError`
     * 422        -> :class:`OpenProjectValidationError`
     * other 4xx/5xx -> :class:`OpenProjectError`
+
+Status ordering (commit 3 of OP integration):
+    The portal renders the kanban board with 8 statuses laid out in a 4x4
+    grid (top row: active cycle; bottom row: terminal / out-of-cycle) —
+    see ``client-portal-kanban.excalidraw`` (v0.4). ``STATUS_ORDER`` is
+    the canonical left-to-right list shared by both the kanban board
+    and the StatusDetails tab nav. ``KANBAN_STATUS_TOP`` and
+    ``KANBAN_STATUS_BOTTOM`` split the eight into the two rows for the
+    grid layout.
 """
 
 from __future__ import annotations
@@ -32,12 +41,39 @@ __all__ = [
     "OpenProjectConcurrencyError",
     "OpenProjectValidationError",
     "STATUS_ORDER",
+    "KANBAN_STATUS_TOP",
+    "KANBAN_STATUS_BOTTOM",
 ]
 
-# Canonical left-to-right status ordering for the Status kanban (Phase 1).
-# Any statuses present in the instance but not listed here are appended in
-# the order the API returns them. See spec "Status & column ordering".
-STATUS_ORDER = ["New", "Ready", "In progress", "Completed", "Deployed"]
+# Canonical left-to-right status ordering shared by both the kanban board
+# and the StatusDetails tab nav. Eight statuses, in the order they appear
+# on the kanban (top row first, then bottom row) — see
+# client-portal-kanban.excalidraw (kanban v0.4, 4x4 grid). Any statuses
+# present in the instance but not listed here are appended in the order
+# the API returns them. See spec "Status & column ordering".
+STATUS_ORDER = [
+    "New",
+    "Ready",
+    "In progress",
+    "In testing",
+    "Blocked",
+    "Rejected",
+    "Deployed",
+    "Completed",
+]
+
+# Top-row (active cycle) statuses on the kanban board, in left-to-right
+# order. The Status tab on the project summary page uses these as
+# columns. Per kanban wireframe design notes: "No 'Completed' in the
+# top row by design: a finished story falls out of the active pipeline
+# and lands in the bottom-row Completed archive bucket — keeps the top
+# row signal-rich".
+KANBAN_STATUS_TOP = ("New", "Ready", "In progress", "In testing")
+
+# Bottom-row (terminal / out-of-cycle) statuses, left-to-right.
+# Blocked and Rejected are "stuck" states; Deployed and Completed are
+# terminal.
+KANBAN_STATUS_BOTTOM = ("Blocked", "Rejected", "Deployed", "Completed")
 
 # Pagination safety cap: 10 pages * 100 = 1000 work packages. Plenty for now.
 _MAX_PAGES = 10
