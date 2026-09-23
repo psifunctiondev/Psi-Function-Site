@@ -1,20 +1,22 @@
-"""Unit tests for the OpenProject portal helper.
+"""Unit tests for the portal-side OpenProject helper module.
 
-Covers:
+``app/services/openproject_portal.py`` is the thin layer between the raw
+``OpenProjectClient`` and the portal's render paths — it adds the
+domain-specific patterns the routes need:
 
-* ``get_client_projects`` — returns master + children when master is
-  set; ``[]`` when master_id is None; degrades gracefully on OP errors
-  (no exception bubbles into the render path).
-* ``status_distribution`` — sums ``storyPoints`` per status name.
-* ``count_by_status`` — counts work packages per status name.
-* ``order_statuses`` — sorts names by :data:`STATUS_ORDER`, preserves
-  unknown names at the tail.
-* ``percent_complete`` — returns int 0..100 for known statuses; ``None``
-  when the distribution is empty.
-* ``is_open_status`` — true for kanban-top + Blocked + Rejected.
+* Walking a client's master + direct-child projects (graceful fallback
+  on OP errors so the dashboard still renders).
+* Status distributions (story-point sums per status) for the Progress
+  chart and snapshot cron.
+* Count by status for the kanban column headers.
+* Ordering statuses by the canonical ``STATUS_ORDER`` (with unknown
+  statuses appended so they don't disappear).
+* Percent-complete math for the dashboard card.
+* The "is this status open?" check for the Backlog tab.
 
-All tests are method-level — no HTTP is touched, no fixtures beyond
-stock ones.
+Tests are pure functions over raw OP payload dicts — no HTTP, no
+database, no Flask app. The render-path integration is covered by the
+route tests in ``tests/test_portal_openproject.py`` (commit 3b).
 """
 
 from __future__ import annotations
@@ -27,9 +29,12 @@ from app.services.openproject import (
     KANBAN_STATUS_BOTTOM,
     KANBAN_STATUS_TOP,
     STATUS_ORDER,
-    OpenProjectAuthError,
+    OpenProjectNotFound,
 )
+from app.services.openproject import OpenProjectClient, OpenProjectError
 from app.services.openproject_portal import (
+    OPEN_STATUSES,
+    DONE_STATUSES,
     count_by_status,
     get_client_projects,
     is_open_status,
@@ -40,239 +45,261 @@ from app.services.openproject_portal import (
 
 
 # --------------------------------------------------------------------------- #
-# Fixtures — minimal Client row + OpenProjectClient stub
+# Fixtures + helpers
 # --------------------------------------------------------------------------- #
-class _StubClient:
-    """Just enough surface for ``get_client_projects`` to call."""
+def _wp(status: str, story_points: int | None = None) -> dict:
+    """Build a minimal work-package payload shape (the only fields the
+    portal helpers read)."""
+    return {
+        "id": 1,
+        "subject": f"WP in {status}",
+        "storyPoints": story_points,
+        "_links": {
+            "status": {"href": f"/api/v3/statuses/{status}", "title": status},
+        },
+    }
 
-    def __init__(self, master=None, children=None, *, raise_on_master=None):
-        self._master = master
-        self._children = children
-        self._raise_on_master = raise_on_master
+
+def _project(pid: int, name: str) -> dict:
+    """Minimal project payload (master or child shape from OP)."""
+    return {
+        "id": pid,
+        "name": name,
+        "_links": {"self": {"href": f"/api/v3/projects/{pid}"}},
+    }
+
+
+class _StubClient:
+    """Bare-minimum stand-in for OpenProjectClient.
+
+    Lets the test set ``master`` and ``children`` payloads and assert on
+    which calls ``get_client_projects`` made. Raises if a method is
+    called that the test didn't stub — easier to spot over-calls than
+    using MagicMock defaults.
+    """
+
+    def __init__(self, master=None, children=None, master_error=None,
+                 children_error=None):
+        self.master = master
+        self.children = children or []
+        self.master_error = master_error
+        self.children_error = children_error
         self.master_calls = 0
         self.children_calls = 0
 
-    def get_project(self, project_id):
+    def get_project(self, pid):
         self.master_calls += 1
-        if self._raise_on_master is not None:
-            raise self._raise_on_master
-        return self._master
+        if self.master_error is not None:
+            raise self.master_error
+        return self.master
 
     def get_child_projects(self, parent_id):
         self.children_calls += 1
-        return self._children
-
-
-class _Client:
-    """Bare-bones Client stand-in: only the attribute the helper reads."""
-
-    def __init__(self, slug='acme', master_id=42):
-        self.slug = slug
-        self.openproject_master_project_id = master_id
-
-
-def _wp(status_name, sp=None, wp_id=1):
-    """Build a minimal work-package row.
-
-    ``sp`` of ``None`` means the WP has no ``storyPoints`` set (the field
-    is nullable on the OP side). Default ``sp=5`` keeps tests terse.
-    """
-    return {
-        "id": wp_id,
-        "storyPoints": sp if sp is not None else None,
-        "_links": {"status": {"title": status_name}},
-    }
+        if self.children_error is not None:
+            raise self.children_error
+        return self.children
 
 
 # --------------------------------------------------------------------------- #
 # get_client_projects
 # --------------------------------------------------------------------------- #
-class TestGetClientProjects:
+class _StubClientRow:
+    """Mimic a Client row enough for ``getattr(client,
+    'openproject_master_project_id', None)`` — the helper uses getattr
+    rather than a typed accessor so it works with the SQLAlchemy model
+    AND with test doubles.
+    """
+    def __init__(self, slug='test-client', master_id=None):
+        self.slug = slug
+        self.openproject_master_project_id = master_id
 
-    def test_returns_empty_when_no_master_configured(self):
-        client = _Client(master_id=None)
-        op = _StubClient()
-        assert get_client_projects(client, op) == []
-        assert op.master_calls == 0  # don't even hit OP
 
-    def test_returns_master_and_children(self):
-        client = _Client(master_id=42)
-        master = {"id": 42, "name": "Master"}
-        children = [
-            {"id": 43, "name": "Child A"},
-            {"id": 44, "name": "Child B"},
-        ]
-        op = _StubClient(master=master, children=children)
-        out = get_client_projects(client, op)
-        assert len(out) == 3
-        assert out[0]["portal_role"] == "master"
-        assert out[0]["name"] == "Master"
-        assert out[1]["portal_role"] == "child"
-        assert out[1]["name"] == "Child A"
-        assert out[2]["portal_role"] == "child"
-        assert out[2]["name"] == "Child B"
+def test_get_client_projects_returns_empty_when_no_master_id():
+    """If the Client row has no master project ID, return [] — no OP call."""
+    client_row = _StubClientRow(master_id=None)
+    stub = _StubClient()
+    assert get_client_projects(client_row, stub) == []
+    assert stub.master_calls == 0
+    assert stub.children_calls == 0
 
-    def test_master_only_when_no_children(self):
-        client = _Client(master_id=42)
-        op = _StubClient(master={"id": 42, "name": "Master"}, children=[])
-        out = get_client_projects(client, op)
-        assert len(out) == 1
-        assert out[0]["portal_role"] == "master"
 
-    def test_returns_master_only_when_children_fetch_fails(self):
-        """If master succeeds but children fails (e.g. transient OP 5xx),
-        we still return the master — never an empty list when we have
-        at least one good row. The dashboard partial can show 'master
-        only' with an inline warning if it wants.
-        """
-        client = _Client(master_id=42)
-        op = mock.MagicMock()
-        op.get_project.return_value = {"id": 42, "name": "Master"}
-        op.get_child_projects.side_effect = OpenProjectAuthError("nope")
-        out = get_client_projects(client, op)
-        assert len(out) == 1
-        assert out[0]["portal_role"] == "master"
+def test_get_client_projects_returns_master_and_children():
+    """Master + direct children, each tagged with their portal role."""
+    client_row = _StubClientRow(master_id=100)
+    master = _project(100, "Acme Master")
+    children = [_project(101, "Build"), _project(102, "Marketing")]
+    stub = _StubClient(master=master, children=children)
 
-    def test_returns_empty_when_master_fetch_fails(self):
-        """If even the master fails (auth, 404, transport), return []
-        rather than raise — the render path handles empty gracefully.
-        """
-        client = _Client(master_id=42)
-        op = _StubClient(raise_on_master=OpenProjectAuthError("nope"))
-        assert get_client_projects(client, op) == []
+    projects = get_client_projects(client_row, stub)
+
+    assert [p["id"] for p in projects] == [100, 101, 102]
+    assert [p["portal_role"] for p in projects] == ["master", "child", "child"]
+    assert stub.master_calls == 1
+    assert stub.children_calls == 1
+
+
+def test_get_client_projects_returns_master_only_when_children_fails():
+    """A 404 on the children endpoint must NOT swallow the master — the
+    dashboard should still show the master row, just without children."""
+    client_row = _StubClientRow(master_id=100)
+    master = _project(100, "Acme Master")
+    stub = _StubClient(
+        master=master,
+        children_error=OpenProjectNotFound("missing"),
+    )
+    projects = get_client_projects(client_row, stub)
+    assert len(projects) == 1
+    assert projects[0]["id"] == 100
+    assert projects[0]["portal_role"] == "master"
+
+
+def test_get_client_projects_returns_empty_when_master_fails():
+    """A 404 on the master endpoint means the whole client has no OP
+    data — return [] so the dashboard renders the empty state, not a
+    half-broken row."""
+    client_row = _StubClientRow(master_id=100)
+    stub = _StubClient(master_error=OpenProjectNotFound("gone"))
+    assert get_client_projects(client_row, stub) == []
 
 
 # --------------------------------------------------------------------------- #
-# status_distribution + count_by_status
+# status_distribution
 # --------------------------------------------------------------------------- #
-class TestStatusDistribution:
+def test_status_distribution_buckets_story_points_by_status():
+    """SP per status, summed."""
+    wps = [
+        _wp("New", 3),
+        _wp("New", 5),
+        _wp("In progress", 8),
+        _wp("Completed", 2),
+    ]
+    dist = status_distribution(wps)
+    assert dist == {"New": 8, "In progress": 8, "Completed": 2}
 
-    def test_sums_story_points_by_status_name(self):
-        wps = [
-            _wp("New", sp=3),
-            _wp("New", sp=5),
-            _wp("In progress", sp=8),
-            _wp("Completed", sp=2),
-        ]
-        assert status_distribution(wps) == {
-            "New": 8,
-            "In progress": 8,
-            "Completed": 2,
-        }
 
-    def test_treats_null_story_points_as_zero(self):
-        """Stories without storyPoints still count under their status,
-        with 0 SP contribution — they show up in the distribution rather
-        than disappearing.
-        """
-        wps = [
-            _wp("New", sp=None),
-            _wp("New", sp=5),
-        ]
-        assert status_distribution(wps) == {"New": 5}
+def test_status_distribution_treats_missing_sp_as_zero():
+    """A WP without storyPoints must not raise or skew the bucket — SP=0."""
+    wps = [_wp("New", None), _wp("New", 3)]
+    assert status_distribution(wps) == {"New": 3}
 
-    def test_returns_unknown_bucket_when_no_status_link(self):
-        """Defensive: a WP without _links.status lands under 'Unknown'
-        so it doesn't get silently dropped from the Progress chart.
-        """
-        wps = [{"id": 1, "storyPoints": 3, "_links": {}}]
-        assert status_distribution(wps) == {"Unknown": 3}
 
-    def test_empty_input_returns_empty_dict(self):
-        assert status_distribution([]) == {}
+def test_status_distribution_handles_unparseable_sp_gracefully():
+    """A WP with a non-int storyPoints (e.g. a stray string) must not
+    raise into the dashboard render path."""
+    wps = [_wp("New", "abc"), _wp("New", 4)]
+    assert status_distribution(wps) == {"New": 4}
 
-    def test_count_by_status_returns_counts_not_points(self):
-        wps = [
-            _wp("New", sp=3),
-            _wp("New", sp=5),
-            _wp("Completed", sp=2),
-        ]
-        assert count_by_status(wps) == {"New": 2, "Completed": 1}
+
+def test_status_distribution_groups_statusless_wps_under_unknown():
+    """A WP with no status link still appears (under 'Unknown') rather
+    than silently disappearing."""
+    bare = {"id": 1, "subject": "orphan", "storyPoints": 2, "_links": {}}
+    assert status_distribution([bare]) == {"Unknown": 2}
+
+
+# --------------------------------------------------------------------------- #
+# count_by_status
+# --------------------------------------------------------------------------- #
+def test_count_by_status_counts_per_status():
+    """WP count (not SP) per status."""
+    wps = [
+        _wp("New"), _wp("New"), _wp("New"),
+        _wp("In progress"), _wp("Completed"),
+    ]
+    assert count_by_status(wps) == {"New": 3, "In progress": 1, "Completed": 1}
+
+
+def test_count_by_status_empty_when_no_wps():
+    assert count_by_status([]) == {}
 
 
 # --------------------------------------------------------------------------- #
 # order_statuses
 # --------------------------------------------------------------------------- #
-class TestOrderStatuses:
+def test_order_statuses_sorts_by_canonical_order():
+    """Input in arbitrary order comes out in STATUS_ORDER sequence."""
+    names = ["Completed", "New", "In progress", "Ready"]
+    assert order_statuses(names) == ["New", "Ready", "In progress", "Completed"]
 
-    def test_orders_by_status_order(self):
-        names = ["Completed", "New", "In progress"]
-        assert order_statuses(names) == ["New", "In progress", "Completed"]
 
-    def test_appends_unknown_names_at_tail(self):
-        """Statuses the OP instance has that we don't list must still
-        appear — appended in input order at the end.
-        """
-        names = ["Custom", "New", "ZZZ-Internal", "Ready"]
-        out = order_statuses(names)
-        # Known names come first in canonical order.
-        assert out[:2] == ["New", "Ready"]
-        # Unknowns appended in input order.
-        assert out[2:] == ["Custom", "ZZZ-Internal"]
+def test_order_statuses_appends_unknown_statuses_at_end():
+    """A status present in OP but not in STATUS_ORDER (e.g. a custom
+    workflow state) must not vanish — it gets appended in input order."""
+    names = ["Custom A", "New", "Custom B", "Ready"]
+    assert order_statuses(names) == ["New", "Ready", "Custom A", "Custom B"]
 
-    def test_empty_input(self):
-        assert order_statuses([]) == []
 
-    def test_full_canonical_order_round_trip(self):
-        assert order_statuses(STATUS_ORDER) == list(STATUS_ORDER)
+def test_order_statuses_handles_empty_input():
+    assert order_statuses([]) == []
 
 
 # --------------------------------------------------------------------------- #
 # percent_complete
 # --------------------------------------------------------------------------- #
-class TestPercentComplete:
+def test_percent_complete_sums_done_statuses_over_total():
+    """Done SP / total SP, rounded to nearest int."""
+    dist = {"New": 10, "Completed": 30, "Deployed": 60}
+    assert percent_complete(dist) == 90  # 90 of 100
 
-    def test_none_for_empty_distribution(self):
-        """Empty board must NOT show as 0% — None renders as '—'."""
-        assert percent_complete({}) is None
 
-    def test_zero_percent_when_only_unknown_statuses(self):
-        """WPs with no status bucket land under 'Unknown'. They're
-        counted in the total but contribute nothing to 'done', so the
-        result is 0%. Not None — the distribution isn't empty.
-        """
-        assert percent_complete({"Unknown": 5}) == 0
+def test_percent_complete_returns_none_for_empty_distribution():
+    """Empty board shouldn't render '0%' (would look accidentally
+    finished). Returns None so the template renders '—'."""
+    assert percent_complete({}) is None
 
-    def test_zero_percent_when_all_in_open_states(self):
-        assert percent_complete({"New": 5, "In progress": 3}) == 0
 
-    def test_full_percent_when_all_done(self):
-        assert percent_complete({"Completed": 5, "Deployed": 5}) == 100
+def test_percent_complete_returns_none_for_zero_total():
+    """All-zero distribution (no SP anywhere) also returns None."""
+    assert percent_complete({"New": 0, "Completed": 0}) is None
 
-    def test_partial_percent_rounds_to_int(self):
-        # 3 done of 10 total = 30
-        assert percent_complete({
-            "Completed": 3,
-            "New": 4,
-            "In progress": 3,
-        }) == 30
 
-    def test_treats_only_completed_and_deployed_as_done(self):
-        """Custom OP statuses named 'Done' / 'Shipped' should NOT count
-        until the canonical mapping is updated — until then, only the
-        two wireframe-named terminal statuses count.
-        """
-        # 'Shipped' has SP but isn't in DONE_STATUSES — 0% complete.
-        assert percent_complete({"Shipped": 10}) == 0
+def test_percent_complete_uses_done_statuses_constant():
+    """Pin: DONE_STATUSES drives the math. If someone renames the
+    statuses in OP and updates DONE_STATUSES, this test reflects that."""
+    # Sanity check the constant — guards against an accidental rename.
+    assert DONE_STATUSES == {"Deployed", "Completed"}
 
 
 # --------------------------------------------------------------------------- #
 # is_open_status
 # --------------------------------------------------------------------------- #
-class TestIsOpenStatus:
+def test_open_statuses_constant_matches_kanban_top_plus_blocked_rejected():
+    """The Backlog tab excludes terminal + deployed stories. The
+    open-statuses set is the kanban top-row (active cycle) plus
+    Blocked + Rejected (stuck but not terminal). Pin the constant so
+    an accidental edit is loud."""
+    assert OPEN_STATUSES == set(KANBAN_STATUS_TOP) | {"Blocked", "Rejected"}
 
-    @pytest.mark.parametrize("name", list(KANBAN_STATUS_TOP) + ["Blocked", "Rejected"])
-    def test_open_statuses(self, name):
-        assert is_open_status(name) is True
 
-    @pytest.mark.parametrize("name", ["Deployed", "Completed", "Unknown", "", None])
-    def test_closed_or_invalid_statuses(self, name):
-        assert is_open_status(name) is False
+@pytest.mark.parametrize("status", [
+    "New", "Ready", "In progress", "In testing",
+    "Blocked", "Rejected",
+])
+def test_is_open_status_true_for_active_statuses(status):
+    """Active-cycle + stuck statuses are part of the backlog."""
+    assert is_open_status(status) is True
 
-    def test_does_not_confuse_with_kanban_bottom_closed(self):
-        """Done statuses (Deployed, Completed) are NOT 'open' for backlog
-        purposes — they live on the kanban bottom row but don't show up
-        in the prioritized backlog list.
-        """
-        assert is_open_status("Deployed") is False
-        assert is_open_status("Completed") is False
+
+@pytest.mark.parametrize("status", [
+    "Completed", "Deployed",
+])
+def test_is_open_status_false_for_terminal_statuses(status):
+    """Terminal statuses (Completed, Deployed) are not backlog."""
+    assert is_open_status(status) is False
+
+
+def test_is_open_status_false_for_none_and_empty_string():
+    """Defensive: None and '' are NOT open (would otherwise silently
+    include WPs whose status link couldn't be resolved)."""
+    assert is_open_status(None) is False
+    assert is_open_status("") is False
+
+
+# --------------------------------------------------------------------------- #
+# STATUS_ORDER cross-checks
+# --------------------------------------------------------------------------- #
+def test_status_order_contains_all_top_and_bottom_statuses():
+    """The two kanban rows (TOP + BOTTOM) partition STATUS_ORDER — every
+    entry must appear in exactly one of them."""
+    partitioned = set(KANBAN_STATUS_TOP) | set(KANBAN_STATUS_BOTTOM)
+    assert set(STATUS_ORDER) == partitioned
