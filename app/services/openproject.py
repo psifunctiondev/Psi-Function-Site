@@ -273,6 +273,48 @@ class OpenProjectClient:
         return _elements(self._request("GET", f"/work_packages/{wp_id}/activities",
                                        params={"pageSize": 100}))
 
+    def last_completed_date_for(
+        self, wp_id: int, completed_status_id: int,
+    ) -> str | None:
+        """Return the ISO timestamp of the LATEST time ``wp_id`` reached Completed.
+
+        Per the field-mapping spec (status-details-op-field-mapping.md
+        §"Completed Date Derivation"): query the work package's activity feed
+        filtered to status-change activities for the Completed status, sorted
+        ``createdAt desc`` with ``pageSize=1`` so the first row IS the latest
+        match. The "latest" semantics handles the reopen-and-reclose case
+        where a story briefly hit Completed, was reopened, and re-closed —
+        the second Completed is the meaningful one (Quinn confirmed
+        2026-09-22 17:10).
+
+        Returns ``None`` when no matching activity exists (story has never
+        reached Completed). Defensive against a collection missing
+        ``_embedded.elements`` (returns ``None`` rather than raising).
+        """
+        params = {
+            "filters": json.dumps([{
+                "newValue": {
+                    "operator": "=",
+                    "values": [f"/api/v3/statuses/{completed_status_id}"],
+                },
+            }]),
+            "sortBy": json.dumps([["createdAt", "desc"]]),
+            "pageSize": 1,
+        }
+        result = self._request(
+            "GET", f"/work_packages/{wp_id}/activities", params=params,
+        )
+        if not isinstance(result, dict):
+            return None
+        embedded = result.get("_embedded") or {}
+        elements = embedded.get("elements") if isinstance(embedded, dict) else None
+        if not isinstance(elements, list) or not elements:
+            return None
+        first = elements[0]
+        if not isinstance(first, dict):
+            return None
+        return first.get("createdAt")
+
     # ------------------------------------------------------------------ #
     # Writes
     # ------------------------------------------------------------------ #
