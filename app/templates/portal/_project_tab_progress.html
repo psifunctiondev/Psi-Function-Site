@@ -1,45 +1,36 @@
-{# Progress tab — stacked bar chart, time on x, story-points on y, stack
-   segments are SP bucketed by status. Read-only this commit.
+{# Progress tab — stacked bar chart, time on x, story points on y, stack
+   segments are SP bucketed by status. Commit 5 wires the dataset to
+   the OpProjectSnapshot table (commit 4) — no live OP call at render.
 
-   Commit 3 ships placeholder data (a stub: the last 8 weekly buckets
-   filled with mock SP totals bucketed by status). The data source
-   flips to the OpProjectSnapshot table in commit 4 — see
-   docs/clients/psi-function-consulting.md runbook.
+   The route passes `progress_data` (a dict with labels / statuses /
+   series) populated from the last 8 weeks of snapshot rows. The chart
+   dataset is serialized into a JSON <script> tag the renderer
+   (portal-progress.js) reads and feeds to Chart.js.
 
-   Chart.js is loaded via Vite in commit 5; for now we inline the CDN
-   link so Quinn can eyeball the placeholder without a frontend build.
-   Replace with the bundled Chart.js once the Vite step lands. #}
+   Chart.js is loaded from the CDN below — Quinn wanted "no asset
+   rebuild for visual review" before commit 5; the Vite-bundled Chart
+   can replace this when the build pipeline is wired up. #}
 
 <div class="portal-project-progress">
-  <h2 class="portal-project-progress__title">Story points by week (placeholder)</h2>
+  <h2 class="portal-project-progress__title">Story points by week</h2>
   <p class="portal-project-progress__caption">
-    Last 8 weeks · placeholder data until the snapshot cron (commit 4) is wired.
+    Last 8 weeks · from daily snapshot (cron via
+    <code>flask openproject snapshot</code>).
   </p>
 
   <div class="portal-project-progress__chart-wrap">
     <canvas id="portal-project-progress-chart"
-            data-placeholder="1"
             width="800" height="320"
             aria-label="Stacked bar chart of story points by week and status"></canvas>
   </div>
 
-  {# Placeholder dataset: 8 weekly buckets with mock SP totals. Will be
-     replaced by snapshot-derived data in commit 4 — same shape, server-
-     rendered into the JSON below. #}
+  {# Server-rendered snapshot dataset. Empty (no snapshots yet) →
+     chart shows a single zero bucket per status. portal-progress.js
+     reads this JSON and instantiates Chart.js on the canvas. #}
   <script id="portal-project-progress-data" type="application/json">
-{
-  "labels": ["W-7","W-6","W-5","W-4","W-3","W-2","W-1","This week"],
-  "statuses": ["New","Ready","In progress","In testing","Blocked","Rejected","Deployed","Completed"],
-  "series": [
-    [3, 2, 5, 1, 0, 0, 0, 0],
-    [2, 4, 3, 2, 1, 0, 0, 0],
-    [1, 2, 5, 8, 3, 0, 0, 0],
-    [0, 1, 3, 5, 2, 0, 0, 0],
-    [0, 0, 1, 2, 2, 1, 0, 0],
-    [0, 0, 0, 0, 1, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 2, 3],
-    [0, 0, 0, 0, 0, 0, 5, 8]
-  ]
-}
+{{ progress_data|tojson(indent=2) }}
   </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+          defer></script>
 </div>

@@ -1,6 +1,4 @@
-{# Backlog tab — prioritized list of OPEN User stories (commit 3 stub).
-   Read-only this commit. SortableJS drag-reorder + priority mutation
-   land in commit 5.
+{# Backlog tab — prioritized list of OPEN User stories (commit 5).
 
    OPEN = stories in any kanban-top status (New, Ready, In progress,
    In testing) plus Blocked + Rejected. Excludes Deployed / Completed
@@ -8,13 +6,25 @@
 
    Each row shows: title · current status · target completion week
    (= OP version end-date, or '—' if unversioned). Sorted by
-   methodos_sequence (customField4) ascending. #}
+   methodos_sequence (customField4) ascending — the drag module
+   (portal-backlog.js) reorders optimistically and PATCHes the new
+   position to /api/portal/openproject/<op>/work_packages/<wp>/reorder.
 
-<div class="portal-backlog">
+   Read-only fallback: if the OP fetch failed the partial renders an
+   inline error banner via tab_error (set in the route). #}
+
+{% if tab_error %}
+  <p class="portal-backlog__flash portal-backlog__flash--error">{{ tab_error }}</p>
+{% endif %}
+
+<div class="portal-backlog"
+     data-op-id="{{ project.id }}"
+     data-slug="{{ client.slug }}">
+
   <h2 class="portal-backlog__title">{{ project.name }} — backlog</h2>
   <p class="portal-backlog__caption">
-    Prioritized list of open user stories · drag-to-reorder wiring
-    lands in commit 5.
+    Prioritized list of open user stories. Drag rows to reorder —
+    changes write through to OpenProject immediately.
   </p>
 
   <table class="portal-backlog__table">
@@ -23,15 +33,36 @@
         <th scope="col">Title</th>
         <th scope="col">Status</th>
         <th scope="col">Target week</th>
+        <th scope="col">SP</th>
       </tr>
     </thead>
-    <tbody>
-      <tr class="portal-backlog__placeholder-row">
-        <td colspan="3" class="portal-backlog__placeholder">
-          Backlog rows render here in commit 5 (User-story filtered,
-          sorted by methodos_sequence).
-        </td>
-      </tr>
+    <tbody class="portal-backlog__tbody">
+      {% for wp in backlog_open_wps %}
+        {% set links = wp.get('_links') or {} %}
+        {% set status_link = links.get('status') or {} %}
+        {% set status_name = status_link.get('title') or 'Unknown' %}
+        {% set epic = wp.get('customField6') %}
+        {% set story = wp.get('customField7') %}
+        <tr class="portal-backlog__row"
+            data-wp-id="{{ wp.id }}"
+            data-lock-version="{{ wp.get('lockVersion', 0) }}">
+          <td>
+            {% if epic and story %}
+              <span class="portal-backlog__row-number">E{{ '%02d'|format(epic|int) }}/S{{ '%02d'|format(story|int) }}</span>
+            {% endif %}
+            {{ wp.get('subject', '(untitled)') }}
+          </td>
+          <td>{{ status_name }}</td>
+          <td>—</td>
+          <td>{{ wp.get('storyPoints') or 0 }}</td>
+        </tr>
+      {% else %}
+        <tr class="portal-backlog__placeholder-row">
+          <td colspan="4" class="portal-backlog__placeholder">
+            No open user stories. Add one in OpenProject.
+          </td>
+        </tr>
+      {% endfor %}
     </tbody>
   </table>
 </div>

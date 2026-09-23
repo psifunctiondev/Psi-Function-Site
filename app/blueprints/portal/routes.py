@@ -239,6 +239,111 @@ def project_summary(slug: str, op_identifier: int):
     if tab not in ('progress', 'status', 'backlog'):
         tab = 'progress'
 
+    # Fetch per-tab data via the cached OP read layer (the snapshot
+    # / WP distribution caches flip to live reads for the Status +
+    # Backlog tabs; the Progress tab reads ONLY from the snapshot
+    # table). Tab-specific failures degrade gracefully — the partial
+    # renders an inline error and the rest of the page still works.
+    from app.services.openproject_config import (
+        OpenProjectConfigError,
+        current_op_client,
+    )
+    from app.services.openproject import (
+        OpenProjectError,
+        STATUS_ORDER,
+    )
+
+    work_packages_by_status: dict[str, list[dict]] = {}
+    backlog_open_wps: list[dict] = []
+    progress_data: dict | None = None
+    tab_error: str | None = None
+
+    try:
+        op = current_op_client()
+        # Per-tab fetches — Status + Backlog need WP lists, Progress
+        # needs snapshots.
+        if tab in ('status', 'backlog'):
+            try:
+                wps = op.get_work_packages(op_identifier)
+            except OpenProjectError as exc:  # noqa: BLE001
+                current_app.logger.exception(
+                    'OP work packages fetch failed for %s/%s',
+                    client.slug, op_identifier,
+                )
+                tab_error = f'OpenProject returned: {exc}'
+                wps = []
+            # Group WPs by status name (Status tab) and filter to open
+            # statuses (Backlog tab). Sort by methodos_sequence (custom
+            # field 4, ascending) so the kanban reads in priority order.
+            for wp in wps:
+                links = wp.get('_links') or {}
+                status_link = links.get('status') or {}
+                status_name = status_link.get('title') or 'Unknown'
+                work_packages_by_status.setdefault(status_name, []).append(wp)
+            # Sort each column by methodos_sequence (custom field 4).
+            for status_name in work_packages_by_status:
+                work_packages_by_status[status_name].sort(
+                    key=lambda w: (
+                        int(w.get('customField4') or 0)
+                        if isinstance(w.get('customField4'), (int, str))
+                        else 0,
+                        int(w.get('id') or 0)
+                        if isinstance(w.get('id'), int)
+                        else 0,
+                    ),
+                )
+            if tab == 'backlog':
+                from app.services.openproject_portal import (
+                    is_open_status, order_statuses,
+                )
+                open_names = [
+                    n for n in work_packages_by_status
+                    if is_open_status(n)
+                ]
+                backlog_open_wps = []
+                for name in order_statuses(open_names):
+                    backlog_open_wps.extend(work_packages_by_status[name])
+
+        elif tab == 'progress':
+            # Read snapshots for the last 8 weeks (default Progress
+            # window). Empty project → flat line at 0 SP — the partial
+            # renders the placeholder copy + zero-bucket chart.
+            from datetime import date as _date, timedelta
+            from app.models.op_snapshot import OpProjectSnapshot
+
+            today = _date.today()
+            rows = (
+                OpProjectSnapshot.query
+                .filter_by(project_op_id=op_identifier)
+                .filter(
+                    OpProjectSnapshot.snapshot_date
+                    >= today - timedelta(weeks=8)
+                )
+                .order_by(OpProjectSnapshot.snapshot_date)
+                .all()
+            )
+            statuses = list(STATUS_ORDER)
+            labels = [r.snapshot_date.isoformat() for r in rows]
+            series = [
+                [r.distribution.get(s, 0) for s in statuses]
+                for r in rows
+            ]
+            progress_data = {
+                'labels': labels,
+                'statuses': statuses,
+                'series': series,
+            }
+    except OpenProjectConfigError:
+        tab_error = (
+            'OpenProject is not configured. Contact Psi Function.'
+        )
+    except Exception:  # noqa: BLE001
+        current_app.logger.exception(
+            'tab-data fetch failed for %s/%s',
+            client.slug, op_identifier,
+        )
+        tab_error = 'Could not load project data; please refresh.'
+
     return render_template(
         'portal/project_summary.html',
         client=client,
@@ -246,6 +351,10 @@ def project_summary(slug: str, op_identifier: int):
         project=project,
         projects=projects,
         tab=tab,
+        work_packages_by_status=work_packages_by_status,
+        backlog_open_wps=backlog_open_wps,
+        progress_data=progress_data,
+        tab_error=tab_error,
     )
 
 
