@@ -10,6 +10,14 @@ from flask.cli import with_appcontext
 from app.extensions import db
 from app.models.client import Client
 from app.models.user import User
+from app.services.openproject_config import (
+    OpenProjectConfigError,
+    current_op_client,
+)
+from app.services.openproject_snapshot import (
+    backfill_snapshots_for_project,
+    run_snapshot_for_active_clients,
+)
 
 
 @click.group('user')
@@ -1283,14 +1291,6 @@ def snapshot_command(for_date, dry_run):
     """
     from datetime import date as date_cls
 
-    from app.services.openproject_config import (
-        OpenProjectConfigError,
-        current_op_client,
-    )
-    from app.services.openproject_snapshot import (
-        run_snapshot_for_active_clients,
-    )
-
     target_day = (
         date_cls.fromisoformat(for_date) if for_date else date_cls.today()
     )
@@ -1345,13 +1345,6 @@ def backfill_snapshots_command(project_id, weeks):
     launch. Per the April spec: "Make backfill a separate CLI command,
     not automatic — so ops controls cost."
     """
-    from app.services.openproject_config import (
-        OpenProjectConfigError,
-        current_op_client,
-    )
-    from app.services.openproject_snapshot import (
-        backfill_snapshots_for_project,
-    )
 
     try:
         op = current_op_client()
