@@ -10,6 +10,14 @@ from flask.cli import with_appcontext
 from app.extensions import db
 from app.models.client import Client
 from app.models.user import User
+from app.services.openproject_config import (
+    OpenProjectConfigError,
+    current_op_client,
+)
+from app.services.openproject_snapshot import (
+    backfill_snapshots_for_project,
+    run_snapshot_for_active_clients,
+)
 
 
 @click.group('user')
@@ -1242,3 +1250,117 @@ def register_cli(app):
     app.cli.add_command(resource_cli)
     app.cli.add_command(seed_taxonomy)
     app.cli.add_command(seed_work_demo)
+    app.cli.add_command(openproject_cli)
+
+
+# --------------------------------------------------------------------------- #
+# OpenProject — snapshot + backfill CLI commands
+# --------------------------------------------------------------------------- #
+@click.group('openproject')
+def openproject_cli():
+    """OpenProject integration commands (commit 4 of the OP integration).
+
+    Subcommands:
+
+    * ``snapshot`` — daily cron entry point. Walks every active client
+      with a wired master project, writes one snapshot row per
+      project (master + children) for today. Idempotent per day.
+
+    * ``backfill-snapshots <project-id> [--weeks N]`` — manually
+      triggered. Reconstructs the last N weeks of snapshot rows from
+      OP journal data. NOT automatic — ops runs this once per new
+      project so the Progress tab doesn't show an empty chart for
+      the first 8 weeks after launch.
+    """
+    pass
+
+
+@openproject_cli.command('snapshot')
+@click.option(
+    '--date', 'for_date', default=None,
+    help='ISO date (YYYY-MM-DD) to snapshot for; defaults to today.',
+)
+@click.option(
+    '--dry-run', is_flag=True, default=False,
+    help='Walk clients and report what would be snapshotted, but do '
+         'not write rows. Useful for ops sanity checks before cron '
+         'fires.',
+)
+@with_appcontext
+def snapshot_command(for_date, dry_run):
+    """Snapshot every active client's OP projects for one day.
+
+    Cron entry point. Default date is today; pass ``--date`` to back-
+    fill a specific day (use carefully — re-running for today is the
+    normal idempotent case).
+    """
+    from datetime import date as date_cls
+
+    target_day = (
+        date_cls.fromisoformat(for_date) if for_date else date_cls.today()
+    )
+
+    try:
+        op = current_op_client()
+    except OpenProjectConfigError as exc:
+        click.echo(f'ERROR: {exc}')
+        raise click.exceptions.Exit(code=2) from None
+
+    if dry_run:
+        # Walk the active-client set without writing.
+        from app.models.client import Client
+        wired = Client.query.filter(
+            Client.is_active.is_(True),
+            Client.openproject_master_project_id.isnot(None),
+        ).all()
+        click.echo(
+            f'[DRY-RUN] would snapshot {len(wired)} clients for '
+            f'{target_day.isoformat()}:'
+        )
+        for c in wired:
+            click.echo(f'  - {c.slug} (master project {c.openproject_master_project_id})')
+        return
+
+    summary = run_snapshot_for_active_clients(op, day=target_day)
+    if not summary:
+        click.echo(
+            f'No active clients have an OP master project wired '
+            f'(snapshot for {target_day.isoformat()} is a no-op).'
+        )
+        return
+
+    click.echo(f'Snapshotted {target_day.isoformat()}:')
+    for slug, n in sorted(summary.items()):
+        click.echo(f'  {slug:<32} {n} project(s)')
+
+
+@openproject_cli.command('backfill-snapshots')
+@click.argument('project_id', type=int)
+@click.option(
+    '--weeks', default=8, show_default=True,
+    help='Number of past weeks to reconstruct (default: 8 — matches '
+         'the Progress tab default window).',
+)
+@with_appcontext
+def backfill_snapshots_command(project_id, weeks):
+    """Backfill snapshots for one project from journal data.
+
+    NOT automatic — ops runs this once per new project so the Progress
+    tab doesn't show an empty chart for the first N weeks after
+    launch. Per the April spec: "Make backfill a separate CLI command,
+    not automatic — so ops controls cost."
+    """
+
+    try:
+        op = current_op_client()
+    except OpenProjectConfigError as exc:
+        click.echo(f'ERROR: {exc}')
+        raise click.exceptions.Exit(code=2) from None
+
+    written = backfill_snapshots_for_project(
+        op, project_id, weeks=weeks,
+    )
+    click.echo(
+        f'Backfilled {written} snapshot row(s) for project {project_id} '
+        f'(last {weeks} weeks).'
+    )

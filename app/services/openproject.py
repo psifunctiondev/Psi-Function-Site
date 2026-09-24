@@ -14,6 +14,15 @@ Error mapping (see :func:`_raise_for_status`):
     * 409        -> :class:`OpenProjectConcurrencyError`
     * 422        -> :class:`OpenProjectValidationError`
     * other 4xx/5xx -> :class:`OpenProjectError`
+
+Status ordering (commit 3 of OP integration):
+    The portal renders the kanban board with 8 statuses laid out in a 4x4
+    grid (top row: active cycle; bottom row: terminal / out-of-cycle) —
+    see ``client-portal-kanban.excalidraw`` (v0.4). ``STATUS_ORDER`` is
+    the canonical left-to-right list shared by both the kanban board
+    and the StatusDetails tab nav. ``KANBAN_STATUS_TOP`` and
+    ``KANBAN_STATUS_BOTTOM`` split the eight into the two rows for the
+    grid layout.
 """
 
 from __future__ import annotations
@@ -32,12 +41,39 @@ __all__ = [
     "OpenProjectConcurrencyError",
     "OpenProjectValidationError",
     "STATUS_ORDER",
+    "KANBAN_STATUS_TOP",
+    "KANBAN_STATUS_BOTTOM",
 ]
 
-# Canonical left-to-right status ordering for the Status kanban (Phase 1).
-# Any statuses present in the instance but not listed here are appended in
-# the order the API returns them. See spec "Status & column ordering".
-STATUS_ORDER = ["New", "Ready", "In progress", "Completed", "Deployed"]
+# Canonical left-to-right status ordering shared by both the kanban board
+# and the StatusDetails tab nav. Eight statuses, in the order they appear
+# on the kanban (top row first, then bottom row) — see
+# client-portal-kanban.excalidraw (kanban v0.4, 4x4 grid). Any statuses
+# present in the instance but not listed here are appended in the order
+# the API returns them. See spec "Status & column ordering".
+STATUS_ORDER = [
+    "New",
+    "Ready",
+    "In progress",
+    "In testing",
+    "Blocked",
+    "Rejected",
+    "Deployed",
+    "Completed",
+]
+
+# Top-row (active cycle) statuses on the kanban board, in left-to-right
+# order. The Status tab on the project summary page uses these as
+# columns. Per kanban wireframe design notes: "No 'Completed' in the
+# top row by design: a finished story falls out of the active pipeline
+# and lands in the bottom-row Completed archive bucket — keeps the top
+# row signal-rich".
+KANBAN_STATUS_TOP = ("New", "Ready", "In progress", "In testing")
+
+# Bottom-row (terminal / out-of-cycle) statuses, left-to-right.
+# Blocked and Rejected are "stuck" states; Deployed and Completed are
+# terminal.
+KANBAN_STATUS_BOTTOM = ("Blocked", "Rejected", "Deployed", "Completed")
 
 # Pagination safety cap: 10 pages * 100 = 1000 work packages. Plenty for now.
 _MAX_PAGES = 10
@@ -236,6 +272,48 @@ class OpenProjectClient:
         """Return the activity/journal entries for a work package (backfill)."""
         return _elements(self._request("GET", f"/work_packages/{wp_id}/activities",
                                        params={"pageSize": 100}))
+
+    def last_completed_date_for(
+        self, wp_id: int, completed_status_id: int,
+    ) -> str | None:
+        """Return the ISO timestamp of the LATEST time ``wp_id`` reached Completed.
+
+        Per the field-mapping spec (status-details-op-field-mapping.md
+        §"Completed Date Derivation"): query the work package's activity feed
+        filtered to status-change activities for the Completed status, sorted
+        ``createdAt desc`` with ``pageSize=1`` so the first row IS the latest
+        match. The "latest" semantics handles the reopen-and-reclose case
+        where a story briefly hit Completed, was reopened, and re-closed —
+        the second Completed is the meaningful one (Quinn confirmed
+        2026-09-22 17:10).
+
+        Returns ``None`` when no matching activity exists (story has never
+        reached Completed). Defensive against a collection missing
+        ``_embedded.elements`` (returns ``None`` rather than raising).
+        """
+        params = {
+            "filters": json.dumps([{
+                "newValue": {
+                    "operator": "=",
+                    "values": [f"/api/v3/statuses/{completed_status_id}"],
+                },
+            }]),
+            "sortBy": json.dumps([["createdAt", "desc"]]),
+            "pageSize": 1,
+        }
+        result = self._request(
+            "GET", f"/work_packages/{wp_id}/activities", params=params,
+        )
+        if not isinstance(result, dict):
+            return None
+        embedded = result.get("_embedded") or {}
+        elements = embedded.get("elements") if isinstance(embedded, dict) else None
+        if not isinstance(elements, list) or not elements:
+            return None
+        first = elements[0]
+        if not isinstance(first, dict):
+            return None
+        return first.get("createdAt")
 
     # ------------------------------------------------------------------ #
     # Writes

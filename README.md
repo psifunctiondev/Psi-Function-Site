@@ -8,6 +8,7 @@ This project uses Python (Flask) and Node (Vite). Both environments must be init
 
 * [`docs/clients/acme-showcase.md`](docs/clients/acme-showcase.md) — runbook for the ACME public-safe showcase tenant (CLI seeders, deploy hook, smoke test).
 * [`docs/clients/drift-and-anchor.md`](docs/clients/drift-and-anchor.md) — runbook for the Drift & Anchor client portal (brand story landing, resources seeder, Catherine invite flow).
+* [`docs/clients/psi-function-consulting.md`](docs/clients/psi-function-consulting.md) — runbook for the OpenProject-backed client portal (project summary tabs, drag-drop writes, daily snapshot cron, backfill command, field-mapping contract).
 
 ## Bootstrap procedure
 

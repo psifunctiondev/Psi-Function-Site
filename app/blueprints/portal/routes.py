@@ -7,6 +7,7 @@ from flask import (
     abort,
     current_app,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -103,7 +104,20 @@ def admin_overview():
 @portal_bp.get('/p/<slug>')
 @login_required
 def client_dashboard(slug: str):
-    """Client dashboard — shows resources grouped by category, themed per client."""
+    """Client dashboard — shows resources grouped by category, themed per client.
+
+    The "Projects" card is now OpenProject-backed when the client has an
+    ``openproject_master_project_id`` set: it renders one row per OP
+    project (master + direct children) with a link to the per-project
+    summary page. For clients without an OP master (ACME, CTAI today),
+    the card falls back to the legacy ``backlog`` ClientResource list.
+    See ``portal/_projects_card.html``.
+
+    OP fetch errors are non-fatal — the partial renders a polite
+    "temporarily unavailable" message rather than blowing up the
+    dashboard. The portal render path must never raise from an OP
+    read.
+    """
     client = Client.query.filter_by(slug=slug, is_active=True).first_or_404()
 
     # Check access: user must belong to this client or be an admin
@@ -132,6 +146,25 @@ def client_dashboard(slug: str):
         .all()
     )
 
+    # OpenProject project list for the "Projects" card. Only attempt
+    # when the client has a master project wired AND the OP env vars
+    # are configured — otherwise the helper raises and we fall back.
+    op_projects = None
+    op_projects_status = 'unconfigured'
+    if client.openproject_master_project_id is not None:
+        try:
+            from app.services.openproject_config import current_op_client
+            from app.services.openproject_portal import get_client_projects
+
+            op = current_op_client()
+            op_projects = get_client_projects(client, op)
+            op_projects_status = 'ok' if op_projects else 'error'
+        except Exception:  # noqa: BLE001 — render path, swallow + log
+            op_projects_status = 'error'
+            current_app.logger.exception(
+                'OP project fetch failed for client %s', client.slug,
+            )
+
     return render_template(
         'portal/dashboard.html',
         client=client,
@@ -140,10 +173,412 @@ def client_dashboard(slug: str):
         resources_by_cat=grouped,
         categories=ClientResource.CATEGORIES,
         client_users=client_users,
+        op_projects=op_projects,
+        op_projects_status=op_projects_status,
     )
 
 
-# ---------- Drift & Anchor (per-client landing page) ----------
+@portal_bp.get('/p/<slug>/projects/<int:op_identifier>')
+@login_required
+def project_summary(slug: str, op_identifier: int):
+    """Project summary page — three read-only tabs (commit 3).
+
+    URL: ``GET /p/<slug>/projects/<op-identifier>?tab=progress|status|backlog``
+
+    Default tab is ``progress`` per the kickoff. The
+    ``<op-identifier>`` is the OP master or child project id; access
+    gating requires the project to belong to the client's OP master
+    tree (master or direct child). Cross-client requests 404 — same
+    leak-protection as the competitive-audit route.
+
+    The page renders server-side via per-tab Jinja partials so tab
+    switches are full-page navigations (bookmarkable, browser back
+    works). SortableJS drag-drop and optimistic-UI writes land in
+    commit 5.
+    """
+    from app.services.openproject_config import (
+        OpenProjectConfigError,
+        current_op_client,
+    )
+    from app.services.openproject_portal import get_client_projects
+
+    client = Client.query.filter_by(slug=slug, is_active=True).first_or_404()
+    if not current_user.is_admin and (
+        not current_user.client or current_user.client.id != client.id
+    ):
+        abort(403)
+
+    # Cross-client guard: the requested op_identifier must be the
+    # client's own master project OR one of its direct children. A
+    # random / other-client id must 404, not 403 — we don't leak
+    # whether other OP projects exist.
+    if client.openproject_master_project_id is None:
+        abort(404)
+
+    try:
+        op = current_op_client()
+        projects = get_client_projects(client, op)
+    except OpenProjectConfigError:
+        abort(503)
+    except Exception:  # noqa: BLE001 — render path, degrade gracefully
+        current_app.logger.exception(
+            'OP project fetch failed for %s/%s', client.slug, op_identifier,
+        )
+        projects = []
+
+    valid_ids = {p['id'] for p in projects if isinstance(p.get('id'), int)}
+    if op_identifier not in valid_ids:
+        abort(404)
+
+    # Find the matching project dict for display
+    project = next((p for p in projects if p.get('id') == op_identifier), None)
+    if project is None:
+        abort(404)
+
+    tab = request.args.get('tab', 'progress')
+    if tab not in ('progress', 'status', 'backlog'):
+        tab = 'progress'
+
+    # Fetch per-tab data via the cached OP read layer (the snapshot
+    # / WP distribution caches flip to live reads for the Status +
+    # Backlog tabs; the Progress tab reads ONLY from the snapshot
+    # table). Tab-specific failures degrade gracefully — the partial
+    # renders an inline error and the rest of the page still works.
+    from app.services.openproject import (
+        STATUS_ORDER,
+        OpenProjectError,
+    )
+    from app.services.openproject_config import (
+        OpenProjectConfigError,
+        current_op_client,
+    )
+
+    work_packages_by_status: dict[str, list[dict]] = {}
+    backlog_open_wps: list[dict] = []
+    progress_data: dict | None = None
+    tab_error: str | None = None
+
+    try:
+        op = current_op_client()
+        # Per-tab fetches — Status + Backlog need WP lists, Progress
+        # needs snapshots.
+        if tab in ('status', 'backlog'):
+            try:
+                wps = op.get_work_packages(op_identifier)
+            except OpenProjectError as exc:  # noqa: BLE001
+                current_app.logger.exception(
+                    'OP work packages fetch failed for %s/%s',
+                    client.slug, op_identifier,
+                )
+                tab_error = f'OpenProject returned: {exc}'
+                wps = []
+            # Group WPs by status name (Status tab) and filter to open
+            # statuses (Backlog tab). Sort by methodos_sequence (custom
+            # field 4, ascending) so the kanban reads in priority order.
+            for wp in wps:
+                links = wp.get('_links') or {}
+                status_link = links.get('status') or {}
+                status_name = status_link.get('title') or 'Unknown'
+                work_packages_by_status.setdefault(status_name, []).append(wp)
+            # Sort each column by methodos_sequence (custom field 4).
+            for status_name in work_packages_by_status:
+                work_packages_by_status[status_name].sort(
+                    key=lambda w: (
+                        int(w.get('customField4') or 0)
+                        if isinstance(w.get('customField4'), (int, str))
+                        else 0,
+                        int(w.get('id') or 0)
+                        if isinstance(w.get('id'), int)
+                        else 0,
+                    ),
+                )
+            if tab == 'backlog':
+                from app.services.openproject_portal import (
+                    is_open_status,
+                    order_statuses,
+                )
+                open_names = [
+                    n for n in work_packages_by_status
+                    if is_open_status(n)
+                ]
+                backlog_open_wps = []
+                for name in order_statuses(open_names):
+                    backlog_open_wps.extend(work_packages_by_status[name])
+
+        elif tab == 'progress':
+            # Read snapshots for the last 8 weeks (default Progress
+            # window). Empty project → flat line at 0 SP — the partial
+            # renders the placeholder copy + zero-bucket chart.
+            from datetime import date as _date
+            from datetime import timedelta
+
+            from app.models.op_snapshot import OpProjectSnapshot
+
+            today = _date.today()
+            rows = (
+                OpProjectSnapshot.query
+                .filter_by(project_op_id=op_identifier)
+                .filter(
+                    OpProjectSnapshot.snapshot_date
+                    >= today - timedelta(weeks=8)
+                )
+                .order_by(OpProjectSnapshot.snapshot_date)
+                .all()
+            )
+            statuses = list(STATUS_ORDER)
+            labels = [r.snapshot_date.isoformat() for r in rows]
+            series = [
+                [r.distribution.get(s, 0) for s in statuses]
+                for r in rows
+            ]
+            progress_data = {
+                'labels': labels,
+                'statuses': statuses,
+                'series': series,
+            }
+    except OpenProjectConfigError:
+        tab_error = (
+            'OpenProject is not configured. Contact Psi Function.'
+        )
+    except Exception:  # noqa: BLE001
+        current_app.logger.exception(
+            'tab-data fetch failed for %s/%s',
+            client.slug, op_identifier,
+        )
+        tab_error = 'Could not load project data; please refresh.'
+
+    return render_template(
+        'portal/project_summary.html',
+        client=client,
+        user=current_user,
+        project=project,
+        projects=projects,
+        tab=tab,
+        work_packages_by_status=work_packages_by_status,
+        backlog_open_wps=backlog_open_wps,
+        progress_data=progress_data,
+        tab_error=tab_error,
+    )
+
+
+# ---------- Portal writes: status change + reorder (commit 5) ----------
+
+def _resolve_op_project(client, op_identifier: int):
+    """Return ``(op_client, project_dict)`` if ``op_identifier`` belongs
+    to ``client``; abort 404 otherwise.
+
+    Cross-client guards mirror the GET ``project_summary`` route:
+    404 (not 403) on mismatch so we don't leak whether other OP
+    projects exist.
+    """
+    from app.services.openproject_config import (
+        OpenProjectConfigError,
+        current_op_client,
+    )
+    from app.services.openproject_portal import get_client_projects
+
+    if client.openproject_master_project_id is None:
+        abort(404)
+    try:
+        op = current_op_client()
+        projects = get_client_projects(client, op)
+    except OpenProjectConfigError:
+        abort(503)
+    except Exception:  # noqa: BLE001
+        current_app.logger.exception(
+            'OP project fetch failed for %s/%s',
+            client.slug, op_identifier,
+        )
+        projects = []
+
+    valid_ids = {p['id'] for p in projects if isinstance(p.get('id'), int)}
+    if op_identifier not in valid_ids:
+        abort(404)
+    project = next(
+        (p for p in projects if p.get('id') == op_identifier), None,
+    )
+    return op, project
+
+
+@portal_bp.post(
+    '/api/portal/openproject/<int:op_identifier>/'
+    'work_packages/<int:wp_id>/status',
+)
+@login_required
+def api_change_work_package_status(
+    op_identifier: int, wp_id: int,
+):
+    """Change a work package's status via drag-drop (commit 5).
+
+    Body: ``{"targetStatus": "In progress", "lockVersion": 1}``.
+
+    Returns JSON for the optimistic-UI JS:
+
+        200 -> ``{"ok": true, "workPackage": {...}}``
+        409 -> ``{"ok": false, "code": "CONFLICT", ...}``
+        422 -> ``{"ok": false, "code": "VALIDATION", ...}``
+        503 -> ``{"ok": false, "code": "CONFIG", "message": "..."}``
+    """
+    from app.services.openproject_writes import (
+        change_work_package_status,
+    )
+
+    client = current_user.client
+    if client is None or not client.is_active:
+        abort(403)
+
+    payload = request.get_json(silent=True) or {}
+    target_status = (
+        payload.get('targetStatus') or payload.get('target_status')
+    )
+    lock_version = (
+        payload.get('lockVersion') or payload.get('lock_version')
+    )
+    if not target_status or lock_version is None:
+        return jsonify({
+            'ok': False,
+            'code': 'VALIDATION',
+            'message': (
+                'targetStatus and lockVersion are required.'
+            ),
+        }), 400
+    try:
+        lock_version = int(lock_version)
+    except (TypeError, ValueError):
+        return jsonify({
+            'ok': False,
+            'code': 'VALIDATION',
+            'message': 'lockVersion must be an integer.',
+        }), 400
+
+    op, _project = _resolve_op_project(client, op_identifier)
+
+    # Best-effort read of the current status name so the audit row has
+    # a meaningful before_value. If it fails the audit row just gets
+    # before_value=None (we still know who/when/what-was-set).
+    before_name = None
+    try:
+        wp_now = op.get_work_package(wp_id)
+        status_link = (
+            (wp_now.get('_links') or {}).get('status') or {}
+        )
+        before_name = status_link.get('title')
+    except Exception:  # noqa: BLE001
+        before_name = None
+
+    result = change_work_package_status(
+        op,
+        user=current_user,
+        client_id=client.id,
+        op_project_id=op_identifier,
+        wp_id=wp_id,
+        target_status_name=str(target_status),
+        lock_version=lock_version,
+        before_status_name=before_name,
+    )
+
+    http_status = 200
+    if not result.success:
+        http_status = {
+            'CONFLICT': 409,
+            'NOT_FOUND': 404,
+            'VALIDATION': 422,
+            'CONFIG': 503,
+            'TRANSPORT': 502,
+            'UNKNOWN': 500,
+        }.get(result.code, 500)
+    return jsonify(result.to_dict()), http_status
+
+
+@portal_bp.post(
+    '/api/portal/openproject/<int:op_identifier>/'
+    'work_packages/<int:wp_id>/reorder',
+)
+@login_required
+def api_reorder_work_package(
+    op_identifier: int, wp_id: int,
+):
+    """Reorder a work package via drag-drop on the Backlog tab (commit 5).
+
+    Body: ``{"newPosition": 5, "lockVersion": 1}``.
+
+    Returns the same JSON envelope as the status route. The
+    ``position`` shape is provisional per
+    ``OpenProjectClient.update_work_package_priority_order``; if OP
+    rejects it in production we re-spike.
+    """
+    from app.services.openproject_writes import (
+        reorder_work_package,
+    )
+
+    client = current_user.client
+    if client is None or not client.is_active:
+        abort(403)
+
+    payload = request.get_json(silent=True) or {}
+    new_position = (
+        payload.get('newPosition') or payload.get('new_position')
+    )
+    lock_version = (
+        payload.get('lockVersion') or payload.get('lock_version')
+    )
+    if new_position is None or lock_version is None:
+        return jsonify({
+            'ok': False,
+            'code': 'VALIDATION',
+            'message': (
+                'newPosition and lockVersion are required.'
+            ),
+        }), 400
+    try:
+        new_position = int(new_position)
+        lock_version = int(lock_version)
+    except (TypeError, ValueError):
+        return jsonify({
+            'ok': False,
+            'code': 'VALIDATION',
+            'message': (
+                'newPosition and lockVersion must be integers.'
+            ),
+        }), 400
+
+    op, _project = _resolve_op_project(client, op_identifier)
+
+    # Best-effort read of the current position for the audit row.
+    before_position = None
+    try:
+        wp_now = op.get_work_package(wp_id)
+        pos = wp_now.get('position')
+        if isinstance(pos, int):
+            before_position = pos
+    except Exception:  # noqa: BLE001
+        before_position = None
+
+    result = reorder_work_package(
+        op,
+        user=current_user,
+        client_id=client.id,
+        op_project_id=op_identifier,
+        wp_id=wp_id,
+        new_position=new_position,
+        lock_version=lock_version,
+        before_position=before_position,
+    )
+
+    http_status = 200
+    if not result.success:
+        http_status = {
+            'CONFLICT': 409,
+            'NOT_FOUND': 404,
+            'VALIDATION': 422,
+            'CONFIG': 503,
+            'TRANSPORT': 502,
+            'UNKNOWN': 500,
+        }.get(result.code, 500)
+    return jsonify(result.to_dict()), http_status
+
+
+# ---------- Drift & Anchor (per-client landing page) ---------- #
 
 @portal_bp.get('/p/drift-and-anchor/')
 @login_required

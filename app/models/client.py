@@ -17,6 +17,13 @@ class Client(db.Model):
     font_url = db.Column(db.String(512))  # e.g. Google Fonts CSS link
     font_display = db.Column(db.String(128))  # e.g. 'Julius Sans One, sans-serif'
     logo_max_height = db.Column(db.String(32))  # CSS value, e.g. '5rem'. None = use default.
+    # OpenProject integration (commit 2 of 6, see spec 2026-04-24).
+    # The integer ID of the master OpenProject project for this client.
+    # Nullable: stays null until ops wires a real project per client. The
+    # master project may have direct child sub-projects (discovered via the
+    # OpenProject API at read time, not stored here). See
+    # app/services/openproject.py for the client that consumes this.
+    openproject_master_project_id = db.Column(db.Integer, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     # Relationships

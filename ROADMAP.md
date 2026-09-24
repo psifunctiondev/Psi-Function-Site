@@ -69,8 +69,9 @@ Authenticated client-specific sitelets accessible via direct URL or hidden login
 - **CTAI** (`/p/ctai`) — Catherine Truman Architects, internal tooling hub (TruRender in progress)
 - **ACME** (`/p/acme`) — fictional public-safe showcase tenant for demos
 - **Drift & Anchor** (`/p/drift-and-anchor`) — brand-strategy consultancy; R1 ships the brand-story landing + initial resources (see `docs/clients/drift-and-anchor.md`)
+- **Psi Function Consulting** (`/p/psi-function-consulting`) — OpenProject-backed client portal with per-project summary pages (Progress / Status / Backlog tabs) + drag-drop writes through to OP via the service-account token. See `docs/clients/psi-function-consulting.md`.
 
-**Next steps:** Design the per-client dashboard layout, decide on OpenProject API integration approach, set up file storage for static assets.
+**Next steps:** OpenProject-backed portal pages ship in this workstream's commits 3-5; remaining work is UI polish (drag-affordance grey-outs for ineligible transitions), real-time updates, and the version end-date lookup for the Backlog tab's "Target week" column.
 
 ---
 

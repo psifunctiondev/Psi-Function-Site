@@ -41,18 +41,14 @@
     </div>
   </div>
 
-  <!-- Column 2: Projects -->
+  <!-- Column 2: Projects — OP-backed with legacy fallback.
+       op_projects / op_projects_status are wired in portal/routes.py
+       (see client_dashboard). When the client has an OP master project
+       wired, the OP project list renders; otherwise we fall back to
+       the static ClientResource "backlog" list (ACME / CTAI today). -->
   <div class="portal-dashboard-col">
     <h2 class="portal-dashboard-col__title">Projects</h2>
-    <div class="portal-dashboard-col__items">
-      {% for r in resources_by_cat.get('backlog', []) %}
-        <a class="portal-dashboard-col__item" href="{{ r.external_url or url_for('static', filename=r.file_path) }}" {% if r.external_url %}target="_blank" rel="noopener noreferrer"{% endif %}>
-          {{ r.title }}
-        </a>
-      {% else %}
-        <span class="portal-dashboard-col__empty">No project plans yet</span>
-      {% endfor %}
-    </div>
+    {% include 'portal/_projects_card.html' %}
   </div>
 
   <!-- Column 3: Tools -->

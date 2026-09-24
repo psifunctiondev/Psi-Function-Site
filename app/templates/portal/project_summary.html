@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} — {{ client.name }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/portal.css') }}">
+{% if client.font_url %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{{ client.font_url }}">
+{% endif %}
+<style>
+  :root {
+    --client-primary: {{ client.primary_color or '#6C7D94' }};
+    --client-accent: {{ client.accent_color or '#F0643A' }};
+    --client-radius: 0px;
+    {% if client.font_display %}--client-font-display: {{ client.font_display|safe }};
+    --client-weight: 400;{% endif %}
+    {% if client.logo_max_height %}--client-logo-max-height: {{ client.logo_max_height }};{% endif %}
+  }
+  .portal-page {
+    --color-bg: #f5f5f5;
+    --color-surface: #ffffff;
+    --color-text: #313131;
+    --color-text-muted: #878787;
+    --color-heading: #313131;
+    --color-border: #e0e0e0;
+    --color-link: var(--client-primary);
+    --color-link-hover: var(--client-accent);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="portal-page">
+
+  {# Eyebrow: client logo / name (same pattern as dashboard) #}
+  <div class="portal__eyebrow-row">
+    {% if client.logo_url %}
+      <img class="portal__eyebrow-logo" src="{{ client.logo_url }}" alt="{{ client.name }}">
+    {% else %}
+      <p class="portal__eyebrow portal__eyebrow--client">{{ client.name }}</p>
+    {% endif %}
+  </div>
+  {% if client.tagline %}
+    <p class="portal__tagline">{{ client.tagline }}</p>
+  {% endif %}
+
+  <div class="container section-stack">
+
+    {# Breadcrumb: Client > Projects > Project #}
+    <nav class="portal-breadcrumb" aria-label="Breadcrumb">
+      <a href="{{ url_for('portal.client_dashboard', slug=client.slug) }}">{{ client.name }}</a>
+      <span class="portal-breadcrumb__sep">›</span>
+      <a href="{{ url_for('portal.client_dashboard', slug=client.slug) }}">Projects</a>
+      <span class="portal-breadcrumb__sep">›</span>
+      <span>{{ project.name }}</span>
+    </nav>
+
+    {# Project header strip #}
+    <header class="portal-project-header">
+      <h1 class="portal-project-header__title">{{ project.name }}</h1>
+      {% if project.portal_role == 'master' %}
+        <span class="portal-project-header__role">Master project</span>
+      {% endif %}
+    </header>
+
+    {# Tab nav — full-page navigations, no JS #}
+    <nav class="portal-tabs" aria-label="Project summary tabs">
+      <a class="portal-tabs__tab {% if tab == 'progress' %}portal-tabs__tab--active{% endif %}"
+         href="?tab=progress">Progress</a>
+      <a class="portal-tabs__tab {% if tab == 'status' %}portal-tabs__tab--active{% endif %}"
+         href="?tab=status">Status</a>
+      <a class="portal-tabs__tab {% if tab == 'backlog' %}portal-tabs__tab--active{% endif %}"
+         href="?tab=backlog">Backlog</a>
+    </nav>
+
+    {# Tab body — server-side partial per tab #}
+    <section class="portal-tab-body">
+      {% if tab == 'progress' %}
+        {% include 'portal/_project_tab_progress.html' %}
+      {% elif tab == 'status' %}
+        {% include 'portal/_project_tab_status.html' %}
+      {% elif tab == 'backlog' %}
+        {% include 'portal/_project_tab_backlog.html' %}
+      {% endif %}
+    </section>
+
+  </div>
+</section>
+
+{% endblock %}

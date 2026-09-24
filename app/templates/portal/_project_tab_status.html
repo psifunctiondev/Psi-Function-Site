@@ -1,0 +1,125 @@
+{# Status tab — kanban board with SortableJS drag-drop (commit 5).
+
+   Per client-portal-kanban.excalidraw v0.4:
+   - Top row (active cycle): New · Ready · In progress · In testing
+   - Bottom row (terminal / stuck): Blocked · Rejected · Deployed · Completed
+
+   Cards are server-rendered from the project's work packages, grouped
+   by status name (the kanban's left-to-right column order). Each card
+   carries data-* attributes the drag module (portal-kanban.js) reads:
+     - data-wp-id             for the POST URL
+     - data-lock-version      for the OP lockVersion check
+     - data-story-points      for column header SP sums
+
+   SortableJS is loaded via Vite (commit 5c) — see app/static/js/main.js
+   for the import. The drag module self-binds when it sees this DOM.
+
+   Read-only fallback: if the OP fetch failed the partial renders an
+   inline error banner via tab_error (set in the route). #}
+
+{% set top_statuses = ('New','Ready','In progress','In testing') %}
+{% set bottom_statuses = ('Blocked','Rejected','Deployed','Completed') %}
+
+{% if tab_error %}
+  <p class="portal-kanban__flash portal-kanban__flash--error">{{ tab_error }}</p>
+{% endif %}
+
+<div class="portal-kanban"
+     data-op-id="{{ project.id }}"
+     data-slug="{{ client.slug }}">
+
+  <h2 class="portal-kanban__title">{{ project.name }} — kanban board</h2>
+  <p class="portal-kanban__caption">
+    Drag cards across columns to update status — changes write through to
+    OpenProject immediately.
+  </p>
+
+  <div class="portal-kanban__row">
+    {% for status in top_statuses %}
+      {% set cards = work_packages_by_status.get(status, []) %}
+      {% set col_sp = cards|sum(attribute='storyPoints')|default(0) %}
+      <div class="portal-kanban__col"
+           data-status="{{ status }}">
+        <header class="portal-kanban__col-header">
+          <h3 class="portal-kanban__col-title">{{ status }}</h3>
+          <span class="portal-kanban__col-count">
+            {{ cards|length }} {{ 'story' if cards|length == 1 else 'stories' }}
+            · {{ col_sp }} {{ 'pt' if col_sp == 1 else 'pts' }}
+          </span>
+        </header>
+        <div class="portal-kanban__cards">
+          {% for wp in cards %}
+            <div class="portal-kanban__card"
+                 data-wp-id="{{ wp.id }}"
+                 data-lock-version="{{ wp.get('lockVersion', 0) }}"
+                 data-story-points="{{ wp.get('storyPoints') or 0 }}">
+              {% set epic = wp.get('customField6') %}
+              {% set story = wp.get('customField7') %}
+              {% if epic and story %}
+                <span class="portal-kanban__card-number">E{{ '%02d'|format(epic|int) }}/S{{ '%02d'|format(story|int) }}</span>
+              {% else %}
+                <span class="portal-kanban__card-number">#{{ wp.id }}</span>
+              {% endif %}
+              <p class="portal-kanban__card-title">{{ wp.get('subject', '(untitled)') }}</p>
+              <div class="portal-kanban__card-meta">
+                <span>{{ wp.get('storyPoints') or 0 }} pt{{ '' if (wp.get('storyPoints') or 0) == 1 else 's' }}</span>
+                {% set links = wp.get('_links') or {} %}
+                {% set assignee = (links.get('assignee') or {}).get('title') %}
+                {% if assignee %}
+                  <span>{{ assignee }}</span>
+                {% endif %}
+              </div>
+            </div>
+          {% else %}
+            <p class="portal-kanban__placeholder">— empty —</p>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="portal-kanban__row portal-kanban__row--terminal">
+    {% for status in bottom_statuses %}
+      {% set cards = work_packages_by_status.get(status, []) %}
+      {% set col_sp = cards|sum(attribute='storyPoints')|default(0) %}
+      <div class="portal-kanban__col"
+           data-status="{{ status }}">
+        <header class="portal-kanban__col-header">
+          <h3 class="portal-kanban__col-title">{{ status }}</h3>
+          <span class="portal-kanban__col-count">
+            {{ cards|length }} {{ 'story' if cards|length == 1 else 'stories' }}
+            · {{ col_sp }} {{ 'pt' if col_sp == 1 else 'pts' }}
+          </span>
+        </header>
+        <div class="portal-kanban__cards">
+          {% for wp in cards %}
+            <div class="portal-kanban__card"
+                 data-wp-id="{{ wp.id }}"
+                 data-lock-version="{{ wp.get('lockVersion', 0) }}"
+                 data-story-points="{{ wp.get('storyPoints') or 0 }}">
+              {% set epic = wp.get('customField6') %}
+              {% set story = wp.get('customField7') %}
+              {% if epic and story %}
+                <span class="portal-kanban__card-number">E{{ '%02d'|format(epic|int) }}/S{{ '%02d'|format(story|int) }}</span>
+              {% else %}
+                <span class="portal-kanban__card-number">#{{ wp.id }}</span>
+              {% endif %}
+              <p class="portal-kanban__card-title">{{ wp.get('subject', '(untitled)') }}</p>
+              <div class="portal-kanban__card-meta">
+                <span>{{ wp.get('storyPoints') or 0 }} pt{{ '' if (wp.get('storyPoints') or 0) == 1 else 'pts' }}</span>
+                {% set links = wp.get('_links') or {} %}
+                {% set assignee = (links.get('assignee') or {}).get('title') %}
+                {% if assignee %}
+                  <span>{{ assignee }}</span>
+                {% endif %}
+              </div>
+            </div>
+          {% else %}
+            <p class="portal-kanban__placeholder">— empty —</p>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>

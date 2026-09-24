@@ -1,0 +1,36 @@
+{# Progress tab — stacked bar chart, time on x, story points on y, stack
+   segments are SP bucketed by status. Commit 5 wires the dataset to
+   the OpProjectSnapshot table (commit 4) — no live OP call at render.
+
+   The route passes `progress_data` (a dict with labels / statuses /
+   series) populated from the last 8 weeks of snapshot rows. The chart
+   dataset is serialized into a JSON <script> tag the renderer
+   (portal-progress.js) reads and feeds to Chart.js.
+
+   Chart.js is loaded from the CDN below — Quinn wanted "no asset
+   rebuild for visual review" before commit 5; the Vite-bundled Chart
+   can replace this when the build pipeline is wired up. #}
+
+<div class="portal-project-progress">
+  <h2 class="portal-project-progress__title">Story points by week</h2>
+  <p class="portal-project-progress__caption">
+    Last 8 weeks · from daily snapshot (cron via
+    <code>flask openproject snapshot</code>).
+  </p>
+
+  <div class="portal-project-progress__chart-wrap">
+    <canvas id="portal-project-progress-chart"
+            width="800" height="320"
+            aria-label="Stacked bar chart of story points by week and status"></canvas>
+  </div>
+
+  {# Server-rendered snapshot dataset. Empty (no snapshots yet) →
+     chart shows a single zero bucket per status. portal-progress.js
+     reads this JSON and instantiates Chart.js on the canvas. #}
+  <script id="portal-project-progress-data" type="application/json">
+{{ progress_data|tojson(indent=2) }}
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+          defer></script>
+</div>

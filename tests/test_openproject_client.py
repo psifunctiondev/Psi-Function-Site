@@ -21,6 +21,8 @@ from unittest import mock
 import pytest
 
 from app.services.openproject import (
+    KANBAN_STATUS_BOTTOM,
+    KANBAN_STATUS_TOP,
     STATUS_ORDER,
     OpenProjectAuthError,
     OpenProjectClient,
@@ -65,8 +67,27 @@ def test_auth_header_is_basic_apikey():
 
 
 def test_status_order_constant():
+    # Eight statuses in kanban-display order (top row then bottom row),
+    # see client-portal-kanban.excalidraw v0.4 and
+    # KANBAN_STATUS_TOP/KANBAN_STATUS_BOTTOM below.
     assert STATUS_ORDER[0] == "New"
-    assert STATUS_ORDER[-1] == "Deployed"
+    assert STATUS_ORDER[-1] == "Completed"
+    assert len(STATUS_ORDER) == 8
+    # All eight names appear exactly once (order-sensitive).
+    assert set(STATUS_ORDER) == {
+        "New", "Ready", "In progress", "In testing",
+        "Blocked", "Rejected", "Deployed", "Completed",
+    }
+
+
+def test_kanban_status_tuples():
+    # Top row: the active cycle — left to right.
+    assert KANBAN_STATUS_TOP == ("New", "Ready", "In progress", "In testing")
+    # Bottom row: terminal / out-of-cycle — left to right.
+    assert KANBAN_STATUS_BOTTOM == ("Blocked", "Rejected", "Deployed", "Completed")
+    # The two tuples cover all of STATUS_ORDER without overlap.
+    assert set(KANBAN_STATUS_TOP) | set(KANBAN_STATUS_BOTTOM) == set(STATUS_ORDER)
+    assert set(KANBAN_STATUS_TOP) & set(KANBAN_STATUS_BOTTOM) == set()
 
 
 # --------------------------------------------------------------------------- #
