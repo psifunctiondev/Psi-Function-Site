@@ -406,7 +406,7 @@ def _resolve_op_project(client, op_identifier: int):
 )
 @login_required
 def api_change_work_package_status(
-    slug: str, op_identifier: int, wp_id: int,
+    op_identifier: int, wp_id: int,
 ):
     """Change a work package's status via drag-drop (commit 5).
 
@@ -423,12 +423,8 @@ def api_change_work_package_status(
         change_work_package_status,
     )
 
-    client = Client.query.filter_by(
-        slug=slug, is_active=True,
-    ).first_or_404()
-    if not current_user.is_admin and (
-        not current_user.client or current_user.client.id != client.id
-    ):
+    client = current_user.client
+    if client is None or not client.is_active:
         abort(403)
 
     payload = request.get_json(silent=True) or {}
@@ -500,7 +496,7 @@ def api_change_work_package_status(
 )
 @login_required
 def api_reorder_work_package(
-    slug: str, op_identifier: int, wp_id: int,
+    op_identifier: int, wp_id: int,
 ):
     """Reorder a work package via drag-drop on the Backlog tab (commit 5).
 
@@ -515,12 +511,8 @@ def api_reorder_work_package(
         reorder_work_package,
     )
 
-    client = Client.query.filter_by(
-        slug=slug, is_active=True,
-    ).first_or_404()
-    if not current_user.is_admin and (
-        not current_user.client or current_user.client.id != client.id
-    ):
+    client = current_user.client
+    if client is None or not client.is_active:
         abort(403)
 
     payload = request.get_json(silent=True) or {}

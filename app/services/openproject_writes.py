@@ -49,6 +49,9 @@ from app.services.openproject import (
     OpenProjectError,
 )
 from app.services.openproject_cache import cache_invalidate
+from app.services.openproject_config import (
+    current_op_client,  # noqa: F401 — re-exported for test mock targets
+)
 
 logger = logging.getLogger(__name__)
 
