@@ -169,9 +169,13 @@ def backfill_snapshots_for_project(
     for boundary in boundaries:
         # For each WP, the status it was in at the boundary is found
         # by looking at the journals: pick the latest activity whose
-        # createdAt < boundary that changed the status. If no such
-        # activity exists and the WP was created before the boundary,
-        # assume the WP didn't exist yet (skip).
+        # createdAt < boundary that changed the status. If no journal
+        # predates the boundary (WP has no recent activity, or the
+        # activity is too new to count), fall back to the WP's
+        # CURRENT status — the WP must have been in some status the
+        # whole way back. Without this fallback, projects with sparse
+        # journal history get empty distributions on older boundaries
+        # and the Progress chart renders a 0-bucket row.
         distribution: dict[str, int] = {}
         for wp in wps:
             wp_id = wp.get('id')
@@ -187,10 +191,19 @@ def backfill_snapshots_for_project(
                 op_client, wp_id, boundary,
             )
             if status_at_boundary is None:
-                continue
-            distribution[status_at_boundary] = distribution.get(
-                status_at_boundary, 0,
-            ) + sp
+                # Fall back to the WP's current status — already
+                # loaded from get_work_packages above, no extra
+                # round-trip. Use setdefault so multiple WPs sharing
+                # the same status name don't inflate the bucket.
+                links = wp.get('_links') or {}
+                current = ((links.get('status') or {}).get('title'))
+                if not isinstance(current, str) or not current:
+                    continue
+                distribution[current] = distribution.get(current, 0) + sp
+            else:
+                distribution[status_at_boundary] = distribution.get(
+                    status_at_boundary, 0,
+                ) + sp
 
         snap = OpProjectSnapshot.for_project_on_date(project_op_id, boundary)
         if snap is None:
