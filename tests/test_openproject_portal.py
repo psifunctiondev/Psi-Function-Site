@@ -21,8 +21,6 @@ route tests in ``tests/test_portal_openproject.py`` (commit 3b).
 
 from __future__ import annotations
 
-from unittest import mock
-
 import pytest
 
 from app.services.openproject import (
@@ -31,10 +29,9 @@ from app.services.openproject import (
     STATUS_ORDER,
     OpenProjectNotFound,
 )
-from app.services.openproject import OpenProjectClient, OpenProjectError
 from app.services.openproject_portal import (
-    OPEN_STATUSES,
     DONE_STATUSES,
+    OPEN_STATUSES,
     count_by_status,
     get_client_projects,
     is_open_status,

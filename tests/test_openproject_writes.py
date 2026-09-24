@@ -28,7 +28,6 @@ from unittest import mock
 
 import pytest
 
-from app.extensions import db
 from app.models.portal_audit_log import PortalAuditLog
 from app.services.openproject import (
     OpenProjectConcurrencyError,

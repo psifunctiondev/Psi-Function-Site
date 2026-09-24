@@ -21,7 +21,7 @@ creating duplicates.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 
 from app.extensions import db
 
@@ -93,7 +93,7 @@ class OpProjectSnapshot(db.Model):
     @classmethod
     def for_project_on_date(
         cls, project_op_id: int, day: date,
-    ) -> 'OpProjectSnapshot | None':
+    ) -> OpProjectSnapshot | None:
         """Look up the snapshot for a (project, day) pair, or None."""
         return cls.query.filter_by(
             project_op_id=project_op_id, snapshot_date=day,

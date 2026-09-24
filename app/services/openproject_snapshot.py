@@ -215,8 +215,7 @@ def _status_at_boundary(
 ) -> str | None:
     """Return the WP's status at ``boundary`` (latest status-change
     activity strictly before ``boundary``), or None if unknown."""
-    from app.services.openproject_cache import fingerprint
-    from app.services.openproject_cache import cache_get, cache_set
+    from app.services.openproject_cache import cache_get, cache_set, fingerprint
 
     # Cache key on (wp_id, boundary_iso) so we don't refetch per WP.
     fp = fingerprint(wp_id, {'boundary': boundary.isoformat()})

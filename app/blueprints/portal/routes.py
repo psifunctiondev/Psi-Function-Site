@@ -244,13 +244,13 @@ def project_summary(slug: str, op_identifier: int):
     # Backlog tabs; the Progress tab reads ONLY from the snapshot
     # table). Tab-specific failures degrade gracefully — the partial
     # renders an inline error and the rest of the page still works.
+    from app.services.openproject import (
+        STATUS_ORDER,
+        OpenProjectError,
+    )
     from app.services.openproject_config import (
         OpenProjectConfigError,
         current_op_client,
-    )
-    from app.services.openproject import (
-        OpenProjectError,
-        STATUS_ORDER,
     )
 
     work_packages_by_status: dict[str, list[dict]] = {}
@@ -294,7 +294,8 @@ def project_summary(slug: str, op_identifier: int):
                 )
             if tab == 'backlog':
                 from app.services.openproject_portal import (
-                    is_open_status, order_statuses,
+                    is_open_status,
+                    order_statuses,
                 )
                 open_names = [
                     n for n in work_packages_by_status
@@ -308,7 +309,9 @@ def project_summary(slug: str, op_identifier: int):
             # Read snapshots for the last 8 weeks (default Progress
             # window). Empty project → flat line at 0 SP — the partial
             # renders the placeholder copy + zero-bucket chart.
-            from datetime import date as _date, timedelta
+            from datetime import date as _date
+            from datetime import timedelta
+
             from app.models.op_snapshot import OpProjectSnapshot
 
             today = _date.today()

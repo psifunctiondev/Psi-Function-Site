@@ -21,9 +21,9 @@ from unittest import mock
 import pytest
 
 from app.services.openproject import (
-    STATUS_ORDER,
     KANBAN_STATUS_BOTTOM,
     KANBAN_STATUS_TOP,
+    STATUS_ORDER,
     OpenProjectAuthError,
     OpenProjectClient,
     OpenProjectConcurrencyError,

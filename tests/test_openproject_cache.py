@@ -25,12 +25,12 @@ from unittest import mock
 import pytest
 
 from app.services.openproject_cache import (
+    TTL_SECONDS,
     cache_get,
-    cache_set,
     cache_invalidate,
+    cache_set,
     fingerprint,
     reset_cache_for_tests,
-    TTL_SECONDS,
 )
 
 

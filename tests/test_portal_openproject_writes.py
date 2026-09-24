@@ -410,7 +410,9 @@ class TestStatusHappyPath:
         self, app, client, test_user, db_session, monkeypatch,
     ):
         from app.services.openproject_cache import (
-            cache_get, cache_set, reset_cache_for_tests,
+            cache_get,
+            cache_set,
+            reset_cache_for_tests,
         )
         reset_cache_for_tests()
         _set_op_env(monkeypatch)

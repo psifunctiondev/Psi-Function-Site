@@ -19,10 +19,7 @@ from __future__ import annotations
 
 from unittest import mock
 
-import pytest
-
 from app.models.client import Client
-from app.models.user import User
 
 
 def _login(http_client, email, password):

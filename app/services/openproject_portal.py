@@ -24,10 +24,9 @@ Field lookups use the canonical field names from
 from __future__ import annotations
 
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 from app.services.openproject import (
-    KANBAN_STATUS_BOTTOM,
     KANBAN_STATUS_TOP,
     STATUS_ORDER,
     OpenProjectClient,

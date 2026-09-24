@@ -23,8 +23,8 @@ from __future__ import annotations
 import pytest
 
 from app.services.openproject_config import (
-    current_op_client,
     OpenProjectConfigError,
+    current_op_client,
 )
 
 

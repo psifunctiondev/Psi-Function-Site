@@ -1299,7 +1299,7 @@ def snapshot_command(for_date, dry_run):
         op = current_op_client()
     except OpenProjectConfigError as exc:
         click.echo(f'ERROR: {exc}')
-        raise click.exceptions.Exit(code=2)
+        raise click.exceptions.Exit(code=2) from None
 
     if dry_run:
         # Walk the active-client set without writing.
@@ -1357,7 +1357,7 @@ def backfill_snapshots_command(project_id, weeks):
         op = current_op_client()
     except OpenProjectConfigError as exc:
         click.echo(f'ERROR: {exc}')
-        raise click.exceptions.Exit(code=2)
+        raise click.exceptions.Exit(code=2) from None
 
     written = backfill_snapshots_for_project(
         op, project_id, weeks=weeks,

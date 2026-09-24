@@ -19,16 +19,13 @@ Covers:
 
 from __future__ import annotations
 
-import json
-from datetime import date, timedelta
+from datetime import date
 from unittest import mock
 
 import pytest
 from click.testing import CliRunner
 
-from app import create_app
 from app.cli import openproject_cli
-from app.extensions import db
 from app.models.client import Client
 from app.models.op_snapshot import OpProjectSnapshot
 from app.services.openproject_snapshot import (
